@@ -1,4 +1,4 @@
-import { ActionIcon, Box, Button, Code, Group, Modal, SegmentedControl, Text, Title, Tooltip } from "@mantine/core";
+import { ActionIcon, Box, Button, Code, Group, Modal, SegmentedControl, Text, Title, Tooltip, useMantineTheme } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseYaml } from "../lib/docs";
@@ -18,7 +18,6 @@ import {
 const LABEL_W = 260;
 const ROW_H = 34;
 const HEADER_H = 52;
-const COLORS = ["blue", "teal", "grape", "orange", "indigo", "pink", "cyan", "lime", "red", "violet"];
 
 type Tick = { day: number; label: string };
 
@@ -75,6 +74,7 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
   const [closed, setClosed] = useState<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const today = todayDay();
+  const chartColors: string[] = useMantineTheme().other.chartColors;
 
   // 前後に余白を取り、目盛りの切れ目にそろえる
   const pad = scale === "day" ? 3 : scale === "week" ? 14 : 45;
@@ -112,7 +112,7 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
     });
 
   const bodyH = rows.length * ROW_H;
-  const color = (si: number) => COLORS[si % COLORS.length];
+  const color = (si: number) => chartColors[si % chartColors.length];
 
   return (
     <>

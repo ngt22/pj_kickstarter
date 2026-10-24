@@ -1,25 +1,184 @@
-/* Mantine で表せない部分だけをここに書く */
+/* Mantine で表せない部分だけをここに書く。値はテーマのトークン（CSS 変数）だけを使う（theme.ts） */
+
+/* ヘッダーのロゴ */
+.ks-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.ks-brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-white);
+  background: linear-gradient(135deg, var(--mantine-color-brand-6), var(--mantine-color-brand-8));
+  font-size: var(--mantine-font-size-sm);
+}
+
+/* リンクになっているカード：触れたら少し持ち上げる */
+.ks-card-link {
+  transition: box-shadow 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+.ks-card-link:hover {
+  border-color: var(--mantine-color-brand-3);
+  box-shadow: var(--mantine-shadow-md);
+  transform: translateY(-1px);
+}
+
 .mermaid {
   overflow-x: auto;
   margin: var(--mantine-spacing-md) 0;
   padding: var(--mantine-spacing-md);
   border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-gray-0);
-}
-[data-mantine-color-scheme="dark"] .mermaid {
-  background: var(--mantine-color-gray-1);
+  background: var(--ks-subtle);
+  border: 1px solid var(--mantine-color-default-border);
 }
 
-/* Markdown の本文は明朝体（Noto Serif JP）にする。コードは等幅のまま */
+/* 書体のルール（README「デザイントークン」）
+   - 書体はゴシック体（Noto Sans JP）の1種類だけ。本文・見出し・表・図すべて同じ
+   - 等幅はコード・パス・型名だけ
+   - 強弱は書体を変えず、太さ（400 本文 / 500 ラベル / 700 見出し・強調）とサイズで付ける */
+/* ---- 本文の文字組み ----
+   文字の階層は4段階：ページ見出し（h1）> 節（h2）> 項（h3）> 本文。補足は dimmed の xs
+   余白は「節の前 > 項の前 > 段落の間」の順に大きくし、まとまりが目で追えるようにする
+   文章の行は全角40字程度で折り返す（表と図は紙の幅いっぱいに使う） */
 .doc-body {
-  font-family: "Noto Serif JP", serif;
+  --ks-measure: 40em;
+  font-size: var(--mantine-font-size-md);
   line-height: 1.9;
+  letter-spacing: 0.04em;
+  color: var(--ks-text-body);
 }
-.doc-body h1,
-.doc-body h2,
-.doc-body h3,
+.doc-body > :is(p, ul, ol, blockquote) {
+  max-width: var(--ks-measure);
+}
+.doc-body > p {
+  margin-bottom: var(--mantine-spacing-md);
+}
+.doc-body h2 {
+  margin-top: calc(var(--mantine-spacing-xl) * 1.4);
+  margin-bottom: var(--mantine-spacing-sm);
+  color: var(--mantine-color-text);
+}
+.doc-body h3 {
+  margin-top: var(--mantine-spacing-xl);
+  margin-bottom: var(--mantine-spacing-sm);
+  color: var(--mantine-color-text);
+}
 .doc-body h4 {
-  font-family: "Noto Serif JP", serif;
+  margin-top: var(--mantine-spacing-lg);
+  margin-bottom: var(--mantine-spacing-xs);
+  color: var(--mantine-color-text);
+}
+/* 見出しの直後の表・図は詰めすぎない */
+.doc-body > :is(h2, h3, h4) + :is(table, div) {
+  margin-top: var(--mantine-spacing-md);
+}
+.doc-body > :is(table, .mermaid, div) {
+  margin-bottom: var(--mantine-spacing-lg);
+}
+.doc-body :is(ul, ol) {
+  padding-left: 1.5em;
+  margin-bottom: var(--mantine-spacing-md);
+}
+.doc-body li + li {
+  margin-top: var(--mantine-spacing-xs);
+}
+.doc-body li::marker {
+  color: var(--mantine-color-dimmed);
+}
+.doc-body strong {
+  font-weight: 700;
+  color: var(--mantine-color-text);
+}
+.doc-body blockquote {
+  margin: 0 0 var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border-left: 3px solid var(--mantine-color-brand-4);
+  border-radius: 0 var(--mantine-radius-sm) var(--mantine-radius-sm) 0;
+  background: var(--ks-subtle);
+  color: var(--mantine-color-dimmed);
+}
+.doc-body :not(pre) > code {
+  padding: 0.1em 0.4em;
+  font-size: 0.875em;
+  letter-spacing: 0;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--ks-subtle);
+  border: 1px solid var(--mantine-color-default-border);
+}
+/* 表の中は本文より一段小さく、字間も詰める */
+.doc-body table {
+  letter-spacing: 0.02em;
+}
+
+/* ---- ページ見出し（DocView） ---- */
+.ks-eyebrow {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--mantine-color-brand-light-color);
+}
+
+/* 見出しは仮名の字間を詰めて締める（本文は読みやすさ優先で詰めない） */
+h1,
+h2,
+h3,
+h4 {
+  font-feature-settings: "palt";
+  letter-spacing: 0.02em;
+}
+
+/* 狭い画面ではページ見出しを一段小さくする */
+@media (max-width: 48em) {
+  h1 {
+    font-size: 1.625rem !important;
+  }
+}
+
+/* 表の数字は桁をそろえる */
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 表の枠。Mantine の Table（.ks-table-frame で包む）と Markdown の表を同じ見た目にする */
+.ks-table-frame {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+}
+.ks-table-frame tr:last-child td {
+  border-bottom: 0;
+}
+.ks-table-frame .mantine-Table-tfoot .mantine-Table-th {
+  background: var(--ks-subtle);
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+.doc-body > table {
+  font-family: var(--mantine-font-family);
+  font-size: var(--mantine-font-size-sm);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.mantine-Table-thead .mantine-Table-th,
+.doc-body > table th {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+  color: var(--mantine-color-dimmed);
+  background: var(--ks-subtle);
+}
+.doc-body > table :is(th, td) {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.doc-body > table tr:last-child td {
+  border-bottom: 0;
 }
 .doc-body code,
 .doc-body pre {
@@ -37,15 +196,15 @@
 .gantt {
   overflow: auto;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-body);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
 }
 .gantt-header {
   position: sticky;
   top: 0;
   z-index: 3;
   display: flex;
-  background: var(--mantine-color-body);
+  background: var(--ks-subtle);
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 .gantt-label {
@@ -56,21 +215,22 @@
   align-items: center;
   gap: 6px;
   height: 100%;
-  padding: 0 10px;
+  padding: 0 var(--mantine-spacing-sm);
   flex-shrink: 0;
-  background: var(--mantine-color-body);
+  background: var(--ks-surface);
   border-right: 1px solid var(--mantine-color-default-border);
   min-width: 0;
 }
 .gantt-corner {
   z-index: 4;
+  background: var(--ks-subtle);
   font-size: var(--mantine-font-size-sm);
   font-weight: 700;
 }
 .gantt-tick {
   position: absolute;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--mantine-font-size-xs);
   color: var(--mantine-color-dimmed);
 }
 .gantt-tick-top {
@@ -114,7 +274,7 @@
 }
 .gantt-section .gantt-label {
   cursor: pointer;
-  background: var(--mantine-color-default-hover);
+  background: var(--ks-subtle);
 }
 .gantt-section .gantt-label:hover {
   background: var(--mantine-color-default);
@@ -134,7 +294,7 @@
   padding: 0 8px;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--mantine-font-size-sm);
   line-height: 20px;
   border: 1px solid;
   border-radius: var(--mantine-radius-sm);
@@ -157,7 +317,7 @@
   position: absolute;
   top: 0;
   line-height: 34px;
-  font-size: 13px;
+  font-size: var(--mantine-font-size-sm);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -174,9 +334,9 @@
   line-height: 1.4;
   margin: var(--mantine-spacing-md) 0;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-body);
-  box-shadow: var(--mantine-shadow-sm);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+  box-shadow: var(--mantine-shadow-md);
   overflow: hidden;
 }
 .mock p {
@@ -189,7 +349,7 @@
   max-width: 360px;
   border-width: 8px;
   border-radius: 28px;
-  border-color: var(--mantine-color-dark-4);
+  border-color: var(--mantine-color-gray-8);
 }
 .mock-chrome {
   display: flex;
@@ -197,7 +357,7 @@
   gap: 6px;
   height: 28px;
   padding: 0 10px;
-  background: var(--mantine-color-default-hover);
+  background: var(--ks-subtle);
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 .mock-chrome i {
@@ -209,10 +369,10 @@
 .mock-url {
   margin-left: 12px;
   padding: 1px 12px;
-  font-size: 11px;
+  font-size: var(--mantine-font-size-xs);
   color: var(--mantine-color-dimmed);
-  background: var(--mantine-color-body);
-  border-radius: 10px;
+  background: var(--ks-surface);
+  border-radius: var(--mantine-radius-xl);
 }
 .mock-mobile .mock-chrome {
   justify-content: center;
@@ -223,7 +383,7 @@
   width: 80px;
   height: 6px;
   border-radius: 3px;
-  background: var(--mantine-color-dark-4);
+  background: var(--mantine-color-gray-8);
 }
 .mock-screen {
   padding: var(--mantine-spacing-md);
@@ -261,7 +421,7 @@
 .er {
   display: flex;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-md);
+  border-radius: var(--mantine-radius-lg);
   overflow: hidden;
 }
 .er-side {
@@ -269,11 +429,12 @@
   flex-shrink: 0;
   padding: var(--mantine-spacing-xs);
   border-right: 1px solid var(--mantine-color-default-border);
-  background: var(--mantine-color-body);
+  background: var(--ks-surface);
   min-height: 0;
 }
 .er-canvas {
   flex: 1;
+  background: var(--ks-subtle);
   min-width: 0;
 }
 .er-item {
@@ -300,9 +461,10 @@
 }
 .er-table {
   font-family: var(--mantine-font-family);
-  background: var(--mantine-color-body);
+  background: var(--ks-surface);
   border: 1.5px solid;
-  border-radius: var(--mantine-radius-sm);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--mantine-shadow-xs);
   overflow: hidden;
   cursor: pointer;
 }
@@ -322,11 +484,11 @@
   align-items: center;
   gap: 6px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: var(--mantine-font-size-xs);
 }
 .er-key {
   width: 18px;
-  font-size: 10px;
+  font-size: var(--mantine-font-size-xs);
   font-weight: 700;
   color: var(--mantine-color-dimmed);
 }
@@ -338,7 +500,7 @@
 }
 .er-col-type {
   color: var(--mantine-color-dimmed);
-  font-size: 11px;
+  font-size: var(--mantine-font-size-xs);
 }
 .er-handle {
   opacity: 0;
@@ -368,4 +530,170 @@
 }
 .react-flow__node-domain {
   pointer-events: none;
+}
+
+.ks-doc-header {
+  margin-bottom: var(--mantine-spacing-xl);
+  padding-bottom: var(--mantine-spacing-lg);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+/* 前後のドキュメントへの移動 */
+.ks-pager {
+  display: block;
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-lg);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.ks-pager:hover {
+  border-color: var(--mantine-color-brand-3);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+/* サイドバー */
+.ks-nav-head {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.ks-nav-num {
+  font-size: var(--mantine-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--mantine-color-dimmed);
+}
+.mantine-NavLink-root[data-active] .ks-nav-num {
+  color: inherit;
+}
+
+/* Mermaid の図：影を消し、角丸をトークンにそろえる */
+.mermaid svg :is(.node rect, .node polygon, .node path) {
+  filter: none !important;
+}
+.mermaid svg .node rect {
+  rx: var(--mantine-radius-sm);
+  ry: var(--mantine-radius-sm);
+}
+
+/* ---- 表紙（ProjectCover） ---- */
+.ks-cover {
+  position: relative;
+  overflow: hidden;
+  padding: var(--mantine-spacing-xl);
+  border-radius: var(--mantine-radius-xl);
+  color: var(--mantine-color-white);
+  background:
+    radial-gradient(circle at 88% 18%, rgb(255 255 255 / 0.14) 0 120px, transparent 121px),
+    radial-gradient(circle at 96% 92%, rgb(255 255 255 / 0.08) 0 220px, transparent 221px),
+    linear-gradient(135deg, var(--ks-cover-from), var(--ks-cover-to));
+  box-shadow: var(--mantine-shadow-md);
+}
+@media (min-width: 48em) {
+  .ks-cover {
+    padding: calc(var(--mantine-spacing-xl) * 1.4) calc(var(--mantine-spacing-xl) * 1.2);
+  }
+}
+.ks-cover-eyebrow {
+  color: rgb(255 255 255 / 0.75);
+}
+.ks-cover-title {
+  margin-top: var(--mantine-spacing-lg);
+  font-size: 2.5rem;
+  line-height: 1.3;
+  color: inherit;
+}
+.ks-cover-summary {
+  margin-top: var(--mantine-spacing-sm);
+  max-width: 40em;
+  font-size: var(--mantine-font-size-lg);
+  line-height: 1.8;
+  color: rgb(255 255 255 / 0.88);
+}
+.ks-cover-meta {
+  margin-top: var(--mantine-spacing-xl);
+  padding-top: var(--mantine-spacing-lg);
+  border-top: 1px solid rgb(255 255 255 / 0.2);
+}
+.ks-cover-meta-label {
+  color: rgb(255 255 255 / 0.65);
+}
+.ks-stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* マイルストーンの横並びタイムライン */
+.ks-milestones {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(140px, 1fr);
+  overflow-x: auto;
+}
+.ks-milestone {
+  position: relative;
+  padding-right: var(--mantine-spacing-md);
+}
+.ks-milestone::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--mantine-color-default-border);
+}
+.ks-milestone:last-child::before {
+  right: auto;
+  width: 14px;
+}
+.ks-milestone-dot {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--mantine-color-brand-filled);
+  border-radius: 50%;
+  background: var(--ks-surface);
+}
+.ks-milestone[data-done] .ks-milestone-dot {
+  background: var(--mantine-color-brand-filled);
+}
+
+/* 資料のカード */
+.ks-doc-card {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.ks-doc-card:hover {
+  border-color: var(--mantine-color-brand-3);
+  box-shadow: var(--mantine-shadow-sm);
+  transform: translateY(-1px);
+}
+
+/* 空の状態 */
+.ks-empty {
+  border: 1px dashed var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+}
+
+/* 案件一覧のカード：上辺にキー色の帯 */
+.ks-project-card {
+  position: relative;
+  overflow: hidden;
+}
+.ks-project-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--ks-accent);
+}
+.ks-project-card-foot {
+  border-top: 1px solid var(--mantine-color-default-border);
 }

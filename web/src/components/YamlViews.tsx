@@ -13,14 +13,25 @@ type Estimate = {
 type Api = { spec: { info?: { title?: string; version?: string }; paths: Record<string, Record<string, { summary?: string }>> } };
 
 const LEVEL_COLOR: Record<string, string> = { 高: "red", 中: "yellow", 低: "gray" };
-const METHOD_COLOR: Record<string, string> = { GET: "blue", POST: "green", PUT: "orange", PATCH: "orange", DELETE: "red" };
+const METHOD_COLOR: Record<string, string> = { GET: "brand", POST: "teal", PUT: "orange", PATCH: "orange", DELETE: "red" };
 
-function DataTable({ head, children, minWidth = 600 }: { head: string[]; children: React.ReactNode; minWidth?: number }) {
+// right: 右寄せにする列（数値）の見出し
+function DataTable({
+  head,
+  right = [],
+  children,
+  minWidth = 600,
+}: {
+  head: string[];
+  right?: string[];
+  children: React.ReactNode;
+  minWidth?: number;
+}) {
   return (
-    <Table.ScrollContainer minWidth={minWidth}>
-      <Table striped withTableBorder withColumnBorders verticalSpacing="xs">
+    <Table.ScrollContainer minWidth={minWidth} type="native" className="ks-table-frame">
+      <Table highlightOnHover>
         <Table.Thead>
-          <Table.Tr>{head.map((h) => <Table.Th key={h} style={{ whiteSpace: "nowrap" }}>{h}</Table.Th>)}</Table.Tr>
+          <Table.Tr>{head.map((h) => <Table.Th key={h} ta={right.includes(h) ? "right" : undefined} style={{ whiteSpace: "nowrap" }}>{h}</Table.Th>)}</Table.Tr>
         </Table.Thead>
         {children}
       </Table>
@@ -79,7 +90,7 @@ export function EstimateView({ data }: { data: Estimate }) {
   return (
     <>
       <Text mb="sm">人月単価：{fmt.format(data.unit_price)}</Text>
-      <DataTable head={["フェーズ", "作業", "人月", "金額"]}>
+      <DataTable head={["フェーズ", "作業", "人月", "金額"]} right={["人月", "金額"]}>
         <Table.Tbody>
           {data.items.map((i) => (
             <Table.Tr key={i.phase + i.task}>

@@ -18,8 +18,22 @@ class ProjectMeta(Strict):
     name: str
     summary: str = ""
     status: Literal["draft", "proposed", "approved", "archived"] = "draft"
+    # 表紙に表示する項目（すべて省略可）
+    client: str = ""
+    proposed_at: str = Field(default="", pattern=r"^(\d{4}-\d{2}-\d{2})?$")
+    version: str = ""
+    # 表紙のキー色。サイトのテーマにある色の名前
+    color: Literal[
+        "brand", "blue", "indigo", "violet", "grape", "pink", "red", "orange", "yellow", "lime", "green", "teal", "cyan"
+    ] = "brand"
     # 初期の閲覧者。新規案件の初回 push 時だけ access に追加する（以降は管理画面で管理する）
     members: list[str] = []
+
+    # YAML は 2026-10-24 を日付型として読むので、文字列に戻す
+    @field_validator("proposed_at", mode="before")
+    @classmethod
+    def date_to_str(cls, v: object) -> object:
+        return v.isoformat() if isinstance(v, date) else v
 
     @field_validator("members")
     @classmethod

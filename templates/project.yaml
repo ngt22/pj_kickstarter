@@ -3,6 +3,11 @@ id: sample
 name: サンプル案件
 summary: 予約管理Webサービスの新規開発提案（テンプレートの記入例）
 status: draft   # draft | proposed | approved | archived
+# 以下は表紙に表示する項目（省略可）
+client: 〇〇株式会社 様
+proposed_at: 2026-10-24   # 提案日 YYYY-MM-DD
+version: "1.0"
+color: brand   # 表紙のキー色: brand | blue | indigo | violet | grape | pink | red | orange | yellow | lime | green | teal | cyan
 # 初期の閲覧者（省略可）。新規案件の初回 push 時だけ閲覧権限に追加します。
 # 以降の追加・削除はサイトの「閲覧権限」画面（管理者のみ）で行います。
 members:

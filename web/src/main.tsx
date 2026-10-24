@@ -6,11 +6,11 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./lib/auth";
 import "./styles.css";
-import { theme } from "./theme";
+import { cssVariablesResolver, theme } from "./theme";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="auto">
+    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} defaultColorScheme="auto">
       <BrowserRouter>
         <AuthProvider>
           <App />

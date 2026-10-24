@@ -82,6 +82,20 @@ Markdown の中に次のコードブロックを書くと、図として描画�
 | ` ```er ` | ER 図 | ドメインごとの自動配置、テーブル・列の検索、ドメイン絞り込み、キー列だけ表示、関連ハイライト、ミニマップ |
 | ` ```mermaid ` | その他の図 | Mermaid の記法そのまま（ページ遷移図など） |
 
+## デザイントークン
+
+見た目のルールは `web/src/theme.ts` に集約しています。画面や図のコードでは色コードや px を直接書かず、Mantine の props（`c="dimmed"`, `radius="md"` など）か CSS 変数（`var(--mantine-spacing-md)`, `var(--ks-surface)` など）でここの値を参照します。
+
+| トークン | 内容 |
+| --- | --- |
+| 色 | ブランド色 `brand`（藍）と灰色を含む全色を OKLCH から生成（`web/src/lib/palette.ts`）。どの色相も明るさ・鮮やかさの段階がそろうので、図やバッジで色が混ざっても強さが揃う |
+| 面 | `--ks-canvas`（画面の地）、`--ks-surface`（紙・カード）、`--ks-subtle`（表の見出しなど） |
+| 図の色 | `theme.other.chartColors` の順にガントのセクションへ割り当て。ER 図のドメイン色も同じ色を使う |
+| 余白・角丸・影 | 余白は 4px グリッド（xs 8 / sm 12 / md 16 / lg 24 / xl 40）、角丸は xs〜xl の5段階、影は5段階 |
+| 文字 | 書体はゴシック体 Noto Sans JP の1種類だけ（本文・見出し・表・図すべて）。等幅はコード・パス・型名だけ。強弱は書体を変えず、太さ（400 本文 / 500 ラベル / 700 見出し・強調）とサイズで付ける |
+
+ブランド色を案件や会社に合わせて変えるときは、`theme.ts` の `BRAND_HUE`（色相 0〜360）を変更します。
+
 ## 新しい案件を追加する
 
 ```sh
@@ -91,6 +105,19 @@ cd ingest
 uv run kickstarter-ingest validate ../projects/my-project
 uv run kickstarter-ingest push ../projects/my-project --gcp-project 本番のID   # 本番へ投入
 ```
+
+### 表紙
+
+案件を開くと、最初に表紙と概要が表示されます。表紙の項目は `project.yaml` に書きます（すべて省略可）。
+
+| 項目 | 内容 |
+| --- | --- |
+| `client` | クライアント名 |
+| `proposed_at` | 提案日（YYYY-MM-DD） |
+| `version` | 版 |
+| `color` | 表紙のキー色（`brand`, `blue`, `teal` など、テーマにある色の名前） |
+
+概要の数字（開発期間・概算費用・マイルストーン・対応中のリスク）は、ロードマップの ` ```gantt `、`estimate.yaml`、`risks.yaml` から自動で集計します。表紙のために数字を書き直す必要はありません。
 
 本番への投入には、Firebase コンソールで発行したサービスアカウント鍵を `GOOGLE_APPLICATION_CREDENTIALS` に指定してください。鍵はリポジトリに入れないでください。
 

@@ -94,7 +94,7 @@ function DomainNode({ data }: NodeProps<Node<DomainData>>) {
       className="er-domain"
       style={{ background: `var(--mantine-color-${data.color}-light)`, borderColor: `var(--mantine-color-${data.color}-outline)` }}
     >
-      <Text fw={700} size="sm" c={`${data.color}.8`}>{data.name}</Text>
+      <Text fw={700} size="sm" c={`var(--mantine-color-${data.color}-light-color)`}>{data.name}</Text>
     </div>
   );
 }
@@ -361,8 +361,8 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
           <MiniMap
             pannable
             zoomable
-            nodeColor={(n) => (n.type === "domain" ? "transparent" : theme.colors[(n.data as TableData).color]?.[5] ?? "#999")}
-            nodeStrokeColor={(n) => (n.type === "domain" ? theme.colors[(n.data as DomainData).color]?.[4] ?? "#999" : "transparent")}
+            nodeColor={(n) => (n.type === "domain" ? "transparent" : theme.colors[(n.data as TableData).color]?.[5] ?? theme.colors.gray[5])}
+            nodeStrokeColor={(n) => (n.type === "domain" ? theme.colors[(n.data as DomainData).color]?.[4] ?? theme.colors.gray[4] : "transparent")}
           />
           )}
         </ReactFlow>

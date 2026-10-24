@@ -106,6 +106,19 @@ uv run kickstarter-ingest validate ../projects/my-project
 uv run kickstarter-ingest push ../projects/my-project --gcp-project 本番のID   # 本番へ投入
 ```
 
+### 表紙
+
+案件を開くと、最初に表紙と概要が表示されます。表紙の項目は `project.yaml` に書きます（すべて省略可）。
+
+| 項目 | 内容 |
+| --- | --- |
+| `client` | クライアント名 |
+| `proposed_at` | 提案日（YYYY-MM-DD） |
+| `version` | 版 |
+| `color` | 表紙のキー色（`brand`, `blue`, `teal` など、テーマにある色の名前） |
+
+概要の数字（開発期間・概算費用・マイルストーン・対応中のリスク）は、ロードマップの ` ```gantt `、`estimate.yaml`、`risks.yaml` から自動で集計します。表紙のために数字を書き直す必要はありません。
+
 本番への投入には、Firebase コンソールで発行したサービスアカウント鍵を `GOOGLE_APPLICATION_CREDENTIALS` に指定してください。鍵はリポジトリに入れないでください。
 
 ## ローカルで動かす（エミュレータ）

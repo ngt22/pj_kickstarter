@@ -112,3 +112,15 @@ def test_push_without_target_is_rejected(capsys):
         with pytest.raises(SystemExit):
             main(argv)
         assert "--gcp-project" in capsys.readouterr().err
+
+
+def test_cover_fields(tmp_path):
+    result = load_project(ROOT / "projects" / "sample")
+    assert result.meta.proposed_at == "2026-10-24"  # YAML の日付型は文字列にそろえる
+    path = copy_sample(tmp_path)
+    text = (path / "project.yaml").read_text(encoding="utf-8")
+    text = text.replace("color: brand", "color: purple").replace("proposed_at: 2026-10-24", "proposed_at: 10/24")
+    (path / "project.yaml").write_text(text, encoding="utf-8")
+    errors = load_project(path).errors
+    assert any("color" in e for e in errors)
+    assert any("proposed_at" in e for e in errors)

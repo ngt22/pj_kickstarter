@@ -573,3 +573,127 @@ table {
   rx: var(--mantine-radius-sm);
   ry: var(--mantine-radius-sm);
 }
+
+/* ---- 表紙（ProjectCover） ---- */
+.ks-cover {
+  position: relative;
+  overflow: hidden;
+  padding: var(--mantine-spacing-xl);
+  border-radius: var(--mantine-radius-xl);
+  color: var(--mantine-color-white);
+  background:
+    radial-gradient(circle at 88% 18%, rgb(255 255 255 / 0.14) 0 120px, transparent 121px),
+    radial-gradient(circle at 96% 92%, rgb(255 255 255 / 0.08) 0 220px, transparent 221px),
+    linear-gradient(135deg, var(--ks-cover-from), var(--ks-cover-to));
+  box-shadow: var(--mantine-shadow-md);
+}
+@media (min-width: 48em) {
+  .ks-cover {
+    padding: calc(var(--mantine-spacing-xl) * 1.4) calc(var(--mantine-spacing-xl) * 1.2);
+  }
+}
+.ks-cover-eyebrow {
+  color: rgb(255 255 255 / 0.75);
+}
+.ks-cover-title {
+  margin-top: var(--mantine-spacing-lg);
+  font-size: 2.5rem;
+  line-height: 1.3;
+  color: inherit;
+}
+.ks-cover-summary {
+  margin-top: var(--mantine-spacing-sm);
+  max-width: 40em;
+  font-size: var(--mantine-font-size-lg);
+  line-height: 1.8;
+  color: rgb(255 255 255 / 0.88);
+}
+.ks-cover-meta {
+  margin-top: var(--mantine-spacing-xl);
+  padding-top: var(--mantine-spacing-lg);
+  border-top: 1px solid rgb(255 255 255 / 0.2);
+}
+.ks-cover-meta-label {
+  color: rgb(255 255 255 / 0.65);
+}
+.ks-stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* マイルストーンの横並びタイムライン */
+.ks-milestones {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(140px, 1fr);
+  overflow-x: auto;
+}
+.ks-milestone {
+  position: relative;
+  padding-right: var(--mantine-spacing-md);
+}
+.ks-milestone::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--mantine-color-default-border);
+}
+.ks-milestone:last-child::before {
+  right: auto;
+  width: 14px;
+}
+.ks-milestone-dot {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--mantine-color-brand-filled);
+  border-radius: 50%;
+  background: var(--ks-surface);
+}
+.ks-milestone[data-done] .ks-milestone-dot {
+  background: var(--mantine-color-brand-filled);
+}
+
+/* 資料のカード */
+.ks-doc-card {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.ks-doc-card:hover {
+  border-color: var(--mantine-color-brand-3);
+  box-shadow: var(--mantine-shadow-sm);
+  transform: translateY(-1px);
+}
+
+/* 空の状態 */
+.ks-empty {
+  border: 1px dashed var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+}
+
+/* 案件一覧のカード：上辺にキー色の帯 */
+.ks-project-card {
+  position: relative;
+  overflow: hidden;
+}
+.ks-project-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--ks-accent);
+}
+.ks-project-card-foot {
+  border-top: 1px solid var(--mantine-color-default-border);
+}

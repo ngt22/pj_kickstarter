@@ -60,7 +60,7 @@ uv run kickstarter-ingest push ../projects/my-project      # 本番へ投入
 ## ローカルで動かす（エミュレータ）
 
 ```sh
-# 1. エミュレータ起動（Java と pnpm が必要）
+# 1. エミュレータ起動（Java 21 以上と pnpm が必要。Ubuntu なら sudo apt install openjdk-21-jre-headless）
 cd web && pnpm install
 pnpm exec firebase emulators:start --only auth,firestore --project demo-kickstarter
 

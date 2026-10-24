@@ -25,3 +25,347 @@
 .doc-body pre {
   font-family: var(--mantine-font-family-monospace);
 }
+
+/* ガントチャート（components/Gantt.tsx） */
+.gantt-wrap {
+  font-family: var(--mantine-font-family);
+  line-height: 1.4;
+}
+.gantt-wrap p {
+  margin: 0; /* Typography の段落余白を打ち消す */
+}
+.gantt {
+  overflow: auto;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+}
+.gantt-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  background: var(--mantine-color-body);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.gantt-label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px;
+  flex-shrink: 0;
+  background: var(--mantine-color-body);
+  border-right: 1px solid var(--mantine-color-default-border);
+  min-width: 0;
+}
+.gantt-corner {
+  z-index: 4;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 700;
+}
+.gantt-tick {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--mantine-color-dimmed);
+}
+.gantt-tick-top {
+  top: 4px;
+  padding-left: 4px;
+  font-weight: 700;
+  color: var(--mantine-color-text);
+  border-left: 1px solid var(--mantine-color-default-border);
+}
+.gantt-tick-bottom {
+  top: 28px;
+  padding-left: 3px;
+}
+.gantt-grid {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+}
+.gantt-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--mantine-color-default-border);
+}
+.gantt-weekend {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--mantine-color-default-hover);
+}
+.gantt-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--mantine-color-red-6);
+}
+.gantt-row {
+  position: relative;
+  display: flex;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.gantt-section .gantt-label {
+  cursor: pointer;
+  background: var(--mantine-color-default-hover);
+}
+.gantt-section .gantt-label:hover {
+  background: var(--mantine-color-default);
+}
+.gantt-summary {
+  position: absolute;
+  top: 14px;
+  height: 6px;
+  border-radius: 3px;
+  opacity: 0.7;
+}
+.gantt-bar {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  height: 22px;
+  padding: 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 20px;
+  border: 1px solid;
+  border-radius: var(--mantine-radius-sm);
+}
+.gantt-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+}
+.gantt-milestone {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg);
+}
+.gantt-outside {
+  position: absolute;
+  top: 0;
+  line-height: 34px;
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.gantt-deps {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* 画面モック（components/ScreenMock.tsx） */
+.mock {
+  font-family: var(--mantine-font-family);
+  line-height: 1.4;
+  margin: var(--mantine-spacing-md) 0;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-sm);
+  overflow: hidden;
+}
+.mock p {
+  margin: 0;
+}
+.mock-desktop {
+  max-width: 760px;
+}
+.mock-mobile {
+  max-width: 360px;
+  border-width: 8px;
+  border-radius: 28px;
+  border-color: var(--mantine-color-dark-4);
+}
+.mock-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--mantine-color-default-hover);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.mock-chrome i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mantine-color-gray-4);
+}
+.mock-url {
+  margin-left: 12px;
+  padding: 1px 12px;
+  font-size: 11px;
+  color: var(--mantine-color-dimmed);
+  background: var(--mantine-color-body);
+  border-radius: 10px;
+}
+.mock-mobile .mock-chrome {
+  justify-content: center;
+  height: 20px;
+  border: 0;
+}
+.mock-notch {
+  width: 80px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mantine-color-dark-4);
+}
+.mock-screen {
+  padding: var(--mantine-spacing-md);
+}
+.mock-header {
+  margin: calc(var(--mantine-spacing-md) * -1) calc(var(--mantine-spacing-md) * -1) 0;
+  padding: 8px var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.mock-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-dimmed);
+  background: repeating-linear-gradient(45deg, var(--mantine-color-default-hover) 0 10px, transparent 10px 20px);
+  border: 1px dashed var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+}
+.mock-note {
+  position: absolute;
+  z-index: 1;
+  top: -8px;
+  left: -10px;
+}
+
+/* ER図（components/ErDiagram.tsx） */
+.er-wrap {
+  font-family: var(--mantine-font-family);
+  line-height: 1.4;
+}
+.er-wrap p {
+  margin: 0;
+}
+.er {
+  display: flex;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+}
+.er-side {
+  width: 270px;
+  flex-shrink: 0;
+  padding: var(--mantine-spacing-xs);
+  border-right: 1px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-body);
+  min-height: 0;
+}
+.er-canvas {
+  flex: 1;
+  min-width: 0;
+}
+.er-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 6px;
+  border-radius: var(--mantine-radius-sm);
+}
+.er-item:hover,
+.er-item[data-active] {
+  background: var(--mantine-color-default-hover);
+}
+.er-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.er-detail {
+  border-top: 1px solid var(--mantine-color-default-border);
+  padding-top: var(--mantine-spacing-xs);
+}
+.er-table {
+  font-family: var(--mantine-font-family);
+  background: var(--mantine-color-body);
+  border: 1.5px solid;
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+}
+.er-table-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  height: 40px;
+  padding: 10px 8px 0;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.er-table-head p {
+  margin: 0;
+}
+.er-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.er-key {
+  width: 18px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mantine-color-dimmed);
+}
+.er-col-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.er-col-type {
+  color: var(--mantine-color-dimmed);
+  font-size: 11px;
+}
+.er-handle {
+  opacity: 0;
+  width: 1px;
+  min-width: 1px;
+  height: 1px;
+  min-height: 1px;
+  border: 0;
+}
+.er-domain {
+  width: 100%;
+  height: 100%;
+  padding: 10px 14px;
+  border: 1.5px dashed;
+  border-radius: var(--mantine-radius-md);
+}
+.react-flow__node.er-dim,
+.react-flow__edge.er-dim {
+  opacity: 0.15;
+}
+.react-flow__node.er-selected .er-table {
+  box-shadow: 0 0 0 3px var(--mantine-color-yellow-5);
+}
+.react-flow__edge.er-edge-on path {
+  stroke: var(--mantine-color-yellow-7);
+  stroke-width: 2;
+}
+.react-flow__node-domain {
+  pointer-events: none;
+}

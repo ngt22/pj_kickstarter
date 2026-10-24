@@ -1,5 +1,6 @@
 """案件ディレクトリを読み込み、検証済みのドキュメント一覧を返す。"""
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -7,7 +8,7 @@ import yaml
 from pydantic import ValidationError
 
 from .doctypes import DOC_TYPES
-from .models import YAML_MODELS, DocHeader, ProjectMeta
+from .models import BLOCK_MODELS, YAML_MODELS, DocHeader, ProjectMeta
 
 
 @dataclass
@@ -36,6 +37,25 @@ def split_front_matter(text: str) -> tuple[dict, str]:
     return yaml.safe_load(parts[1]) or {}, parts[2].lstrip("\n")
 
 
+FENCE_RE = re.compile(r"^```([\w-]+)[ \t]*\n(.*?)^```", re.M | re.S)
+
+
+def check_blocks(body: str) -> list[str]:
+    """```gantt などの図のコードブロックを検証し、エラーメッセージを返す。"""
+    errors = []
+    for m in FENCE_RE.finditer(body):
+        lang, source = m.group(1), m.group(2)
+        model = BLOCK_MODELS.get(lang)
+        if model is None:
+            continue
+        line = body.count("\n", 0, m.start()) + 1
+        try:
+            model.model_validate(yaml.safe_load(source))
+        except (ValidationError, yaml.YAMLError) as e:
+            errors.append(f"{lang} ブロック（本文 {line} 行目）: {e}")
+    return errors
+
+
 def load_project(path: Path) -> LoadResult:
     result = LoadResult()
 
@@ -58,8 +78,12 @@ def load_project(path: Path) -> LoadResult:
         text = file.read_text(encoding="utf-8")
         try:
             if dt.format == "markdown":
-                header, _ = split_front_matter(text)
+                header, body = split_front_matter(text)
                 parsed = DocHeader.model_validate(header)
+                block_errors = check_blocks(body)
+                if block_errors:
+                    result.errors.extend(f"{dt.filename}: {e}" for e in block_errors)
+                    continue
             else:
                 parsed = YAML_MODELS[dt.key].model_validate(yaml.safe_load(text))
         except (ValidationError, ValueError, yaml.YAMLError) as e:

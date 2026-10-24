@@ -1,15 +1,37 @@
+import { isValidElement, lazy, Suspense } from "react";
+import { Loader } from "@mantine/core";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Gantt from "./Gantt";
 import Mermaid from "./Mermaid";
+import ScreenMock from "./ScreenMock";
+
+const ErDiagram = lazy(() => import("./ErDiagram"));
+
+// ```言語名 のコードブロックを図として描画する
+const DIAGRAMS: Record<string, (source: string) => React.ReactElement> = {
+  "language-mermaid": (s) => <Mermaid code={s.trim()} />,
+  "language-gantt": (s) => <Gantt source={s} />,
+  "language-mock": (s) => <ScreenMock source={s} />,
+  "language-er": (s) => (
+    <Suspense fallback={<Loader size="sm" />}>
+      <ErDiagram source={s} />
+    </Suspense>
+  ),
+};
 
 export default function Markdown({ text }: { text: string }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        code({ className, children, ...props }) {
-          if (className === "language-mermaid") return <Mermaid code={String(children).trim()} />;
-          return <code className={className} {...props}>{children}</code>;
+        // 図は <pre> の中に入れない（等幅・改行保持のスタイルが効いてしまうため）
+        pre({ children, ...props }) {
+          if (isValidElement<{ className?: string; children?: React.ReactNode }>(children)) {
+            const render = DIAGRAMS[children.props.className ?? ""];
+            if (render) return render(String(children.props.children));
+          }
+          return <pre {...props}>{children}</pre>;
         },
       }}
     >

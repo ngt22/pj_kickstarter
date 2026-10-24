@@ -54,6 +54,48 @@ def test_markdown_requires_title(tmp_path):
     assert main(["validate", str(path)]) == 1
 
 
+def test_invalid_gantt_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    text = (path / "roadmap.md").read_text(encoding="utf-8").replace("after: slot,", "after: nothing,")
+    (path / "roadmap.md").write_text(text, encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("roadmap.md: gantt") and "nothing" in e for e in result.errors)
+
+
+def test_templates_are_valid(tmp_path):
+    dest = tmp_path / "sample"
+    shutil.copytree(ROOT / "templates", dest)
+    result = load_project(dest)
+    # project.yaml は id がディレクトリ名と一致しないので除く
+    assert [e for e in result.errors if not e.startswith("project.yaml")] == []
+
+
+def test_unknown_mock_element_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    text = (path / "screens.md").read_text(encoding="utf-8").replace("- checkbox:", "- chekbox:")
+    (path / "screens.md").write_text(text, encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("screens.md: mock") and "chekbox" in e for e in result.errors)
+
+
+def test_mock_elements_match_web():
+    import re
+
+    from kickstarter_ingest.models import MOCK_ELEMENTS
+
+    src = (ROOT / "web" / "src" / "components" / "ScreenMock.tsx").read_text(encoding="utf-8")
+    body = src.split("const ELEMENTS", 1)[1].split("\n};", 1)[0]
+    assert set(re.findall(r"^  (\w+): \(", body, re.M)) == set(MOCK_ELEMENTS)
+
+
+def test_broken_er_reference_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    text = (path / "er-diagram.md").read_text(encoding="utf-8").replace("fk: menu }", "fk: menus }")
+    (path / "er-diagram.md").write_text(text, encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("er-diagram.md: er") and "menus" in e for e in result.errors)
+
+
 def test_members_is_optional(tmp_path):
     path = copy_sample(tmp_path)
     text = (path / "project.yaml").read_text(encoding="utf-8")

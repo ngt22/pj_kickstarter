@@ -81,6 +81,15 @@ cd web && pnpm emu:user a@example.com pass1234   # 任意のアカウント
 
 Emulator UI（http://localhost:4000 ）の Authentication でも作れます。その場合は Email と Password を実際に入力し、`Verified email?` をオンにしてください。
 
+### リモートのサーバー（headless）で動かす場合
+
+ブラウザはエミュレータ（9099, 8080）と開発サーバー（5173）に直接つなぎます。サーバー側の `localhost` に届くよう、SSH でポートを転送してください。
+
+```sh
+ssh -L 4000:localhost:4000 -L 4400:localhost:4400 -L 9099:localhost:9099 \
+    -L 8080:localhost:8080 -L 9150:localhost:9150 -L 5173:localhost:5173 user@server
+```
+
 ## 本番に公開する（Firebase Hosting）
 
 1. Firebase コンソールでプロジェクトを作り、Authentication の「メール/パスワード」と「Google」を有効にする

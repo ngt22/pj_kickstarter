@@ -52,3 +52,19 @@ def test_markdown_requires_title(tmp_path):
     path = copy_sample(tmp_path)
     (path / "requirements.md").write_text("# 見出しだけ\n", encoding="utf-8")
     assert main(["validate", str(path)]) == 1
+
+
+def test_invalid_gantt_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    text = (path / "roadmap.md").read_text(encoding="utf-8").replace("after: slot,", "after: nothing,")
+    (path / "roadmap.md").write_text(text, encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("roadmap.md: gantt") and "nothing" in e for e in result.errors)
+
+
+def test_templates_are_valid(tmp_path):
+    dest = tmp_path / "sample"
+    shutil.copytree(ROOT / "templates", dest)
+    result = load_project(dest)
+    # project.yaml は id がディレクトリ名と一致しないので除く
+    assert [e for e in result.errors if not e.startswith("project.yaml")] == []

@@ -25,3 +25,145 @@
 .doc-body pre {
   font-family: var(--mantine-font-family-monospace);
 }
+
+/* ガントチャート（components/Gantt.tsx） */
+.gantt-wrap {
+  font-family: var(--mantine-font-family);
+  line-height: 1.4;
+}
+.gantt-wrap p {
+  margin: 0; /* Typography の段落余白を打ち消す */
+}
+.gantt {
+  overflow: auto;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+}
+.gantt-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  background: var(--mantine-color-body);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.gantt-label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px;
+  flex-shrink: 0;
+  background: var(--mantine-color-body);
+  border-right: 1px solid var(--mantine-color-default-border);
+  min-width: 0;
+}
+.gantt-corner {
+  z-index: 4;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 700;
+}
+.gantt-tick {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--mantine-color-dimmed);
+}
+.gantt-tick-top {
+  top: 4px;
+  padding-left: 4px;
+  font-weight: 700;
+  color: var(--mantine-color-text);
+  border-left: 1px solid var(--mantine-color-default-border);
+}
+.gantt-tick-bottom {
+  top: 28px;
+  padding-left: 3px;
+}
+.gantt-grid {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+}
+.gantt-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--mantine-color-default-border);
+}
+.gantt-weekend {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--mantine-color-default-hover);
+}
+.gantt-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--mantine-color-red-6);
+}
+.gantt-row {
+  position: relative;
+  display: flex;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.gantt-section .gantt-label {
+  cursor: pointer;
+  background: var(--mantine-color-default-hover);
+}
+.gantt-section .gantt-label:hover {
+  background: var(--mantine-color-default);
+}
+.gantt-summary {
+  position: absolute;
+  top: 14px;
+  height: 6px;
+  border-radius: 3px;
+  opacity: 0.7;
+}
+.gantt-bar {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  height: 22px;
+  padding: 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 20px;
+  border: 1px solid;
+  border-radius: var(--mantine-radius-sm);
+}
+.gantt-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+}
+.gantt-milestone {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg);
+}
+.gantt-outside {
+  position: absolute;
+  top: 0;
+  line-height: 34px;
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.gantt-deps {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  overflow: visible;
+}

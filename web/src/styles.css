@@ -167,3 +167,85 @@
   pointer-events: none;
   overflow: visible;
 }
+
+/* 画面モック（components/ScreenMock.tsx） */
+.mock {
+  font-family: var(--mantine-font-family);
+  line-height: 1.4;
+  margin: var(--mantine-spacing-md) 0;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-sm);
+  overflow: hidden;
+}
+.mock p {
+  margin: 0;
+}
+.mock-desktop {
+  max-width: 760px;
+}
+.mock-mobile {
+  max-width: 360px;
+  border-width: 8px;
+  border-radius: 28px;
+  border-color: var(--mantine-color-dark-4);
+}
+.mock-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--mantine-color-default-hover);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.mock-chrome i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mantine-color-gray-4);
+}
+.mock-url {
+  margin-left: 12px;
+  padding: 1px 12px;
+  font-size: 11px;
+  color: var(--mantine-color-dimmed);
+  background: var(--mantine-color-body);
+  border-radius: 10px;
+}
+.mock-mobile .mock-chrome {
+  justify-content: center;
+  height: 20px;
+  border: 0;
+}
+.mock-notch {
+  width: 80px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mantine-color-dark-4);
+}
+.mock-screen {
+  padding: var(--mantine-spacing-md);
+}
+.mock-header {
+  margin: calc(var(--mantine-spacing-md) * -1) calc(var(--mantine-spacing-md) * -1) 0;
+  padding: 8px var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.mock-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-dimmed);
+  background: repeating-linear-gradient(45deg, var(--mantine-color-default-hover) 0 10px, transparent 10px 20px);
+  border: 1px dashed var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+}
+.mock-note {
+  position: absolute;
+  z-index: 1;
+  top: -8px;
+  left: -10px;
+}

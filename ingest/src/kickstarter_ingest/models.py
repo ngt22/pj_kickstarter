@@ -148,6 +148,74 @@ class GanttBlock(Strict):
         return self
 
 
+# 画面モック（```mock）の部品と、それぞれに書ける項目。web/src/components/ScreenMock.tsx と揃える
+# None は中身を自由に書ける部品（文字列や数値の短縮形のみ）
+MOCK_ELEMENTS: dict[str, set[str] | None] = {
+    "header": {"title", "links", "actions", "note"},
+    "heading": {"text", "level", "note"},
+    "text": {"text", "dimmed", "note"},
+    "input": {"label", "type", "placeholder", "value", "required", "help", "error", "note"},
+    "select": {"label", "options", "value", "required", "note"},
+    "checkbox": {"label", "checked", "note"},
+    "radio": {"label", "options", "value", "note"},
+    "button": {"label", "variant", "to", "disabled", "full", "note"},
+    "buttons": {"items", "align"},
+    "row": {"items"},
+    "card": {"title", "items", "note"},
+    "table": {"columns", "rows", "note"},
+    "list": {"items", "note"},
+    "tabs": {"items", "active", "note"},
+    "alert": {"title", "text", "color", "note"},
+    "image": {"label", "height", "note"},
+    "divider": None,
+    "space": None,
+}
+BUTTON_KEYS = MOCK_ELEMENTS["button"]
+CONTAINERS = {"row", "card"}
+
+
+def check_mock_elements(items: Any, where: str = "body") -> None:
+    if not isinstance(items, list):
+        raise ValueError(f"{where} は部品のリストにしてください")
+    for i, el in enumerate(items):
+        path = f"{where}[{i}]"
+        if not isinstance(el, dict) or len(el) != 1:
+            raise ValueError(f"{path}: 部品は「- 種類: 中身」の形で1つずつ書いてください")
+        kind, value = next(iter(el.items()))
+        if kind not in MOCK_ELEMENTS:
+            raise ValueError(f"{path}: 不明な部品 {kind}（使える部品: {', '.join(MOCK_ELEMENTS)}）")
+        allowed = MOCK_ELEMENTS[kind]
+        if kind in ("buttons", "row", "list", "tabs") and isinstance(value, list):
+            value = {"items": value}
+        if isinstance(value, dict) and allowed is not None:
+            unknown = set(value) - allowed
+            if unknown:
+                raise ValueError(f"{path}: {kind} に書けない項目 {sorted(unknown)}（書ける項目: {sorted(allowed)}）")
+            if kind in CONTAINERS and "items" in value:
+                check_mock_elements(value["items"], f"{path}.{kind}")
+            if kind == "buttons":
+                for b in value.get("items", []):
+                    if isinstance(b, dict) and set(b) - BUTTON_KEYS:
+                        raise ValueError(f"{path}: ボタンに書けない項目 {sorted(set(b) - BUTTON_KEYS)}")
+            if kind == "header":
+                for b in value.get("actions", []):
+                    if isinstance(b, dict) and set(b) - BUTTON_KEYS:
+                        raise ValueError(f"{path}: ボタンに書けない項目 {sorted(set(b) - BUTTON_KEYS)}")
+
+
+class MockBlock(Strict):
+    device: Literal["desktop", "mobile"] = "desktop"
+    title: str | None = None
+    body: list[Any] = Field(min_length=1)
+
+    @field_validator("body")
+    @classmethod
+    def check_body(cls, v: list[Any]) -> list[Any]:
+        check_mock_elements(v)
+        return v
+
+
 BLOCK_MODELS: dict[str, type[BaseModel]] = {
     "gantt": GanttBlock,
+    "mock": MockBlock,
 }

@@ -52,3 +52,21 @@ def test_markdown_requires_title(tmp_path):
     path = copy_sample(tmp_path)
     (path / "requirements.md").write_text("# 見出しだけ\n", encoding="utf-8")
     assert main(["validate", str(path)]) == 1
+
+
+def test_members_is_optional(tmp_path):
+    path = copy_sample(tmp_path)
+    text = (path / "project.yaml").read_text(encoding="utf-8")
+    (path / "project.yaml").write_text(text.split("members:")[0], encoding="utf-8")
+    result = load_project(path)
+    assert result.errors == []
+    assert result.meta.members == []
+
+
+def test_push_without_target_is_rejected(capsys):
+    import pytest
+
+    for argv in (["push", str(ROOT / "projects" / "sample")], ["admin", "list"]):
+        with pytest.raises(SystemExit):
+            main(argv)
+        assert "--gcp-project" in capsys.readouterr().err

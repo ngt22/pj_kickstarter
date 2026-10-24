@@ -17,7 +17,8 @@ class ProjectMeta(Strict):
     name: str
     summary: str = ""
     status: Literal["draft", "proposed", "approved", "archived"] = "draft"
-    members: list[str] = Field(min_length=1)
+    # 初期の閲覧者。新規案件の初回 push 時だけ access に追加する（以降は管理画面で管理する）
+    members: list[str] = []
 
     @field_validator("members")
     @classmethod

@@ -15,7 +15,6 @@ export type ProjectRecord = {
   name: string;
   summary: string;
   status: string;
-  members: string[];
 };
 
 export function stripFrontMatter(text: string): string {

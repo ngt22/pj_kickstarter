@@ -21,7 +21,6 @@ import {
 import { neutral, ramp } from "./lib/palette";
 
 const SANS = '"Noto Sans JP", "Hiragino Sans", system-ui, sans-serif';
-const SERIF = '"Noto Serif JP", "Hiragino Mincho ProN", serif';
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
 // ブランドカラー：落ち着いた藍色。主要ボタン・選択状態・リンクに使う
@@ -84,7 +83,6 @@ export const theme = createTheme({
   },
 
   other: {
-    serif: SERIF,
     // 図（ガントのセクション、ER のドメインなど）で順に割り当てる色。隣どうしが見分けやすい順
     chartColors: ["brand", "teal", "orange", "grape", "cyan", "pink", "lime", "yellow", "indigo", "red"],
   },
@@ -132,9 +130,7 @@ function darkLightVariants(t: Parameters<CSSVariablesResolver>[0]): Record<strin
 }
 
 export const cssVariablesResolver: CSSVariablesResolver = (t) => ({
-  variables: {
-    "--ks-font-serif": SERIF,
-  },
+  variables: {},
   light: {
     "--ks-canvas": t.colors.gray[1],
     "--ks-surface": t.white,

@@ -38,21 +38,26 @@
   border: 1px solid var(--mantine-color-default-border);
 }
 
-/* Markdown の本文は明朝体（Noto Serif JP）にする。コードは等幅のまま */
+/* 書体のルール（README「デザイントークン」）
+   - 書体はゴシック体（Noto Sans JP）の1種類だけ。本文・見出し・表・図すべて同じ
+   - 等幅はコード・パス・型名だけ
+   - 強弱は書体を変えず、太さ（400 本文 / 500 ラベル / 700 見出し）とサイズで付ける */
 .doc-body {
-  font-family: var(--ks-font-serif);
   line-height: 1.9;
 }
-.doc-body h1,
-.doc-body h2,
-.doc-body h3,
-.doc-body h4 {
-  font-family: var(--ks-font-serif);
+
+/* 見出しは仮名の字間を詰めて締める（本文は読みやすさ優先で詰めない） */
+h1,
+h2,
+h3,
+h4 {
+  font-feature-settings: "palt";
+  letter-spacing: 0.02em;
 }
 
-/* 図の中は画面の部品なので、本文の明朝体を引き継がない */
-.doc-body :is(.mock, .gantt-wrap, .er-wrap) :is(h1, h2, h3, h4) {
-  font-family: var(--mantine-font-family);
+/* 表の数字は桁をそろえる */
+table {
+  font-variant-numeric: tabular-nums;
 }
 
 /* 表の枠。Mantine の Table（.ks-table-frame で包む）と Markdown の表を同じ見た目にする */

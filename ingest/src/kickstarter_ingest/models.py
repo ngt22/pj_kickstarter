@@ -215,7 +215,58 @@ class MockBlock(Strict):
         return v
 
 
+class ErDomain(Strict):
+    id: str
+    name: str | None = None
+    color: str | None = None
+
+
+class ErColumn(Strict):
+    name: str
+    type: str | None = None
+    pk: bool = False
+    fk: str | None = None  # "テーブル名" または "テーブル名.列名"
+    unique: bool = False
+    nullable: bool = False
+    note: str | None = None
+
+
+class ErTable(Strict):
+    name: str
+    label: str | None = None
+    domain: str | None = None
+    note: str | None = None
+    columns: list[ErColumn] = Field(min_length=1)
+
+
+class ErBlock(Strict):
+    domains: list[ErDomain] = []
+    tables: list[ErTable] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def check_refs(self) -> "ErBlock":
+        domains = {d.id for d in self.domains}
+        tables = {t.name: t for t in self.tables}
+        if len(tables) != len(self.tables):
+            raise ValueError("テーブル名が重複しています")
+        for t in self.tables:
+            if t.domain is not None and t.domain not in domains:
+                raise ValueError(f"テーブル {t.name} の domain: {t.domain} が domains にありません")
+            for c in t.columns:
+                if not c.fk:
+                    continue
+                name, _, col = c.fk.partition(".")
+                target = tables.get(name)
+                if target is None:
+                    raise ValueError(f"{t.name}.{c.name} の参照先 {c.fk} がありません")
+                col = col or next((x.name for x in target.columns if x.pk), "")
+                if not any(x.name == col for x in target.columns):
+                    raise ValueError(f"{t.name}.{c.name} の参照先の列 {c.fk} がありません")
+        return self
+
+
 BLOCK_MODELS: dict[str, type[BaseModel]] = {
     "gantt": GanttBlock,
     "mock": MockBlock,
+    "er": ErBlock,
 }

@@ -6,7 +6,7 @@
 
 ```
 pj_kickstarter/
-├─ web/        閲覧サイト（Vite + React + React Router の SPA、Mantine、Firebase Auth、Mermaid）
+├─ web/        閲覧サイト（Vite + React + React Router の SPA、Mantine、Firebase Auth、Mermaid、React Flow）
 ├─ ingest/     取り込み CLI（Python / uv）：原稿を検証して Firestore に投入
 ├─ templates/  14種の原稿テンプレート（記入例つき）
 ├─ projects/   案件ごとの原稿。templates をコピーして記入する
@@ -32,11 +32,11 @@ pj_kickstarter/
 | personas | personas.md | Markdown（ユースケース図は Mermaid） |
 | requirements | requirements.md | Markdown |
 | tech-spec | tech-spec.md | Markdown |
-| screens | screens.md | Markdown（ワイヤーフレームはテキスト図） |
+| screens | screens.md | Markdown（` ```mock ` ブロックで画面モック） |
 | page-flow | page-flow.md | Mermaid flowchart |
-| er-diagram | er-diagram.md | Mermaid erDiagram |
+| er-diagram | er-diagram.md | ` ```er ` ブロック → ズーム・検索・ドメイン絞り込みできる ER 図 |
 | api | api.yaml | OpenAPI 3 → エンドポイント一覧 |
-| roadmap | roadmap.md | Mermaid gantt |
+| roadmap | roadmap.md | ` ```gantt ` ブロック → スクロール・ズームできるガントチャート |
 | estimate | estimate.yaml | 表＋合計の自動計算 |
 | risks | risks.yaml | 表 |
 | test-plan | test-plan.md | Markdown |
@@ -44,6 +44,17 @@ pj_kickstarter/
 | adr | adr.md | Markdown |
 
 Markdown の原稿には front matter（`title`, `order`）が必要です。不要なドキュメントはファイルを消せば省略されます。
+
+### 図のブロック
+
+Markdown の中に次のコードブロックを書くと、図として描画されます。中身はどれも YAML で、`validate` が書き間違い（存在しない参照先や部品名など）を検出します。書き方は `templates/` の各ファイルの冒頭コメントを見てください。
+
+| ブロック | 用途 | 主な機能 |
+| --- | --- | --- |
+| ` ```gantt ` | スケジュール | `after` で日付を自動計算、日/週/月の切り替え、今日線、依存の矢印、セクション折りたたみ、全画面 |
+| ` ```mock ` | 画面モック | ブラウザ/スマホ枠、入力・表・ボタンなどの部品、`note` 番号で項目表と対応、`to` で遷移先 |
+| ` ```er ` | ER 図 | ドメインごとの自動配置、テーブル・列の検索、ドメイン絞り込み、キー列だけ表示、関連ハイライト、ミニマップ |
+| ` ```mermaid ` | その他の図 | Mermaid の記法そのまま（ページ遷移図など） |
 
 ## 新しい案件を追加する
 

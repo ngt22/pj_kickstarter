@@ -86,3 +86,11 @@ def test_mock_elements_match_web():
     src = (ROOT / "web" / "src" / "components" / "ScreenMock.tsx").read_text(encoding="utf-8")
     body = src.split("const ELEMENTS", 1)[1].split("\n};", 1)[0]
     assert set(re.findall(r"^  (\w+): \(", body, re.M)) == set(MOCK_ELEMENTS)
+
+
+def test_broken_er_reference_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    text = (path / "er-diagram.md").read_text(encoding="utf-8").replace("fk: menu }", "fk: menus }")
+    (path / "er-diagram.md").write_text(text, encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("er-diagram.md: er") and "menus" in e for e in result.errors)

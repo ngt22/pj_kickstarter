@@ -7,7 +7,7 @@ import { useAuth } from "../lib/auth";
 import { auth } from "../lib/firebase";
 
 export default function Layout({ children, sidebar }: { children: ReactNode; sidebar?: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [opened, { toggle, close }] = useDisclosure();
   return (
     <AppShell
@@ -19,6 +19,7 @@ export default function Layout({ children, sidebar }: { children: ReactNode; sid
         <Group h="100%" px="md">
           {sidebar && <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="目次" />}
           <Anchor component={Link} to="/" fw={700} c="inherit" underline="never" mr="auto">Kickstarter</Anchor>
+          {isAdmin && <Button component={Link} to="/admin" variant="subtle" size="xs">閲覧権限</Button>}
           <Text size="sm" c="dimmed" visibleFrom="xs">{user?.email}</Text>
           <Button variant="default" size="xs" onClick={() => signOut(auth)}>ログアウト</Button>
         </Group>

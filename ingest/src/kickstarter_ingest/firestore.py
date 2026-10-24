@@ -1,9 +1,9 @@
-"""Firestore への書き込み。FIRESTORE_EMULATOR_HOST があればエミュレータに書く。"""
+"""Firestore / Auth への書き込み。FIRESTORE_EMULATOR_HOST / FIREBASE_AUTH_EMULATOR_HOST があればエミュレータに書く。"""
 
 import os
 
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import auth, credentials, firestore
 from google.auth.credentials import AnonymousCredentials
 
 from .loader import LoadResult
@@ -16,18 +16,32 @@ class _EmulatorCredential(credentials.Base):
         return AnonymousCredentials()
 
 
+def _init(gcp_project: str | None) -> None:
+    if firebase_admin._apps:
+        return
+    options = {"projectId": gcp_project} if gcp_project else None
+    # 本番は GOOGLE_APPLICATION_CREDENTIALS のサービスアカウント鍵を使う
+    on_emulator = os.environ.get("FIRESTORE_EMULATOR_HOST") or os.environ.get("FIREBASE_AUTH_EMULATOR_HOST")
+    firebase_admin.initialize_app(credential=_EmulatorCredential() if on_emulator else None, options=options)
+
+
 def push(result: LoadResult, gcp_project: str | None) -> int:
     assert result.meta is not None
-    options = {"projectId": gcp_project} if gcp_project else None
-    if not firebase_admin._apps:
-        # 本番は GOOGLE_APPLICATION_CREDENTIALS のサービスアカウント鍵を使う
-        cred = _EmulatorCredential() if os.environ.get("FIRESTORE_EMULATOR_HOST") else None
-        firebase_admin.initialize_app(credential=cred, options=options)
+    _init(gcp_project)
     db = firestore.client()
 
     project_ref = db.collection("projects").document(result.meta.id)
+    is_new = not project_ref.get().exists
     batch = db.batch()
-    batch.set(project_ref, {**result.meta.model_dump(), "updatedAt": firestore.SERVER_TIMESTAMP})
+    # 閲覧者は案件ドキュメントに載せない（クライアント同士でメールが見えないように access に分ける）
+    batch.set(project_ref, {**result.meta.model_dump(exclude={"members"}), "updatedAt": firestore.SERVER_TIMESTAMP})
+    # members は新規案件の初期値としてだけ使う。以降は管理画面で外した人を push で戻さないよう、触らない
+    for email in result.meta.members if is_new else []:
+        batch.set(
+            db.collection("access").document(email),
+            {"projects": firestore.ArrayUnion([result.meta.id]), "updatedAt": firestore.SERVER_TIMESTAMP},
+            merge=True,
+        )
 
     keep = set()
     for doc in result.docs:
@@ -49,3 +63,18 @@ def push(result: LoadResult, gcp_project: str | None) -> int:
             batch.delete(snap.reference)
     batch.commit()
     return len(result.docs)
+
+
+def set_admin(email: str, admin: bool, gcp_project: str | None) -> None:
+    """カスタムクレーム admin を付け外しする。ユーザーは先にサインアップしている必要がある。"""
+    _init(gcp_project)
+    user = auth.get_user_by_email(email)
+    claims = {k: v for k, v in (user.custom_claims or {}).items() if k != "admin"}
+    if admin:
+        claims["admin"] = True
+    auth.set_custom_user_claims(user.uid, claims or None)
+
+
+def list_admins(gcp_project: str | None) -> list[str]:
+    _init(gcp_project)
+    return sorted(u.email for u in auth.list_users().iterate_all() if (u.custom_claims or {}).get("admin") is True)

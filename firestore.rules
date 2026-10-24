@@ -1,23 +1,46 @@
 rules_version = '2';
 
-// 書き込みは ingest CLI（Admin SDK）だけが行うため、クライアントからは読み取り専用。
-// 閲覧できるのは、メール確認済みで、案件の members にメールアドレスが含まれるユーザーのみ。
+// 案件の原稿の書き込みは ingest CLI（Admin SDK）だけが行うため、クライアントからは読み取り専用。
+// 管理者（カスタムクレーム admin: true）は全案件を読めて、閲覧権限（access）を編集できる。
+// クライアントは access/{自分のメール}.projects に含まれる案件だけを読める。
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isMember(project) {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email.lower() in project.data.members;
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function canView(projectId) {
+      let access = /databases/$(database)/documents/access/$(myEmail());
+      return isAdmin() || (signedIn() && exists(access) && projectId in get(access).data.projects);
     }
 
     match /projects/{projectId} {
-      allow read: if isMember(resource);
+      allow read: if canView(projectId);
       allow write: if false;
 
       match /docs/{docType} {
-        allow read: if isMember(get(/databases/$(database)/documents/projects/$(projectId)));
+        allow read: if canView(projectId);
         allow write: if false;
       }
+    }
+
+    // 閲覧権限。ドキュメントIDは小文字のメールアドレス。
+    // 閲覧者リストを案件側に持たないので、クライアント同士でお互いのメールは見えない。
+    match /access/{email} {
+      allow read: if isAdmin() || (signedIn() && myEmail() == email);
+      allow create, update: if isAdmin()
+        && email == email.lower()
+        && request.resource.data.keys().hasOnly(["projects", "updatedAt"])
+        && request.resource.data.projects is list;
+      allow delete: if isAdmin();
     }
   }
 }

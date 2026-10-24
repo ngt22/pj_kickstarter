@@ -1,5 +1,5 @@
 import { Alert, Badge, Card, Group, Loader, SimpleGrid, Text, Title } from "@mantine/core";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
@@ -9,19 +9,30 @@ import { db } from "../lib/firebase";
 
 const STATUS_COLOR: Record<string, string> = { draft: "gray", proposed: "blue", approved: "green", archived: "dark" };
 
+// 管理者は全件を取得する。クライアントは access/{自分のメール} にある案件を1件ずつ取得する
+// （全件クエリはルールで拒否されるため）
+async function loadProjects(email: string, isAdmin: boolean): Promise<ProjectRecord[]> {
+  if (isAdmin) {
+    const snap = await getDocs(collection(db, "projects"));
+    return snap.docs.map((d) => d.data() as ProjectRecord);
+  }
+  const access = await getDoc(doc(db, "access", email.toLowerCase()));
+  const ids: string[] = access.data()?.projects ?? [];
+  const snaps = await Promise.all(ids.map((id) => getDoc(doc(db, "projects", id))));
+  return snaps.filter((s) => s.exists()).map((s) => s.data() as ProjectRecord);
+}
+
 export default function ProjectList() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [projects, setProjects] = useState<ProjectRecord[] | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user?.email) return;
-    // ルールが members に自分のメールを含む案件しか許可しないため、クエリも同じ条件にする
-    const q = query(collection(db, "projects"), where("members", "array-contains", user.email.toLowerCase()));
-    getDocs(q)
-      .then((snap) => setProjects(snap.docs.map((d) => d.data() as ProjectRecord)))
+    loadProjects(user.email, isAdmin)
+      .then(setProjects)
       .catch((e) => setError(String(e)));
-  }, [user]);
+  }, [user, isAdmin]);
 
   return (
     <Layout>

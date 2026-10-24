@@ -1,0 +1,8 @@
+# 案件メタ情報。id はディレクトリ名と同じにする（英小文字・数字・ハイフン）
+id: sample
+name: サンプル案件
+summary: 予約管理Webサービスの新規開発提案（テンプレートの記入例）
+status: draft   # draft | proposed | approved | archived
+# 閲覧を許可するメールアドレス（Firebase Auth のメール確認済みアカウント）
+members:
+  - you@example.com

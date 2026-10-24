@@ -1,0 +1,17 @@
+title: リスク管理表
+order: 11
+risks:
+  - id: R-01
+    title: 要件の追加による遅延
+    probability: 中   # 高 | 中 | 低
+    impact: 高
+    mitigation: 変更はADRに記録し、優先度で次フェーズへ回す
+    owner: PM
+    status: open      # open | closed
+  - id: R-02
+    title: Firestore 無料枠の超過
+    probability: 低
+    impact: 中
+    mitigation: 読み取り回数をモニタリングし、上限前にアラート
+    owner: 開発
+    status: open

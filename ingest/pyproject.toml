@@ -1,0 +1,23 @@
+[project]
+name = "kickstarter-ingest"
+version = "0.1.0"
+description = "提案資料（Markdown / YAML）を検証して Firestore に流し込む CLI"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "firebase-admin>=6.5",
+]
+
+[project.scripts]
+kickstarter-ingest = "kickstarter_ingest.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

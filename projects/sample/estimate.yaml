@@ -1,0 +1,19 @@
+title: 見積もり
+order: 10
+currency: JPY
+unit_price: 800000   # 人月単価
+items:
+  - phase: 要件定義
+    task: 要件ヒアリング・要件定義書作成
+    person_months: 0.5
+  - phase: 設計
+    task: 画面・API・DB設計
+    person_months: 0.5
+  - phase: 開発
+    task: 予約機能・管理画面
+    person_months: 1.5
+  - phase: テスト
+    task: 結合・受入テスト支援
+    person_months: 0.5
+notes:
+  - インフラ費用は Firebase 無料枠内を想定

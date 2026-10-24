@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// 書き込みは ingest CLI（Admin SDK）だけが行うため、クライアントからは読み取り専用。
+// 閲覧できるのは、メール確認済みで、案件の members にメールアドレスが含まれるユーザーのみ。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isMember(project) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in project.data.members;
+    }
+
+    match /projects/{projectId} {
+      allow read: if isMember(resource);
+      allow write: if false;
+
+      match /docs/{docType} {
+        allow read: if isMember(get(/databases/$(database)/documents/projects/$(projectId)));
+        allow write: if false;
+      }
+    }
+  }
+}

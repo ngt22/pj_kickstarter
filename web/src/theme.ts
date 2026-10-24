@@ -97,10 +97,10 @@ export const theme = createTheme({
     }),
     Card: Card.extend({ defaultProps: { withBorder: true, radius: "lg", padding: "lg", shadow: "xs" } }),
     Paper: Paper.extend({ defaultProps: { radius: "lg" } }),
-    Button: Button.extend({ styles: { label: { fontWeight: 600 } } }),
+    Button: Button.extend({ styles: { label: { fontWeight: 700 } } }),
     Badge: Badge.extend({
       defaultProps: { variant: "light", radius: "sm" },
-      styles: { root: { textTransform: "none", letterSpacing: 0, fontWeight: 600 } },
+      styles: { root: { textTransform: "none", letterSpacing: 0, fontWeight: 700 } },
     }),
     Alert: Alert.extend({ defaultProps: { variant: "light", radius: "md" } }),
     NavLink: NavLink.extend({
@@ -115,7 +115,8 @@ export const theme = createTheme({
   },
 });
 
-// 面の色。canvas（画面の地）の上に surface（紙・カード）を置き、subtle は表の見出しなどの薄い面
+// 面の色。canvas（画面の地）の上に surface（紙・カード）を置き、subtle は表の見出しなどの薄い面。
+// 本文の文字（text-body）は見出しより一段淡くして、見出しとの強弱をつける
 // Mantine 既定のダークモードの light 系（淡い背景のボタン・バッジ）は暗く沈みすぎるので、
 // 中間の濃さの色を半透明で重ねて、ライトモードと同じ「淡い色面」に見せる
 function darkLightVariants(t: Parameters<CSSVariablesResolver>[0]): Record<string, string> {
@@ -135,12 +136,14 @@ export const cssVariablesResolver: CSSVariablesResolver = (t) => ({
     "--ks-canvas": t.colors.gray[1],
     "--ks-surface": t.white,
     "--ks-subtle": t.colors.gray[0],
+    "--ks-text-body": t.colors.gray[8],
     "--mantine-color-default-border": t.colors.gray[2],
   },
   dark: {
     "--ks-canvas": t.colors.dark[8],
     "--ks-surface": t.colors.dark[7],
     "--ks-subtle": t.colors.dark[6],
+    "--ks-text-body": t.colors.dark[1],
     "--mantine-color-default-border": t.colors.dark[5],
     ...darkLightVariants(t),
   },

@@ -8,6 +8,7 @@ export type DocRecord = {
   order: number;
   format: DocFormat;
   body: string;
+  updatedAt?: { toDate(): Date }; // Firestore の Timestamp
 };
 
 export type ProjectRecord = {

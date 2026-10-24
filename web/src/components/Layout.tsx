@@ -13,10 +13,10 @@ export default function Layout({ children, sidebar }: { children: ReactNode; sid
     <AppShell
       header={{ height: 60 }}
       navbar={sidebar ? { width: 280, breakpoint: "sm", collapsed: { mobile: !opened } } : undefined}
-      padding="xl"
+      padding={{ base: "sm", sm: "xl" }}
     >
       <AppShell.Header>
-        <Group h="100%" px="lg" gap="sm">
+        <Group h="100%" px={{ base: "sm", sm: "lg" }} gap="sm" wrap="nowrap">
           {sidebar && <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="目次" />}
           <Anchor component={Link} to="/" c="inherit" underline="never" mr="auto" className="ks-brand">
             <span className="ks-brand-mark">K</span>

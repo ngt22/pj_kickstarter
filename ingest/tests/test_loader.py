@@ -61,3 +61,12 @@ def test_members_is_optional(tmp_path):
     result = load_project(path)
     assert result.errors == []
     assert result.meta.members == []
+
+
+def test_push_without_target_is_rejected(capsys):
+    import pytest
+
+    for argv in (["push", str(ROOT / "projects" / "sample")], ["admin", "list"]):
+        with pytest.raises(SystemExit):
+            main(argv)
+        assert "--gcp-project" in capsys.readouterr().err

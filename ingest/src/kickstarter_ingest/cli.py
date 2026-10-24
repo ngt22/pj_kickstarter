@@ -1,9 +1,9 @@
 """使い方:
   uv run kickstarter-ingest validate ../projects/sample
-  uv run kickstarter-ingest push ../projects/sample [--emulator] [--gcp-project ID]
-  uv run kickstarter-ingest admin grant you@example.com [--emulator] [--gcp-project ID]
-  uv run kickstarter-ingest admin revoke you@example.com
-  uv run kickstarter-ingest admin list
+  uv run kickstarter-ingest push ../projects/sample (--emulator | --gcp-project ID)
+  uv run kickstarter-ingest admin grant you@example.com (--emulator | --gcp-project ID)
+  uv run kickstarter-ingest admin revoke you@example.com (--emulator | --gcp-project ID)
+  uv run kickstarter-ingest admin list (--emulator | --gcp-project ID)
 """
 
 import argparse
@@ -25,7 +25,7 @@ def report(path: Path):
 
 def add_target_args(p: argparse.ArgumentParser, emulator_help: str) -> None:
     p.add_argument("--emulator", action="store_true", help=emulator_help)
-    p.add_argument("--gcp-project", help="Firebase のプロジェクトID（省略時は認証情報から推定）")
+    p.add_argument("--gcp-project", help="本番の Firebase プロジェクトID（--emulator を付けないときは必須）")
 
 
 def admin(args: argparse.Namespace) -> int:
@@ -67,6 +67,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("email", nargs="?")
     add_target_args(p, "localhost:9099 の Auth エミュレータを使う")
     args = parser.parse_args(argv)
+    # 認証情報の既定プロジェクトに暗黙で接続すると、無関係な GCP プロジェクトを操作しかねないので明示させる
+    if getattr(args, "emulator", None) is False and not args.gcp_project:
+        parser.error("本番に接続するには --gcp-project を指定してください（ローカルのエミュレータなら --emulator）")
 
     if args.command == "admin":
         return admin(args)

@@ -35,9 +35,15 @@ pj_kickstarter/
 
 ```sh
 cd ingest
-uv run kickstarter-ingest admin grant boss@example.com    # 管理者にする
-uv run kickstarter-ingest admin revoke boss@example.com   # 管理者から外す
-uv run kickstarter-ingest admin list                      # 管理者の一覧
+uv run kickstarter-ingest admin grant boss@example.com --gcp-project 本番のID    # 管理者にする
+uv run kickstarter-ingest admin revoke boss@example.com --gcp-project 本番のID   # 管理者から外す
+uv run kickstarter-ingest admin list --gcp-project 本番のID                      # 管理者の一覧
+```
+
+ローカルのエミュレータに対しては `--gcp-project` の代わりに `--emulator` を付けます。どちらも付けないとエラーになります（gcloud の既定プロジェクトなど、無関係なプロジェクトにうっかり接続しないため）。
+
+```sh
+uv run kickstarter-ingest admin grant boss@example.com --emulator
 ```
 
 付け外しは、そのユーザーが次にログインしたとき（または約1時間後のトークン更新時）に反映されます。
@@ -72,7 +78,7 @@ cp -r templates projects/my-project
 nvim projects/my-project/project.yaml   # id を my-project に（members に初期の閲覧者を書いてもよい）
 cd ingest
 uv run kickstarter-ingest validate ../projects/my-project
-uv run kickstarter-ingest push ../projects/my-project      # 本番へ投入
+uv run kickstarter-ingest push ../projects/my-project --gcp-project 本番のID   # 本番へ投入
 ```
 
 本番への投入には、Firebase コンソールで発行したサービスアカウント鍵を `GOOGLE_APPLICATION_CREDENTIALS` に指定してください。鍵はリポジトリに入れないでください。
@@ -117,7 +123,7 @@ ssh -L 4000:localhost:4000 -L 4400:localhost:4400 -L 9099:localhost:9099 \
 2. `.firebaserc` の `default` を本番のプロジェクトIDに書き換える
 3. `web/.env.example` を `web/.env.local` にコピーし、Firebase の設定値を入れる
 4. 公開する
-5. 自分のアカウントでサインアップしてから、`uv run kickstarter-ingest admin grant 自分のメール` で管理者にする
+5. 自分のアカウントでサインアップしてから、`uv run kickstarter-ingest admin grant 自分のメール --gcp-project 本番のID` で管理者にする
 
 ```sh
 cd web && pnpm build && cd ..

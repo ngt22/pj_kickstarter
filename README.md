@@ -6,7 +6,7 @@
 
 ```
 pj_kickstarter/
-├─ web/        閲覧サイト（Vite + React + React Router の SPA、Firebase Auth、Mermaid）
+├─ web/        閲覧サイト（Vite + React + React Router の SPA、Mantine、Firebase Auth、Mermaid）
 ├─ ingest/     取り込み CLI（Python / uv）：原稿を検証して Firestore に投入
 ├─ templates/  14種の原稿テンプレート（記入例つき）
 ├─ projects/   案件ごとの原稿。templates をコピーして記入する

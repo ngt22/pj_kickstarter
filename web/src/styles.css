@@ -1,48 +1,11 @@
-:root {
-  --bg: #ffffff;
-  --fg: #1f2328;
-  --muted: #656d76;
-  --line: #d0d7de;
-  --accent: #0969da;
-  --panel: #f6f8fa;
-  --danger: #cf222e;
-  font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
-  color: var(--fg);
-  background: var(--bg);
+/* Mantine で表せない部分だけをここに書く */
+.mermaid {
+  overflow-x: auto;
+  margin: var(--mantine-spacing-md) 0;
+  padding: var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-gray-0);
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d; --accent: #4493f8; --panel: #161b22; --danger: #f85149; }
-}
-body { margin: 0; background: var(--bg); }
-a { color: var(--accent); text-decoration: none; }
-button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; font: inherit; }
-button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--line); }
-input { width: 100%; box-sizing: border-box; padding: 8px; margin: 4px 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
-.muted { color: var(--muted); }
-.error { color: var(--danger); white-space: pre-wrap; }
-.center { text-align: center; margin-top: 30vh; }
-.card { display: block; border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: var(--panel); color: var(--fg); }
-.login { max-width: 360px; margin: 10vh auto; padding: 0 16px; }
-.login button { width: 100%; margin-top: 8px; }
-.layout header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
-.layout header .brand { font-weight: 700; margin-right: auto; color: var(--fg); }
-.body { display: flex; }
-.sidebar { width: 240px; flex-shrink: 0; border-right: 1px solid var(--line); padding: 16px; min-height: calc(100vh - 56px); box-sizing: border-box; }
-.sidebar ol { padding-left: 28px; line-height: 2; }
-.sidebar a.active { font-weight: 700; }
-.project-name { font-weight: 700; }
-.content { flex: 1; min-width: 0; padding: 16px 32px; max-width: 960px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-.badge { font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
-table { border-collapse: collapse; width: 100%; margin: 12px 0; display: block; overflow-x: auto; }
-th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
-th { background: var(--panel); }
-.num { text-align: right; }
-td.level.高 { color: var(--danger); font-weight: 700; }
-pre { background: var(--panel); padding: 12px; overflow-x: auto; border-radius: 6px; }
-.mermaid { overflow-x: auto; margin: 12px 0; }
-@media (max-width: 720px) {
-  .body { flex-direction: column; }
-  .sidebar { width: auto; min-height: 0; border-right: 0; border-bottom: 1px solid var(--line); }
-  .content { padding: 16px; }
+[data-mantine-color-scheme="dark"] .mermaid {
+  background: var(--mantine-color-gray-1);
 }

@@ -1,3 +1,5 @@
+import { Badge, Code, List, Table, Text } from "@mantine/core";
+
 type Glossary = { terms: { term: string; reading?: string; definition: string }[] };
 type Risks = {
   risks: { id: string; title: string; probability: string; impact: string; mitigation: string; owner?: string; status: string }[];
@@ -10,35 +12,59 @@ type Estimate = {
 };
 type Api = { spec: { info?: { title?: string; version?: string }; paths: Record<string, Record<string, { summary?: string }>> } };
 
+const LEVEL_COLOR: Record<string, string> = { 高: "red", 中: "yellow", 低: "gray" };
+const METHOD_COLOR: Record<string, string> = { GET: "blue", POST: "green", PUT: "orange", PATCH: "orange", DELETE: "red" };
+
+function DataTable({ head, children, minWidth = 600 }: { head: string[]; children: React.ReactNode; minWidth?: number }) {
+  return (
+    <Table.ScrollContainer minWidth={minWidth}>
+      <Table striped withTableBorder withColumnBorders verticalSpacing="xs">
+        <Table.Thead>
+          <Table.Tr>{head.map((h) => <Table.Th key={h} style={{ whiteSpace: "nowrap" }}>{h}</Table.Th>)}</Table.Tr>
+        </Table.Thead>
+        {children}
+      </Table>
+    </Table.ScrollContainer>
+  );
+}
+
 export function GlossaryView({ data }: { data: Glossary }) {
   const terms = [...data.terms].sort((a, b) => (a.reading ?? a.term).localeCompare(b.reading ?? b.term, "ja"));
   return (
-    <table>
-      <thead><tr><th>用語</th><th>読み</th><th>定義</th></tr></thead>
-      <tbody>
+    <DataTable head={["用語", "読み", "定義"]}>
+      <Table.Tbody>
         {terms.map((t) => (
-          <tr key={t.term}><td>{t.term}</td><td>{t.reading}</td><td>{t.definition}</td></tr>
+          <Table.Tr key={t.term}>
+            <Table.Td fw={700}>{t.term}</Table.Td>
+            <Table.Td c="dimmed">{t.reading}</Table.Td>
+            <Table.Td>{t.definition}</Table.Td>
+          </Table.Tr>
         ))}
-      </tbody>
-    </table>
+      </Table.Tbody>
+    </DataTable>
   );
 }
 
 export function RisksView({ data }: { data: Risks }) {
+  const level = (v: string) => <Badge color={LEVEL_COLOR[v] ?? "gray"} variant="light">{v}</Badge>;
   return (
-    <table>
-      <thead>
-        <tr><th>ID</th><th>リスク</th><th>発生確率</th><th>影響度</th><th>対策</th><th>担当</th><th>状態</th></tr>
-      </thead>
-      <tbody>
+    <DataTable head={["ID", "リスク", "発生確率", "影響度", "対策", "担当", "状態"]} minWidth={900}>
+      <Table.Tbody>
         {data.risks.map((r) => (
-          <tr key={r.id} className={r.status === "closed" ? "muted" : ""}>
-            <td>{r.id}</td><td>{r.title}</td><td className={`level ${r.probability}`}>{r.probability}</td>
-            <td className={`level ${r.impact}`}>{r.impact}</td><td>{r.mitigation}</td><td>{r.owner}</td><td>{r.status}</td>
-          </tr>
+          <Table.Tr key={r.id} opacity={r.status === "closed" ? 0.5 : 1}>
+            <Table.Td style={{ whiteSpace: "nowrap" }}>{r.id}</Table.Td>
+            <Table.Td>{r.title}</Table.Td>
+            <Table.Td>{level(r.probability)}</Table.Td>
+            <Table.Td>{level(r.impact)}</Table.Td>
+            <Table.Td>{r.mitigation}</Table.Td>
+            <Table.Td style={{ whiteSpace: "nowrap" }}>{r.owner}</Table.Td>
+            <Table.Td>
+              <Badge color={r.status === "open" ? "blue" : "gray"} variant="outline">{r.status}</Badge>
+            </Table.Td>
+          </Table.Tr>
         ))}
-      </tbody>
-    </table>
+      </Table.Tbody>
+    </DataTable>
   );
 }
 
@@ -52,22 +78,31 @@ export function EstimateView({ data }: { data: Estimate }) {
   const total = estimateTotal(data);
   return (
     <>
-      <p>人月単価：{fmt.format(data.unit_price)}</p>
-      <table>
-        <thead><tr><th>フェーズ</th><th>作業</th><th className="num">人月</th><th className="num">金額</th></tr></thead>
-        <tbody>
+      <Text mb="sm">人月単価：{fmt.format(data.unit_price)}</Text>
+      <DataTable head={["フェーズ", "作業", "人月", "金額"]}>
+        <Table.Tbody>
           {data.items.map((i) => (
-            <tr key={i.phase + i.task}>
-              <td>{i.phase}</td><td>{i.task}</td><td className="num">{i.person_months}</td>
-              <td className="num">{fmt.format(Math.round(i.person_months * data.unit_price))}</td>
-            </tr>
+            <Table.Tr key={i.phase + i.task}>
+              <Table.Td>{i.phase}</Table.Td>
+              <Table.Td>{i.task}</Table.Td>
+              <Table.Td ta="right">{i.person_months}</Table.Td>
+              <Table.Td ta="right">{fmt.format(Math.round(i.person_months * data.unit_price))}</Table.Td>
+            </Table.Tr>
           ))}
-        </tbody>
-        <tfoot>
-          <tr><th colSpan={2}>合計</th><th className="num">{total.months}</th><th className="num">{fmt.format(total.amount)}</th></tr>
-        </tfoot>
-      </table>
-      {data.notes && <ul>{data.notes.map((n) => <li key={n}>{n}</li>)}</ul>}
+        </Table.Tbody>
+        <Table.Tfoot>
+          <Table.Tr>
+            <Table.Th colSpan={2}>合計</Table.Th>
+            <Table.Th ta="right">{total.months}</Table.Th>
+            <Table.Th ta="right">{fmt.format(total.amount)}</Table.Th>
+          </Table.Tr>
+        </Table.Tfoot>
+      </DataTable>
+      {data.notes && (
+        <List mt="md" size="sm">
+          {data.notes.map((n) => <List.Item key={n}>{n}</List.Item>)}
+        </List>
+      )}
     </>
   );
 }
@@ -78,15 +113,18 @@ export function ApiView({ data }: { data: Api }) {
   );
   return (
     <>
-      {data.spec.info && <p>{data.spec.info.title} v{data.spec.info.version}</p>}
-      <table>
-        <thead><tr><th>メソッド</th><th>パス</th><th>概要</th></tr></thead>
-        <tbody>
+      {data.spec.info && <Text mb="sm">{data.spec.info.title} v{data.spec.info.version}</Text>}
+      <DataTable head={["メソッド", "パス", "概要"]}>
+        <Table.Tbody>
           {rows.map((r) => (
-            <tr key={r.method + r.path}><td><code>{r.method}</code></td><td><code>{r.path}</code></td><td>{r.summary}</td></tr>
+            <Table.Tr key={r.method + r.path}>
+              <Table.Td><Badge color={METHOD_COLOR[r.method] ?? "gray"}>{r.method}</Badge></Table.Td>
+              <Table.Td><Code>{r.path}</Code></Table.Td>
+              <Table.Td>{r.summary}</Table.Td>
+            </Table.Tr>
           ))}
-        </tbody>
-      </table>
+        </Table.Tbody>
+      </DataTable>
     </>
   );
 }

@@ -1,3 +1,4 @@
+import { Code } from "@mantine/core";
 import { useEffect, useId, useState } from "react";
 
 // mermaid は大きいので、図があるページを開いたときだけ読み込む
@@ -22,6 +23,6 @@ export default function Mermaid({ code }: { code: string }) {
     };
   }, [id, code]);
 
-  if (error) return <pre className="error">{error}</pre>;
+  if (error) return <Code block c="red">{error}</Code>;
   return <div className="mermaid" dangerouslySetInnerHTML={{ __html: svg }} />;
 }

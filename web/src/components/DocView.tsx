@@ -1,3 +1,4 @@
+import { Title, Typography } from "@mantine/core";
 import { parseYaml, stripFrontMatter, type DocRecord } from "../lib/docs";
 import Markdown from "./Markdown";
 import { ApiView, EstimateView, GlossaryView, RisksView } from "./YamlViews";
@@ -13,8 +14,10 @@ export default function DocView({ doc }: { doc: DocRecord }) {
   if (doc.format === "markdown") {
     return (
       <article>
-        <h1>{doc.title}</h1>
-        <Markdown text={stripFrontMatter(doc.body)} />
+        <Title order={1} mb="md">{doc.title}</Title>
+        <Typography>
+          <Markdown text={stripFrontMatter(doc.body)} />
+        </Typography>
       </article>
     );
   }
@@ -22,7 +25,7 @@ export default function DocView({ doc }: { doc: DocRecord }) {
   const data = parseYaml<Record<string, unknown>>(doc.body);
   return (
     <article>
-      <h1>{doc.title}</h1>
+      <Title order={1} mb="md">{doc.title}</Title>
       {View ? <View data={data} /> : <pre>{doc.body}</pre>}
     </article>
   );

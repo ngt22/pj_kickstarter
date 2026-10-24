@@ -1,3 +1,4 @@
+import { Alert, Badge, Card, Group, Loader, SimpleGrid, Text, Title } from "@mantine/core";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -5,6 +6,8 @@ import Layout from "../components/Layout";
 import { useAuth } from "../lib/auth";
 import type { ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
+
+const STATUS_COLOR: Record<string, string> = { draft: "gray", proposed: "blue", approved: "green", archived: "dark" };
 
 export default function ProjectList() {
   const { user } = useAuth();
@@ -22,19 +25,21 @@ export default function ProjectList() {
 
   return (
     <Layout>
-      <h1>案件一覧</h1>
-      {error && <p className="error">{error}</p>}
-      {projects === null && !error && <p>読み込み中…</p>}
-      {projects?.length === 0 && <p className="muted">閲覧できる案件がありません。</p>}
-      <div className="grid">
+      <Title order={1} mb="lg">案件一覧</Title>
+      {error && <Alert color="red">{error}</Alert>}
+      {projects === null && !error && <Loader />}
+      {projects?.length === 0 && <Text c="dimmed">閲覧できる案件がありません。</Text>}
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
         {projects?.map((p) => (
-          <Link key={p.id} to={`/projects/${p.id}`} className="card project">
-            <h2>{p.name}</h2>
-            <p>{p.summary}</p>
-            <span className={`badge ${p.status}`}>{p.status}</span>
-          </Link>
+          <Card key={p.id} component={Link} to={`/projects/${p.id}`} withBorder shadow="sm" radius="md">
+            <Group justify="space-between" mb="xs">
+              <Text fw={700}>{p.name}</Text>
+              <Badge color={STATUS_COLOR[p.status] ?? "gray"} variant="light">{p.status}</Badge>
+            </Group>
+            <Text size="sm" c="dimmed">{p.summary}</Text>
+          </Card>
         ))}
-      </div>
+      </SimpleGrid>
     </Layout>
   );
 }

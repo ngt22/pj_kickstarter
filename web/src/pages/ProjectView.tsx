@@ -1,6 +1,7 @@
+import { Alert, Loader, NavLink, Text } from "@mantine/core";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { Navigate, NavLink, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import DocView from "../components/DocView";
 import Layout from "../components/Layout";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
@@ -23,27 +24,29 @@ export default function ProjectView() {
       .catch((e) => setError(String(e)));
   }, [projectId]);
 
-  if (error) return <Layout><p className="error">{error}</p></Layout>;
-  if (!docs || !project) return <Layout><p>読み込み中…</p></Layout>;
+  if (error) return <Layout><Alert color="red">{error}</Alert></Layout>;
+  if (!docs || !project) return <Layout><Loader /></Layout>;
   if (!docType && docs.length > 0) return <Navigate to={`/projects/${projectId}/${docs[0].type}`} replace />;
 
   const current = docs.find((d) => d.type === docType);
   const sidebar = (
     <>
-      <p className="project-name">{project.name}</p>
-      <ol>
-        {docs.map((d) => (
-          <li key={d.type}>
-            <NavLink to={`/projects/${projectId}/${d.type}`}>{d.title}</NavLink>
-          </li>
-        ))}
-      </ol>
+      <Text fw={700} px="sm" pb="xs">{project.name}</Text>
+      {docs.map((d, i) => (
+        <NavLink
+          key={d.type}
+          component={Link}
+          to={`/projects/${projectId}/${d.type}`}
+          label={`${i + 1}. ${d.title}`}
+          active={d.type === docType}
+        />
+      ))}
     </>
   );
 
   return (
     <Layout sidebar={sidebar}>
-      {current ? <DocView doc={current} /> : <p className="muted">ドキュメントが見つかりません。</p>}
+      {current ? <DocView doc={current} /> : <Text c="dimmed">ドキュメントが見つかりません。</Text>}
     </Layout>
   );
 }

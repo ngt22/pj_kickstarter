@@ -1,3 +1,4 @@
+import { Center, Loader } from "@mantine/core";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
@@ -19,7 +20,7 @@ export const useAuth = () => useContext(AuthContext);
 export function RequireAuth() {
   const { user, loading } = useAuth();
   const location = useLocation();
-  if (loading) return <p className="center">読み込み中…</p>;
+  if (loading) return <Center h="100vh"><Loader /></Center>;
   if (!user || !user.emailVerified) return <Navigate to="/login" state={{ from: location }} replace />;
   return <Outlet />;
 }

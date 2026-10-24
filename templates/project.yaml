@@ -4,7 +4,7 @@ name: サンプル案件
 summary: 予約管理Webサービスの新規開発提案（テンプレートの記入例）
 status: draft   # draft | proposed | approved | archived
 # 以下は表紙に表示する項目（省略可）
-client: さくら整体 様
+client: 〇〇株式会社 様
 proposed_at: 2026-10-24   # 提案日 YYYY-MM-DD
 version: "1.0"
 color: brand   # 表紙のキー色: brand | blue | indigo | violet | grape | pink | red | orange | yellow | lime | green | teal | cyan

@@ -2,7 +2,13 @@
   "hosting": {
     "public": "web/dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [
+      { "source": "/llms.txt", "headers": [{ "key": "Content-Type", "value": "text/plain; charset=utf-8" }] },
+      { "source": "/templates/**", "headers": [{ "key": "Content-Type", "value": "text/plain; charset=utf-8" }] },
+      { "source": "/schema/**", "headers": [{ "key": "Content-Type", "value": "application/json; charset=utf-8" }] },
+      { "source": "/cli-config.json", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+    ]
   },
   "firestore": {
     "rules": "firestore.rules",

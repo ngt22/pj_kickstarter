@@ -105,13 +105,17 @@ def test_members_is_optional(tmp_path):
     assert result.meta.members == []
 
 
-def test_push_without_target_is_rejected(capsys):
+def test_push_without_target_is_rejected(capsys, tmp_path, monkeypatch):
     import pytest
 
-    for argv in (["push", str(ROOT / "projects" / "sample")], ["admin", "list"]):
-        with pytest.raises(SystemExit):
-            main(argv)
-        assert "--gcp-project" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        main(["admin", "list"])
+    assert "--gcp-project" in capsys.readouterr().err
+    # push はログインしていなければ、login か --gcp-project を求める
+    monkeypatch.setenv("KICKSTARTER_CREDENTIALS", str(tmp_path / "none.json"))
+    assert main(["push", str(ROOT / "projects" / "sample")]) == 1
+    err = capsys.readouterr().err
+    assert "login" in err and "--gcp-project" in err
 
 
 def test_cover_fields(tmp_path):

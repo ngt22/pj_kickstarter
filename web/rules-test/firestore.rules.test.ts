@@ -1,6 +1,6 @@
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { readFileSync } from "node:fs";
-import { arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore";
+import { arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { afterAll, beforeAll, describe, it } from "vitest";
 
 let env: RulesTestEnvironment;
@@ -67,9 +67,36 @@ describe("案件の閲覧", () => {
     await assertFails(getDoc(doc(user("admin@example.com", { verified: false, admin: true }), "projects/sample")));
   });
 
-  it("管理者でも原稿は書き込めない", async () => {
-    await assertFails(setDoc(doc(user("admin@example.com", { admin: true }), "projects/sample/docs/x"), { title: "x" }));
-    await assertFails(setDoc(doc(user("member@example.com"), "projects/sample/docs/x"), { title: "x" }));
+});
+
+describe("原稿の書き込み", () => {
+  const project = { id: "new", name: "新案件", summary: "", status: "draft", client: "", proposed_at: "", version: "", color: "brand", updatedAt: serverTimestamp() };
+  const page = { type: "requirements", title: "要件定義書", order: 3, format: "markdown", body: "## 目的", updatedAt: serverTimestamp() };
+
+  it("管理者は案件とドキュメントを作成・更新・削除できる", async () => {
+    const db = user("admin@example.com", { admin: true });
+    await assertSucceeds(setDoc(doc(db, "projects/new"), project));
+    await assertSucceeds(setDoc(doc(db, "projects/new/docs/requirements"), page));
+    await assertSucceeds(setDoc(doc(db, "projects/new/docs/requirements"), { ...page, body: "## 目的（改）" }));
+    await assertSucceeds(deleteDoc(doc(db, "projects/new/docs/requirements")));
+  });
+
+  it("クライアントや未確認の管理者は書き込めない", async () => {
+    await assertFails(setDoc(doc(user("member@example.com"), "projects/sample/docs/requirements"), page));
+    await assertFails(setDoc(doc(user("member@example.com"), "projects/sample"), { ...project, id: "sample" }));
+    await assertFails(deleteDoc(doc(user("member@example.com"), "projects/sample/docs/requirements")));
+    await assertFails(setDoc(doc(user("admin@example.com", { verified: false, admin: true }), "projects/new"), project));
+    await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), "projects/new"), project));
+  });
+
+  it("管理者でも不正な形の原稿は書けない", async () => {
+    const db = user("admin@example.com", { admin: true });
+    await assertFails(setDoc(doc(db, "projects/other"), project)); // id がドキュメントIDと違う
+    await assertFails(setDoc(doc(db, "projects/new"), { ...project, members: ["a@example.com"] })); // 閲覧者は access に持つ
+    await assertFails(setDoc(doc(db, "projects/new"), { ...project, status: "done" }));
+    await assertFails(setDoc(doc(db, "projects/new/docs/risks"), page)); // type がドキュメントIDと違う
+    await assertFails(setDoc(doc(db, "projects/new/docs/requirements"), { ...page, format: "html" }));
+    await assertFails(setDoc(doc(db, "projects/new/docs/requirements"), { ...page, order: "3" }));
   });
 });
 

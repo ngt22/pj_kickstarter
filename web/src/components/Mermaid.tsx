@@ -8,8 +8,8 @@ function themeVariables(t: MantineTheme, dark: boolean) {
     ? {
         darkMode: true,
         background: c.dark[7],
-        primaryColor: c.brand[9],
-        primaryBorderColor: c.brand[5],
+        primaryColor: c.dark[5],
+        primaryBorderColor: c.brand[4],
         primaryTextColor: c.dark[0],
         secondaryColor: c.teal[9],
         tertiaryColor: c.dark[6],
@@ -34,6 +34,8 @@ function themeVariables(t: MantineTheme, dark: boolean) {
       };
 }
 
+let queue: Promise<void> = Promise.resolve();
+
 // mermaid は大きいので、図があるページを開いたときだけ読み込む
 export default function Mermaid({ code }: { code: string }) {
   const id = "m" + useId().replace(/[^a-zA-Z0-9]/g, "");
@@ -44,7 +46,10 @@ export default function Mermaid({ code }: { code: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    import("mermaid").then(async ({ default: mermaid }) => {
+    // mermaid の設定は全体で1つなので、描画を1つずつ順番に行う（設定と描画が他の図と入れ違わないように）
+    queue = queue.then(async () => {
+      if (cancelled) return;
+      const { default: mermaid } = await import("mermaid");
       mermaid.initialize({
         startOnLoad: false,
         securityLevel: "strict",

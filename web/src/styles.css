@@ -9,3 +9,19 @@
 [data-mantine-color-scheme="dark"] .mermaid {
   background: var(--mantine-color-gray-1);
 }
+
+/* Markdown の本文は明朝体（Noto Serif JP）にする。コードは等幅のまま */
+.doc-body {
+  font-family: "Noto Serif JP", serif;
+  line-height: 1.9;
+}
+.doc-body h1,
+.doc-body h2,
+.doc-body h3,
+.doc-body h4 {
+  font-family: "Noto Serif JP", serif;
+}
+.doc-body code,
+.doc-body pre {
+  font-family: var(--mantine-font-family-monospace);
+}

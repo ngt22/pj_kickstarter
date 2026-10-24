@@ -60,16 +60,16 @@ uv run kickstarter-ingest push ../projects/my-project      # 本番へ投入
 ## ローカルで動かす（エミュレータ）
 
 ```sh
-# 1. エミュレータ起動（Java が必要）
-cd web && npm install
-npx firebase emulators:start --only auth,firestore --project demo-kickstarter
+# 1. エミュレータ起動（Java と pnpm が必要）
+cd web && pnpm install
+pnpm exec firebase emulators:start --only auth,firestore --project demo-kickstarter
 
 # 2. 別ターミナルでサンプル案件を投入
 cd ingest && uv sync
 uv run kickstarter-ingest push ../projects/sample --emulator
 
 # 3. 別ターミナルでサイト起動
-cd web && VITE_USE_EMULATOR=true npm run dev
+cd web && VITE_USE_EMULATOR=true pnpm dev
 ```
 
 ログイン用のユーザーは Emulator UI（http://localhost:4000 ）の Authentication で作り、`Email verified` をオンにしてください。サンプル案件の閲覧者は `you@example.com` です。
@@ -82,7 +82,7 @@ cd web && VITE_USE_EMULATOR=true npm run dev
 4. 公開する
 
 ```sh
-cd web && npm run build && cd ..
+cd web && pnpm build && cd ..
 web/node_modules/.bin/firebase deploy --only hosting,firestore:rules
 ```
 
@@ -92,6 +92,6 @@ web/node_modules/.bin/firebase deploy --only hosting,firestore:rules
 
 ```sh
 cd ingest && uv run pytest        # 原稿の検証
-cd web && npm test                # 表示ロジック
-cd web && npm run test:rules      # Firestore ルール（エミュレータを自動起動）
+cd web && pnpm test                # 表示ロジック
+cd web && pnpm test:rules          # Firestore ルール（エミュレータを自動起動）
 ```

@@ -15,7 +15,7 @@ export default function DocView({ doc }: { doc: DocRecord }) {
     return (
       <article>
         <Title order={1} mb="md">{doc.title}</Title>
-        <Typography>
+        <Typography className="doc-body">
           <Markdown text={stripFrontMatter(doc.body)} />
         </Typography>
       </article>

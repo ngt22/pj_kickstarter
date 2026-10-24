@@ -1,0 +1,10 @@
+title: 用語集
+order: 13
+terms:
+  - term: 枠
+    reading: わく
+    definition: 予約を受け付ける時間の単位
+  - term: ダブルブッキング
+    definition: 同じ枠に定員を超えて予約が入ること
+  - term: ADR
+    definition: Architecture Decision Record。設計上の決定とその理由の記録

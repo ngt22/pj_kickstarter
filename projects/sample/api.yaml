@@ -1,0 +1,29 @@
+# API仕様（OpenAPI 3 形式）
+title: API仕様
+order: 8
+spec:
+  openapi: 3.0.3
+  info:
+    title: 予約API
+    version: 0.1.0
+  paths:
+    /slots:
+      get:
+        summary: 空き枠を取得する
+        parameters:
+          - name: date
+            in: query
+            required: true
+            schema: { type: string, format: date }
+        responses:
+          "200": { description: 空き枠の一覧 }
+    /reservations:
+      post:
+        summary: 予約を作成する
+        responses:
+          "201": { description: 作成した予約 }
+    /reservations/{id}:
+      delete:
+        summary: 予約をキャンセルする
+        responses:
+          "204": { description: キャンセル完了 }

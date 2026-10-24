@@ -7,7 +7,7 @@ import { useAuth } from "../lib/auth";
 import type { ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
 
-const STATUS_COLOR: Record<string, string> = { draft: "gray", proposed: "blue", approved: "green", archived: "dark" };
+const STATUS_COLOR: Record<string, string> = { draft: "gray", proposed: "brand", approved: "green", archived: "dark" };
 
 // 管理者は全件を取得する。クライアントは access/{自分のメール} にある案件を1件ずつ取得する
 // （全件クエリはルールで拒否されるため）
@@ -42,10 +42,10 @@ export default function ProjectList() {
       {projects?.length === 0 && <Text c="dimmed">閲覧できる案件がありません。</Text>}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
         {projects?.map((p) => (
-          <Card key={p.id} component={Link} to={`/projects/${p.id}`} withBorder shadow="sm" radius="md">
+          <Card key={p.id} component={Link} to={`/projects/${p.id}`} className="ks-card-link">
             <Group justify="space-between" mb="xs">
               <Text fw={700}>{p.name}</Text>
-              <Badge color={STATUS_COLOR[p.status] ?? "gray"} variant="light">{p.status}</Badge>
+              <Badge color={STATUS_COLOR[p.status] ?? "gray"}>{p.status}</Badge>
             </Group>
             <Text size="sm" c="dimmed">{p.summary}</Text>
           </Card>

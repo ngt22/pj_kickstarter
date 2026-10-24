@@ -1,25 +1,94 @@
-/* Mantine で表せない部分だけをここに書く */
+/* Mantine で表せない部分だけをここに書く。値はテーマのトークン（CSS 変数）だけを使う（theme.ts） */
+
+/* ヘッダーのロゴ */
+.ks-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.ks-brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-white);
+  background: linear-gradient(135deg, var(--mantine-color-brand-6), var(--mantine-color-brand-8));
+  font-size: var(--mantine-font-size-sm);
+}
+
+/* リンクになっているカード：触れたら少し持ち上げる */
+.ks-card-link {
+  transition: box-shadow 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+.ks-card-link:hover {
+  border-color: var(--mantine-color-brand-3);
+  box-shadow: var(--mantine-shadow-md);
+  transform: translateY(-1px);
+}
+
 .mermaid {
   overflow-x: auto;
   margin: var(--mantine-spacing-md) 0;
   padding: var(--mantine-spacing-md);
   border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-gray-0);
-}
-[data-mantine-color-scheme="dark"] .mermaid {
-  background: var(--mantine-color-gray-1);
+  background: var(--ks-subtle);
+  border: 1px solid var(--mantine-color-default-border);
 }
 
 /* Markdown の本文は明朝体（Noto Serif JP）にする。コードは等幅のまま */
 .doc-body {
-  font-family: "Noto Serif JP", serif;
+  font-family: var(--ks-font-serif);
   line-height: 1.9;
 }
 .doc-body h1,
 .doc-body h2,
 .doc-body h3,
 .doc-body h4 {
-  font-family: "Noto Serif JP", serif;
+  font-family: var(--ks-font-serif);
+}
+
+/* 図の中は画面の部品なので、本文の明朝体を引き継がない */
+.doc-body :is(.mock, .gantt-wrap, .er-wrap) :is(h1, h2, h3, h4) {
+  font-family: var(--mantine-font-family);
+}
+
+/* 表の枠。Mantine の Table（.ks-table-frame で包む）と Markdown の表を同じ見た目にする */
+.ks-table-frame {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+}
+.ks-table-frame tr:last-child td {
+  border-bottom: 0;
+}
+.ks-table-frame .mantine-Table-tfoot .mantine-Table-th {
+  background: var(--ks-subtle);
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+.doc-body > table {
+  font-family: var(--mantine-font-family);
+  font-size: var(--mantine-font-size-sm);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.mantine-Table-thead .mantine-Table-th,
+.doc-body > table th {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  color: var(--mantine-color-dimmed);
+  background: var(--ks-subtle);
+}
+.doc-body > table :is(th, td) {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.doc-body > table tr:last-child td {
+  border-bottom: 0;
 }
 .doc-body code,
 .doc-body pre {
@@ -37,15 +106,15 @@
 .gantt {
   overflow: auto;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-body);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
 }
 .gantt-header {
   position: sticky;
   top: 0;
   z-index: 3;
   display: flex;
-  background: var(--mantine-color-body);
+  background: var(--ks-subtle);
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 .gantt-label {
@@ -56,21 +125,22 @@
   align-items: center;
   gap: 6px;
   height: 100%;
-  padding: 0 10px;
+  padding: 0 var(--mantine-spacing-sm);
   flex-shrink: 0;
-  background: var(--mantine-color-body);
+  background: var(--ks-surface);
   border-right: 1px solid var(--mantine-color-default-border);
   min-width: 0;
 }
 .gantt-corner {
   z-index: 4;
+  background: var(--ks-subtle);
   font-size: var(--mantine-font-size-sm);
   font-weight: 700;
 }
 .gantt-tick {
   position: absolute;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--mantine-font-size-xs);
   color: var(--mantine-color-dimmed);
 }
 .gantt-tick-top {
@@ -114,7 +184,7 @@
 }
 .gantt-section .gantt-label {
   cursor: pointer;
-  background: var(--mantine-color-default-hover);
+  background: var(--ks-subtle);
 }
 .gantt-section .gantt-label:hover {
   background: var(--mantine-color-default);
@@ -134,7 +204,7 @@
   padding: 0 8px;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--mantine-font-size-sm);
   line-height: 20px;
   border: 1px solid;
   border-radius: var(--mantine-radius-sm);
@@ -157,7 +227,7 @@
   position: absolute;
   top: 0;
   line-height: 34px;
-  font-size: 13px;
+  font-size: var(--mantine-font-size-sm);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -174,9 +244,9 @@
   line-height: 1.4;
   margin: var(--mantine-spacing-md) 0;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-body);
-  box-shadow: var(--mantine-shadow-sm);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+  box-shadow: var(--mantine-shadow-md);
   overflow: hidden;
 }
 .mock p {
@@ -189,7 +259,7 @@
   max-width: 360px;
   border-width: 8px;
   border-radius: 28px;
-  border-color: var(--mantine-color-dark-4);
+  border-color: var(--mantine-color-gray-8);
 }
 .mock-chrome {
   display: flex;
@@ -197,7 +267,7 @@
   gap: 6px;
   height: 28px;
   padding: 0 10px;
-  background: var(--mantine-color-default-hover);
+  background: var(--ks-subtle);
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 .mock-chrome i {
@@ -209,10 +279,10 @@
 .mock-url {
   margin-left: 12px;
   padding: 1px 12px;
-  font-size: 11px;
+  font-size: var(--mantine-font-size-xs);
   color: var(--mantine-color-dimmed);
-  background: var(--mantine-color-body);
-  border-radius: 10px;
+  background: var(--ks-surface);
+  border-radius: var(--mantine-radius-xl);
 }
 .mock-mobile .mock-chrome {
   justify-content: center;
@@ -223,7 +293,7 @@
   width: 80px;
   height: 6px;
   border-radius: 3px;
-  background: var(--mantine-color-dark-4);
+  background: var(--mantine-color-gray-8);
 }
 .mock-screen {
   padding: var(--mantine-spacing-md);
@@ -261,7 +331,7 @@
 .er {
   display: flex;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-md);
+  border-radius: var(--mantine-radius-lg);
   overflow: hidden;
 }
 .er-side {
@@ -269,11 +339,12 @@
   flex-shrink: 0;
   padding: var(--mantine-spacing-xs);
   border-right: 1px solid var(--mantine-color-default-border);
-  background: var(--mantine-color-body);
+  background: var(--ks-surface);
   min-height: 0;
 }
 .er-canvas {
   flex: 1;
+  background: var(--ks-subtle);
   min-width: 0;
 }
 .er-item {
@@ -300,9 +371,10 @@
 }
 .er-table {
   font-family: var(--mantine-font-family);
-  background: var(--mantine-color-body);
+  background: var(--ks-surface);
   border: 1.5px solid;
-  border-radius: var(--mantine-radius-sm);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--mantine-shadow-xs);
   overflow: hidden;
   cursor: pointer;
 }
@@ -322,11 +394,11 @@
   align-items: center;
   gap: 6px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: var(--mantine-font-size-xs);
 }
 .er-key {
   width: 18px;
-  font-size: 10px;
+  font-size: var(--mantine-font-size-xs);
   font-weight: 700;
   color: var(--mantine-color-dimmed);
 }
@@ -338,7 +410,7 @@
 }
 .er-col-type {
   color: var(--mantine-color-dimmed);
-  font-size: 11px;
+  font-size: var(--mantine-font-size-xs);
 }
 .er-handle {
   opacity: 0;

@@ -36,9 +36,12 @@ export default function Login() {
   };
 
   return (
-    <Center mih="100vh" p="md">
-      <Paper withBorder shadow="sm" p="xl" radius="md" w="100%" maw={380}>
-        <Title order={2}>Kickstarter</Title>
+    <Center mih="100vh" p="md" bg="var(--ks-canvas)">
+      <Paper withBorder shadow="md" p="xl" w="100%" maw={400}>
+        <Title order={2} className="ks-brand" mb={4}>
+          <span className="ks-brand-mark">K</span>
+          Kickstarter
+        </Title>
         <Text c="dimmed" size="sm" mb="lg">提案資料の閲覧にはログインが必要です。</Text>
 
         {user && !user.emailVerified ? (

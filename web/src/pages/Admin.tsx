@@ -91,7 +91,7 @@ function ProjectAccess({ project, emails, onGrant, onRevoke }: {
   }
 
   return (
-    <Card withBorder radius="md">
+    <Card>
       <Group justify="space-between" mb="xs">
         <Text fw={700}>{project.name}</Text>
         <Badge variant="light" color="gray" tt="none">{project.id}</Badge>

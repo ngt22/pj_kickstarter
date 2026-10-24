@@ -31,7 +31,7 @@ export default function ProjectView() {
   const current = docs.find((d) => d.type === docType);
   const sidebar = (
     <>
-      <Text fw={700} px="sm" pb="xs">{project.name}</Text>
+      <Text fw={700} px="sm" pb="sm">{project.name}</Text>
       {docs.map((d, i) => (
         <NavLink
           key={d.type}

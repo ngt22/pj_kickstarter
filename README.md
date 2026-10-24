@@ -72,7 +72,14 @@ uv run kickstarter-ingest push ../projects/sample --emulator
 cd web && VITE_USE_EMULATOR=true pnpm dev
 ```
 
-ログイン用のユーザーは Emulator UI（http://localhost:4000 ）の Authentication で作り、`Email verified` をオンにしてください。サンプル案件の閲覧者は `you@example.com` です。
+ログイン用のユーザーは、エミュレータを起動したまま次のコマンドで作ります（メール確認済みになります）。サンプル案件の閲覧者は `you@example.com` です。
+
+```sh
+cd web && pnpm emu:user                      # you@example.com / password123
+cd web && pnpm emu:user a@example.com pass1234   # 任意のアカウント
+```
+
+Emulator UI（http://localhost:4000 ）の Authentication でも作れます。その場合は Email と Password を実際に入力し、`Verified email?` をオンにしてください。
 
 ## 本番に公開する（Firebase Hosting）
 

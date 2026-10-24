@@ -90,3 +90,8 @@ def test_non_admin_cannot_login_or_write():
         headers={"Authorization": f"Bearer {remote.id_token(creds)}"},
     )
     assert res.status_code == 403
+
+
+def test_unknown_email_is_explained(capsys):
+    assert main(["login", "--emulator", "--email", "nobody@example.com"]) == 1
+    assert "pnpm emu:user" in capsys.readouterr().err

@@ -118,11 +118,24 @@ def token_claims(id_token: str) -> dict[str, Any]:
     return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
 
 
+SIGN_IN_ERRORS = {
+    "EMAIL_NOT_FOUND": "このメールアドレスのユーザーがいません。先にサイトでサインアップしてください"
+    "（エミュレータなら pnpm emu:user で作成。エミュレータを再起動するとユーザーは消えます）",
+    "INVALID_PASSWORD": "パスワードが違います",
+    "INVALID_LOGIN_CREDENTIALS": "メールアドレスかパスワードが違います",
+    "USER_DISABLED": "このユーザーは無効にされています",
+}
+
+
 def sign_in_with_password(creds: Credentials, email: str, password: str) -> Credentials:
-    data = _post(
-        creds.auth_url("identitytoolkit.googleapis.com", "accounts:signInWithPassword"),
-        {"email": email, "password": password, "returnSecureToken": True},
-    )
+    try:
+        data = _post(
+            creds.auth_url("identitytoolkit.googleapis.com", "accounts:signInWithPassword"),
+            {"email": email, "password": password, "returnSecureToken": True},
+        )
+    except RemoteError as e:
+        hint = next((v for k, v in SIGN_IN_ERRORS.items() if k in str(e)), None)
+        raise RemoteError(f"{hint}（{e}）" if hint else str(e)) from e
     creds.refresh_token = data["refreshToken"]
     return creds
 

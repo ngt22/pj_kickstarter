@@ -1,7 +1,8 @@
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { readFileSync } from "node:fs";
 import { arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { deleteProject } from "../src/lib/deleteProject";
 
 let env: RulesTestEnvironment;
 
@@ -125,5 +126,34 @@ describe("閲覧権限（access）", () => {
     await assertFails(setDoc(doc(db, "access/New@example.com"), { projects: ["sample"] }));
     await assertFails(setDoc(doc(db, "access/x@example.com"), { projects: "sample" }));
     await assertFails(setDoc(doc(db, "access/x@example.com"), { projects: ["sample"], admin: true }));
+  });
+});
+
+describe("案件の削除", () => {
+  beforeAll(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, "projects/trial"), { id: "trial" });
+      await setDoc(doc(db, "projects/trial/docs/requirements"), { title: "要件定義書" });
+      await setDoc(doc(db, "projects/trial/docs/roadmap"), { title: "開発計画" });
+      await setDoc(doc(db, "access/a@example.com"), { projects: ["trial", "sample"] });
+      await setDoc(doc(db, "access/b@example.com"), { projects: ["trial"] });
+    });
+  });
+
+  it("クライアントや未確認の管理者は案件を削除できない", async () => {
+    await assertFails(deleteProject(user("a@example.com"), "trial"));
+    await assertFails(deleteDoc(doc(user("a@example.com"), "projects/trial")));
+    await assertFails(deleteDoc(doc(user("admin@example.com", { verified: false, admin: true }), "projects/trial")));
+    await assertFails(deleteDoc(doc(env.unauthenticatedContext().firestore(), "projects/trial")));
+  });
+
+  it("管理者は案件を原稿と閲覧権限ごと削除できる", async () => {
+    const db = user("admin@example.com", { admin: true });
+    expect(await assertSucceeds(deleteProject(db, "trial"))).toEqual({ docs: 2, viewers: 2 });
+    expect((await getDoc(doc(db, "projects/trial"))).exists()).toBe(false);
+    expect((await getDocs(collection(db, "projects/trial/docs"))).size).toBe(0);
+    expect((await getDoc(doc(db, "access/a@example.com"))).data()?.projects).toEqual(["sample"]);
+    expect((await getDoc(doc(db, "access/b@example.com"))).data()?.projects).toEqual([]);
   });
 });

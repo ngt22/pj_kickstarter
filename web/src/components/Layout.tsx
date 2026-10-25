@@ -22,7 +22,7 @@ export default function Layout({ children, sidebar }: { children: ReactNode; sid
             <span className="ks-brand-mark">K</span>
             Kickstarter
           </Anchor>
-          {isAdmin && <Button component={Link} to="/admin" variant="subtle" size="xs">閲覧権限</Button>}
+          {isAdmin && <Button component={Link} to="/admin" variant="subtle" size="xs">案件の管理</Button>}
           {isAdmin && <Button component={Link} to="/cli-login" variant="subtle" size="xs" visibleFrom="sm">CLI ログイン</Button>}
           <Text size="sm" c="dimmed" visibleFrom="xs">{user?.email}</Text>
           <Button variant="default" size="xs" onClick={() => signOut(auth)}>ログアウト</Button>

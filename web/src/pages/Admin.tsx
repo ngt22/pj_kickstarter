@@ -61,7 +61,7 @@ export default function Admin() {
       const result = await deleteProject(db, project.id);
       setProjects((ps) => ps?.filter((p) => p.id !== project.id) ?? null);
       setViewers(({ [project.id]: _, ...rest }) => rest);
-      setNotice(`「${project.name}」を削除しました（ドキュメント ${result.docs} 件、閲覧者 ${result.viewers} 人の権限を解除）。`);
+      setNotice(`「${project.name}」を削除しました（ドキュメント ${result.docs} 件、付箋 ${result.annotations} 枚、閲覧者 ${result.viewers} 人の権限を解除）。`);
     } catch (e) {
       setError(String(e));
       throw e;

@@ -85,6 +85,15 @@ export const theme = createTheme({
   other: {
     // 図（ガントのセクション、ER のドメインなど）で順に割り当てる色。隣どうしが見分けやすい順
     chartColors: ["brand", "teal", "orange", "grape", "cyan", "pink", "lime", "yellow", "indigo", "red"],
+    // 付箋のペン・囲み・引出線の色（lib/annotations.ts の INK_COLORS と同じ並び）
+    inkColors: {
+      black: "var(--mantine-color-black)",
+      white: "var(--mantine-color-white)",
+      red: "var(--mantine-color-red-6)",
+      blue: "var(--mantine-color-blue-6)",
+      green: "var(--mantine-color-green-6)",
+      yellow: "var(--mantine-color-yellow-5)",
+    },
   },
 
   components: {

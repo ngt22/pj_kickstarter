@@ -1,13 +1,18 @@
 import { Alert, Box, Button, NavLink, Paper, Skeleton, Stack, Text } from "@mantine/core";
 import { IconFileOff, IconHome } from "@tabler/icons-react";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import AnnotationButtons from "../components/annotations/AnnotationButtons";
+import { AnnotationProvider } from "../components/annotations/AnnotationContext";
+import AnnotationLayer from "../components/annotations/AnnotationLayer";
+import AnnotationList from "../components/annotations/AnnotationList";
 import DocView from "../components/DocView";
 import EmptyState from "../components/EmptyState";
 import { DocIcon, ICON_STROKE } from "../components/icons";
 import Layout from "../components/Layout";
 import ProjectCover from "../components/ProjectCover";
+import { COVER } from "../lib/annotations";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
 import { ProjectColorContext } from "../lib/projectColor";
@@ -35,6 +40,10 @@ export default function ProjectView() {
   const [docs, setDocs] = useState<DocRecord[] | null>(null);
   const [site, setSite] = useState<SiteSettings>(EMPTY_SITE);
   const [error, setError] = useState("");
+  const pageTitles = useMemo(
+    () => Object.fromEntries([[COVER, "表紙・概要"], ...(docs ?? []).map((d) => [d.type, d.title])]),
+    [docs],
+  );
 
   useEffect(() => {
     setError("");
@@ -101,5 +110,12 @@ export default function ProjectView() {
       </EmptyState>
     );
 
-  return <Layout sidebar={sidebar}>{content}</Layout>;
+  return (
+    <AnnotationProvider projectId={projectId} docType={docType} pageTitles={pageTitles}>
+      <Layout sidebar={sidebar} actions={<AnnotationButtons />}>
+        <AnnotationLayer>{content}</AnnotationLayer>
+        <AnnotationList />
+      </Layout>
+    </AnnotationProvider>
+  );
 }

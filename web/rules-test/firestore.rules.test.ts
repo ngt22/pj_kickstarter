@@ -1,7 +1,8 @@
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { readFileSync } from "node:fs";
-import { arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { addAnnotation, updateAnnotation, type NewAnnotation } from "../src/lib/annotations";
 import { createProject, type TemplateDoc } from "../src/lib/createProject";
 import { deleteProject } from "../src/lib/deleteProject";
 
@@ -169,6 +170,7 @@ describe("案件の削除", () => {
       await setDoc(doc(db, "projects/trial"), { id: "trial" });
       await setDoc(doc(db, "projects/trial/docs/requirements"), { title: "要件定義書" });
       await setDoc(doc(db, "projects/trial/docs/roadmap"), { title: "開発計画" });
+      await setDoc(doc(db, "projects/trial/annotations/n1"), { authorUid: "a@example.com" });
       await setDoc(doc(db, "access/a@example.com"), { projects: ["trial", "sample"] });
       await setDoc(doc(db, "access/b@example.com"), { projects: ["trial"] });
     });
@@ -183,9 +185,10 @@ describe("案件の削除", () => {
 
   it("管理者は案件を原稿と閲覧権限ごと削除できる", async () => {
     const db = user("admin@example.com", { admin: true });
-    expect(await assertSucceeds(deleteProject(db, "trial"))).toEqual({ docs: 2, viewers: 2 });
+    expect(await assertSucceeds(deleteProject(db, "trial"))).toEqual({ docs: 2, viewers: 2, annotations: 1 });
     expect((await getDoc(doc(db, "projects/trial"))).exists()).toBe(false);
     expect((await getDocs(collection(db, "projects/trial/docs"))).size).toBe(0);
+    expect((await getDocs(collection(db, "projects/trial/annotations"))).size).toBe(0);
     expect((await getDoc(doc(db, "access/a@example.com"))).data()?.projects).toEqual(["sample"]);
     expect((await getDoc(doc(db, "access/b@example.com"))).data()?.projects).toEqual([]);
   });
@@ -213,5 +216,74 @@ describe("案件の作成（管理画面）", () => {
     const db = user("admin@example.com", { admin: true });
     await expect(createProject(db, { ...meta, name: "別の案件" }, docs)).rejects.toThrow("すでに使われています");
     expect((await getDoc(doc(db, "projects/fresh"))).data()?.name).toBe("新しい案件");
+  });
+});
+
+describe("付箋（annotations）", () => {
+  // authenticatedContext の uid はメールアドレスにしている
+  const note = (email: string): NewAnnotation => ({
+    docType: "requirements",
+    authorUid: email,
+    authorName: email,
+    authorEmail: email,
+    items: [{ kind: "box", color: "red", x: 10, y: 20, w: 100, h: 40, text: "ここの文言を直してください" }],
+    comment: "",
+    tags: ["文言"],
+    anchor: { path: [0, 1], left: 0, top: 12 },
+    width: 800,
+  });
+  const notes = (db: ReturnType<typeof user>) => collection(db, "projects/sample/annotations");
+
+  it("閲覧権限のある人は自分の付箋を貼って、状態とハッシュタグを変えられる", async () => {
+    const db = user("member@example.com");
+    const id = await assertSucceeds(addAnnotation(db, "sample", note("member@example.com")));
+    await assertSucceeds(updateAnnotation(db, "sample", id, { status: "close", tags: ["#文言", "済"] }));
+    expect((await getDoc(doc(notes(db), id))).data()).toMatchObject({ status: "close", tags: ["文言", "済"] });
+    await assertSucceeds(deleteDoc(doc(notes(db), id)));
+  });
+
+  it("ほかの人になりすまして貼れず、閲覧権限のない案件にも貼れない", async () => {
+    await assertFails(addAnnotation(user("member@example.com"), "sample", note("peer@example.com")));
+    await assertFails(addAnnotation(user("other@example.com"), "sample", note("other@example.com")));
+    await assertFails(addAnnotation(user("member@example.com"), "secret", note("member@example.com")));
+    await assertFails(addAnnotation(user("member@example.com", { verified: false }), "sample", note("member@example.com")));
+  });
+
+  it("クライアントはほかの人の付箋を読めず、触れない", async () => {
+    const id = await addAnnotation(user("peer@example.com"), "sample", note("peer@example.com"));
+    const db = user("member@example.com");
+    await assertFails(getDoc(doc(notes(db), id)));
+    await assertFails(getDocs(notes(db))); // 自分の分に絞らない一覧は取れない
+    await assertSucceeds(getDocs(query(notes(db), where("authorUid", "==", "member@example.com"))));
+    await assertFails(updateAnnotation(db, "sample", id, { status: "close" }));
+    await assertFails(deleteDoc(doc(notes(db), id)));
+  });
+
+  it("管理者はすべての付箋を読めて、close にしたり削除したりできる", async () => {
+    const id = await addAnnotation(user("peer@example.com"), "sample", note("peer@example.com"));
+    const db = user("admin@example.com", { admin: true });
+    await assertSucceeds(getDocs(notes(db)));
+    await assertSucceeds(updateAnnotation(db, "sample", id, { status: "close" }));
+    await assertSucceeds(deleteDoc(doc(notes(db), id)));
+  });
+
+  it("書いた人・書いた内容・位置はあとから変えられない", async () => {
+    const db = user("member@example.com");
+    const id = await addAnnotation(db, "sample", note("member@example.com"));
+    const ref = doc(notes(db), id);
+    await assertFails(updateDoc(ref, { authorUid: "peer@example.com", updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { items: [], updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(notes(user("admin@example.com", { admin: true })), id), { authorName: "管理者", updatedAt: serverTimestamp() }));
+  });
+
+  it("不正な形の付箋は貼れない", async () => {
+    const db = user("member@example.com");
+    const base = { ...note("member@example.com"), status: "open", createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    await assertSucceeds(setDoc(doc(notes(db), "ok"), base));
+    await assertFails(setDoc(doc(notes(db), "n1"), { ...base, status: "done" }));
+    await assertFails(setDoc(doc(notes(db), "n2"), { ...base, status: "close" })); // 最初は open
+    await assertFails(setDoc(doc(notes(db), "n3"), { ...base, items: [] }));
+    await assertFails(setDoc(doc(notes(db), "n4"), { ...base, extra: 1 }));
+    await assertFails(setDoc(doc(notes(db), "n5"), { ...base, createdAt: new Date(2020, 0, 1) }));
   });
 });

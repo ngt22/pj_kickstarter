@@ -92,9 +92,15 @@ export default function ProjectCover({ project, docs }: { project: ProjectRecord
         />
         <Stat
           icon={IconCoinYen}
-          label="概算費用"
-          value={ov.estimate ? yen.format(ov.estimate.amount) : "—"}
-          sub={ov.estimate ? `${ov.estimate.months} 人月（税抜）` : "見積もりから集計します"}
+          label="初期費用"
+          value={ov.estimate ? yen.format(ov.estimate.initial) : "—"}
+          sub={
+            !ov.estimate
+              ? "見積もりから集計します"
+              : ov.estimate.monthly != null
+                ? `月額 ${yen.format(ov.estimate.monthly)}（${ov.estimate.tax}）`
+                : `${ov.estimate.months} 人月（${ov.estimate.tax}）`
+          }
         />
         <Stat
           icon={IconFlag}

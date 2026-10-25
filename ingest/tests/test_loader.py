@@ -1,9 +1,12 @@
 import shutil
 from pathlib import Path
 
+import yaml
+
 from kickstarter_ingest.cli import main
 from kickstarter_ingest.doctypes import DOC_TYPES
 from kickstarter_ingest.loader import load_project
+from kickstarter_ingest.models import EstimateDoc
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -128,3 +131,40 @@ def test_cover_fields(tmp_path):
     errors = load_project(path).errors
     assert any("color" in e for e in errors)
     assert any("proposed_at" in e for e in errors)
+
+
+LEGACY_ESTIMATE = """\
+title: 見積もり
+order: 10
+unit_price: 800000
+items:
+  - { phase: 開発, task: 予約機能, person_months: 1.5 }
+"""
+
+
+def test_legacy_estimate_is_read_as_initial(tmp_path):
+    path = copy_sample(tmp_path)
+    (path / "estimate.yaml").write_text(LEGACY_ESTIMATE, encoding="utf-8")
+    result = load_project(path)
+    assert result.errors == []
+    doc = EstimateDoc.model_validate(yaml.safe_load(LEGACY_ESTIMATE))
+    assert doc.initial.unit_price == 800000
+    assert doc.monthly is None
+
+
+def test_monthly_includes_cannot_have_amounts(tmp_path):
+    # 月額の内訳に金額（原価）を書けないようにする
+    path = copy_sample(tmp_path)
+    text = (path / "estimate.yaml").read_text(encoding="utf-8")
+    text = text.replace("- サーバーの運用・監視", "- { name: クラウド利用料, amount: 10000 }")
+    (path / "estimate.yaml").write_text(text, encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("estimate.yaml") for e in result.errors)
+
+
+def test_estimate_cannot_mix_legacy_and_initial(tmp_path):
+    path = copy_sample(tmp_path)
+    text = (path / "estimate.yaml").read_text(encoding="utf-8") + "items: []\n"
+    (path / "estimate.yaml").write_text(text, encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("estimate.yaml") for e in result.errors)

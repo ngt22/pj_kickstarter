@@ -1,19 +1,39 @@
 title: 見積もり
 order: 10
 currency: JPY
-unit_price: 800000   # 人月単価
-items:
-  - phase: 要件定義
-    task: 要件ヒアリング・要件定義書作成
-    person_months: 0.5
-  - phase: 設計
-    task: 画面・API・DB設計
-    person_months: 0.5
-  - phase: 開発
-    task: 予約機能・管理画面
-    person_months: 1.5
-  - phase: テスト
-    task: 結合・受入テスト支援
-    person_months: 0.5
+tax: excluded          # excluded（税抜）| included（税込）
+valid_until: 2026-11-30   # 見積もりの有効期限（省略可）
+# 初期費用: 開発時に一度だけいただく費用（人月 × 単価）
+initial:
+  unit_price: 800000   # 人月単価
+  items:
+    - phase: 要件定義
+      task: 要件ヒアリング・要件定義書作成
+      person_months: 0.5
+    - phase: 設計
+      task: 画面・API・DB設計
+      person_months: 0.5
+    - phase: 開発
+      task: 予約機能・管理画面
+      person_months: 1.5
+    - phase: テスト
+      task: 結合・受入テスト支援
+      person_months: 0.5
+# 月額費用: 公開後の継続利用料（省略可）。
+# サーバー・クラウド利用料・API 料金などの原価は個別に書かず、サービスにまとめて includes に書く（金額は書かない）
+monthly:
+  items:
+    - name: 運用保守サービス
+      amount: 50000
+      includes:
+        - サーバーの運用・監視
+        - 障害時の調査・復旧（平日 9〜18 時）
+        - 軽微な修正（月 2 時間まで）
+      limits: 月間 1 万予約まで（超える場合は別途ご相談）
+excludes:
+  - ドメインの取得・更新費用
+terms:
+  - 初期費用は納品検収後、翌月末にお支払い
+  - 月額費用は本番公開月の翌月から発生
 notes:
-  - インフラ費用は Firebase 無料枠内を想定
+  - 機能の追加・変更は別途お見積もりします

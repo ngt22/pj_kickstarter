@@ -252,12 +252,15 @@ MOCK_ELEMENTS: dict[str, set[str] | None] = {
     "toast": {"title", "text", "tone", "note"},
     "empty": {"title", "hint", "action", "note"},
     "image": {"label", "height", "note"},
+    "drawing": {"title", "floors", "floor", "rooms", "pins", "selected", "note"},
     "divider": None,
     "space": None,
 }
 # list の行（{title, sub, ...} で書いたとき）と、stats の数値カードに書ける項目
 LIST_ITEM_KEYS = {"title", "sub", "meta", "badge", "thumb", "avatar", "to"}
 STAT_KEYS = {"label", "value", "delta"}
+PIN_KEYS = {"x", "y", "label", "status", "text"}
+PIN_STATUSES = {"new", "prev", "done"}
 LIST_KINDS = {"buttons", "row", "list", "tabs", "nav", "tabbar", "breadcrumb", "stats", "stepper"}
 BUTTON_KEYS = MOCK_ELEMENTS["button"]
 CONTAINERS = {"row", "card"}
@@ -290,6 +293,16 @@ def check_mock_elements(items: Any, where: str = "body") -> None:
                 for b in [*value.get("actions", []), value.get("action")]:
                     if isinstance(b, dict) and set(b) - BUTTON_KEYS:
                         raise ValueError(f"{path}: ボタンに書けない項目 {sorted(set(b) - BUTTON_KEYS)}")
+            if kind == "drawing":
+                for pin in value.get("pins", []):
+                    if not isinstance(pin, dict) or set(pin) - PIN_KEYS:
+                        raise ValueError(f"{path}: ピンは {{x, y, label, status, text}} で書いてください")
+                    for axis in ("x", "y"):
+                        v = pin.get(axis)
+                        if not isinstance(v, (int, float)) or not 0 <= v <= 100:
+                            raise ValueError(f"{path}: ピンの {axis} は図面に対する % （0〜100）で書いてください")
+                    if pin.get("status", "new") not in PIN_STATUSES:
+                        raise ValueError(f"{path}: ピンの status は {', '.join(sorted(PIN_STATUSES))} のどれかです")
             item_keys = {"list": LIST_ITEM_KEYS, "stats": STAT_KEYS}.get(kind)
             for it in value.get("items", []) if item_keys else []:
                 if isinstance(it, dict) and set(it) - item_keys:

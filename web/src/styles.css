@@ -467,13 +467,17 @@ table {
 }
 
 /* 画面イメージ（components/ScreenMock.tsx）
-   資料の本文と取り違えないよう、ライト・ダークどちらでも暗いステージに端末を置く。
+   資料の本文と取り違えないよう、本文の地と違う色のステージ（点の方眼）に端末を置く。
+   端末の黒い縁がはっきり見えるよう、ステージはライトでは明るいグレー、ダークでは本文より一段明るいグレーにする。
    端末の中（.mock-app）は案件カラーのライトテーマで、実際の画面に近い見た目にする */
 .mock-stage {
-  --mock-stage: color-mix(in oklch, var(--mantine-color-dark-8) 92%, var(--mantine-color-indigo-9) 8%);
-  --mock-on-stage: color-mix(in srgb, var(--mantine-color-white) 85%, transparent);
-  --mock-on-stage-dim: color-mix(in srgb, var(--mantine-color-white) 55%, transparent);
-  --mock-stage-line: color-mix(in srgb, var(--mantine-color-white) 8%, transparent);
+  --mock-stage: color-mix(in oklch, var(--mantine-color-gray-3) 80%, var(--mantine-color-indigo-2) 20%);
+  --mock-on-stage: var(--mantine-color-gray-9);
+  --mock-on-stage-dim: var(--mantine-color-gray-7);
+  --mock-stage-line: rgb(0 0 0 / 0.1);
+  --mock-ink: var(--mantine-color-dark-7); /* 番号の丸 */
+  --mock-num-fg: var(--mantine-color-white);
+  --mock-chip: rgb(255 255 255 / 0.7);
   margin: var(--mantine-spacing-lg) 0;
   padding: var(--mantine-spacing-sm) var(--mantine-spacing-lg) var(--mantine-spacing-lg);
   font-family: var(--mantine-font-family);
@@ -485,6 +489,15 @@ table {
   border: 1px solid var(--mock-stage-line);
   border-radius: var(--mantine-radius-lg);
   content-visibility: auto;
+}
+[data-mantine-color-scheme="dark"] .mock-stage {
+  --mock-stage: color-mix(in oklch, var(--mantine-color-dark-4) 85%, var(--mantine-color-indigo-9) 15%);
+  --mock-on-stage: rgb(255 255 255 / 0.9);
+  --mock-on-stage-dim: rgb(255 255 255 / 0.62);
+  --mock-stage-line: rgb(255 255 255 / 0.1);
+  --mock-ink: var(--mantine-color-dark-8);
+  --mock-num-fg: var(--mantine-color-dark-8);
+  --mock-chip: rgb(255 255 255 / 0.1);
   contain-intrinsic-size: auto 480px;
 }
 .mock-band {
@@ -502,7 +515,7 @@ table {
   padding: 2px 10px;
   font-weight: 700;
   color: var(--mock-on-stage);
-  border: 1px solid color-mix(in srgb, var(--mantine-color-white) 20%, transparent);
+  border: 1px solid var(--mock-on-stage-dim);
   border-radius: var(--mantine-radius-xl);
 }
 .mock-band-note {
@@ -570,7 +583,7 @@ table {
   border-radius: var(--mantine-radius-xl);
 }
 .mock-note-num {
-  color: var(--mock-stage);
+  color: var(--mock-num-fg);
   background: var(--mock-on-stage);
 }
 /* 画面の中の番号は、画面の部品ではないことが分かるようステージの色で描く */
@@ -580,7 +593,7 @@ table {
   top: 0;
   left: -26px;
   color: var(--mantine-color-white);
-  background: var(--mock-stage);
+  background: var(--mock-ink);
   box-shadow: 0 0 0 2px var(--mantine-color-white);
 }
 
@@ -610,7 +623,7 @@ table {
   gap: 2px;
   padding: 2px 10px;
   color: var(--mock-on-stage);
-  background: color-mix(in srgb, var(--mantine-color-white) 8%, transparent);
+  background: var(--mock-chip);
   border-radius: var(--mantine-radius-xl);
 }
 .mock-transition b {
@@ -622,7 +635,7 @@ table {
 .mock-browser {
   overflow: hidden;
   border-radius: 10px;
-  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(0 0 0 / 0.3);
+  box-shadow: 0 20px 40px -14px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(0 0 0 / 0.18);
 }
 .mock-toolbar {
   position: relative;
@@ -664,10 +677,11 @@ table {
   flex-direction: column;
   min-height: 720px;
   overflow: hidden;
-  border: 12px solid var(--mantine-color-dark-7);
+  border: 12px solid #1d1f23;
   border-radius: 44px;
   background: var(--mantine-color-gray-0);
-  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 0 0 1px color-mix(in srgb, var(--mantine-color-white) 12%, transparent);
+  /* 縁の外側に細い金属色のふちを足して、端末の輪郭を背景から立たせる */
+  box-shadow: 0 0 0 1.5px #8b9099, 0 20px 40px -14px rgb(0 0 0 / 0.4);
 }
 .mock-statusbar {
   display: flex;
@@ -851,6 +865,145 @@ table {
   color: var(--mantine-primary-color-light-color);
   background: linear-gradient(135deg, var(--mantine-primary-color-light), color-mix(in srgb, var(--mantine-primary-color-light) 40%, var(--mantine-color-white)));
   border-radius: var(--mantine-radius-md);
+}
+/* 図面と指摘位置のピン（components/MockDrawing.tsx） */
+.mock-drawing-sheet {
+  position: relative;
+  overflow: hidden;
+  background: var(--mantine-color-white);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+}
+.mock-plan {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mock-plan-grid {
+  stroke: var(--mantine-primary-color-light);
+  stroke-width: 1;
+}
+.mock-plan-corridor {
+  fill: var(--mantine-color-gray-0);
+}
+.mock-plan-room {
+  fill: none;
+  stroke: var(--mantine-color-gray-7);
+  stroke-width: 2;
+}
+.mock-plan-outer {
+  fill: none;
+  stroke: var(--mantine-color-gray-8);
+  stroke-width: 5;
+}
+.mock-plan-gap {
+  stroke: var(--mantine-color-white);
+  stroke-width: 4;
+}
+.mock-plan-thin {
+  fill: none;
+  stroke: var(--mantine-color-gray-5);
+  stroke-width: 1;
+}
+.mock-plan-label {
+  font-size: 13px;
+  fill: var(--mantine-color-gray-6);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.mock-plan-mark {
+  fill: var(--mantine-color-gray-6);
+  stroke: var(--mantine-color-gray-6);
+  stroke-width: 1;
+  font-size: 11px;
+  text-anchor: middle;
+}
+.mock-plan-mark text {
+  stroke: none;
+}
+/* ピン: 先端が位置を指す雫形。選んだピンは大きくし、吹き出しで内容を出す */
+.mock-pin {
+  position: absolute;
+  z-index: 1;
+  width: 0;
+  height: 0;
+}
+.mock-pin-head {
+  position: absolute;
+  left: -13px;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  background: var(--pin);
+  border: 2px solid var(--mantine-color-white);
+  border-radius: 50% 50% 50% 0;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+  transform: translateY(-4px) rotate(-45deg);
+  transform-origin: 50% 50%;
+}
+.mock-pin-head span {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--mantine-color-white);
+  transform: rotate(45deg);
+}
+.mock-pin[data-selected] {
+  z-index: 2;
+}
+.mock-pin[data-selected] .mock-pin-head {
+  left: -16px;
+  width: 32px;
+  height: 32px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pin) 30%, transparent), 0 2px 8px rgb(0 0 0 / 0.35);
+}
+.mock-pin-callout {
+  position: absolute;
+  left: 0;
+  bottom: 40px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  width: max-content;
+  max-width: 180px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--mantine-color-text);
+  background: var(--mantine-color-white);
+  border-left: 3px solid var(--pin);
+  border-radius: var(--mantine-radius-sm);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+}
+.mock-pin-callout[data-align="start"] {
+  transform: translateX(-16px);
+}
+.mock-pin-callout[data-align="end"] {
+  transform: translateX(calc(-100% + 16px));
+}
+.mock-pin-callout b {
+  color: var(--pin);
+}
+.mock-drawing-zoom {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mock-pin-legend::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  vertical-align: 0;
+  background: var(--pin);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
 }
 .mock-app [data-to] {
   cursor: pointer;

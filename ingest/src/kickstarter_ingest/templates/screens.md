@@ -19,6 +19,8 @@ order: 5
   stats [{label, value, delta}]（数値カード）  list [文字...] または [{title, sub, meta, badge, thumb, avatar, to}]
   table {columns, rows}（セルの "[予約]" はボタン、"(満席)" はバッジ）  pagination {total}  empty {title, hint, action}
   avatar {name, role}  badge {text, color}  image {label, height}  divider  space
+  drawing {title, floors, floor, rooms: [部屋名...], pins: [{x, y, label, status: new|prev|done, text}], selected}
+    （図面と指摘位置などのピン。図面は部屋名から自動で描き、ピンの x・y は図面に対する %。selected のピンは吹き出しに text を出す）
 どの部品にも note: 番号 を付けると画面の外に注釈が並び、下の項目表と対応させられます。
 to: に書いた遷移先は画面の下に「画面遷移」として一覧になります。
 -->

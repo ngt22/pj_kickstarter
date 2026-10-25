@@ -1,3 +1,7 @@
 node_modules
 dist
 tsconfig.tsbuildinfo
+# pnpm site-assets が ingest から生成する（llms.txt・schema・雛形）
+public/llms.txt
+public/schema
+public/templates

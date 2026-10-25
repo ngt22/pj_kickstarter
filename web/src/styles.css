@@ -437,6 +437,21 @@ table {
   background: var(--ks-subtle);
   min-width: 0;
 }
+/* スマホでは操作パネルを図の上に重ね、図の幅を確保する */
+@media (max-width: 48em) {
+  .er {
+    flex-direction: column;
+  }
+  .er-side {
+    width: auto;
+    max-height: 45%;
+    border-right: none;
+    border-bottom: 1px solid var(--mantine-color-default-border);
+  }
+  .er-canvas {
+    min-height: 0;
+  }
+}
 .er-item {
   display: flex;
   align-items: center;

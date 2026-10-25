@@ -14,20 +14,30 @@ class Strict(BaseModel):
 
 
 class ProjectMeta(Strict):
-    id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]*$")
-    name: str
-    summary: str = ""
-    status: Literal["draft", "proposed", "approved", "archived"] = "draft"
+    """案件の基本情報（project.yaml）。"""
+
+    # description は対話モードの質問を兼ねる（schema/project.json に出力される）
+    id: str = Field(
+        pattern=r"^[a-z0-9][a-z0-9-]*$",
+        description="案件ID（英小文字・数字・ハイフン）。ディレクトリ名と同じにする。案件名から提案して確認する",
+    )
+    name: str = Field(description="案件名は何ですか？")
+    summary: str = Field("", description="案件をひとことで説明すると？（一覧と表紙に表示）")
+    status: Literal["draft", "proposed", "approved", "archived"] = Field(
+        "draft", description="状態。draft（作成中）| proposed（提案済み）| approved（承認）| archived（終了）"
+    )
     # 表紙に表示する項目（すべて省略可）
-    client: str = ""
-    proposed_at: str = Field(default="", pattern=r"^(\d{4}-\d{2}-\d{2})?$")
-    version: str = ""
+    client: str = Field("", description="提案先のクライアント名は？（例: 〇〇株式会社 様）")
+    proposed_at: str = Field(default="", pattern=r"^(\d{4}-\d{2}-\d{2})?$", description="提案日は？（YYYY-MM-DD）")
+    version: str = Field("", description="資料の版は？（例: 1.0）")
     # 表紙のキー色。サイトのテーマにある色の名前
     color: Literal[
         "brand", "blue", "indigo", "violet", "grape", "pink", "red", "orange", "yellow", "lime", "green", "teal", "cyan"
-    ] = "brand"
+    ] = Field("brand", description="表紙のキー色（省略時は brand）")
     # 初期の閲覧者。新規案件の初回 push 時だけ access に追加する（以降は管理画面で管理する）
-    members: list[str] = []
+    members: list[str] = Field(
+        [], description="この案件を閲覧するクライアントのメールアドレスは？（初回 push 時だけ閲覧権限に追加される）"
+    )
 
     # YAML は 2026-10-24 を日付型として読むので、文字列に戻す
     @field_validator("proposed_at", mode="before")
@@ -47,49 +57,49 @@ class ProjectMeta(Strict):
 class DocHeader(BaseModel):
     """Markdown の front matter と YAML 原稿に共通する項目。"""
 
-    title: str
-    order: int
+    title: str = Field(description="ページの見出し（サイドバーにも表示）")
+    order: int = Field(description="サイドバーでの並び順（雛形の値のままでよい）")
 
 
 class GlossaryTerm(Strict):
-    term: str
-    reading: str | None = None
-    definition: str
+    term: str = Field(description="用語")
+    reading: str | None = Field(None, description="読み（ひらがな）。一覧はこの読み順に並ぶ")
+    definition: str = Field(description="意味")
 
 
 class GlossaryDoc(DocHeader, Strict):
-    terms: list[GlossaryTerm]
+    terms: list[GlossaryTerm] = Field(description="業界や社内で使う、説明が必要な用語はありますか？")
 
 
 class Risk(Strict):
-    id: str
-    title: str
-    probability: Literal["高", "中", "低"]
-    impact: Literal["高", "中", "低"]
-    mitigation: str
-    owner: str | None = None
-    status: Literal["open", "closed"] = "open"
+    id: str = Field(description="リスクID（例: R-01）")
+    title: str = Field(description="リスクの内容")
+    probability: Literal["高", "中", "低"] = Field(description="発生確率")
+    impact: Literal["高", "中", "低"] = Field(description="発生したときの影響")
+    mitigation: str = Field(description="対策")
+    owner: str | None = Field(None, description="担当")
+    status: Literal["open", "closed"] = Field("open", description="open（対応中）| closed（解消）")
 
 
 class RisksDoc(DocHeader, Strict):
-    risks: list[Risk]
+    risks: list[Risk] = Field(description="想定されるリスクは何ですか？")
 
 
 class EstimateItem(Strict):
-    phase: str
-    task: str
-    person_months: float = Field(ge=0)
+    phase: str = Field(description="フェーズ（例: 要件定義、設計、開発、テスト）")
+    task: str = Field(description="作業内容")
+    person_months: float = Field(ge=0, description="工数（人月）")
 
 
 class EstimateDoc(DocHeader, Strict):
-    currency: str = "JPY"
-    unit_price: int = Field(ge=0)
-    items: list[EstimateItem]
-    notes: list[str] = []
+    currency: str = Field("JPY", description="通貨")
+    unit_price: int = Field(ge=0, description="人月単価はいくらですか？")
+    items: list[EstimateItem] = Field(description="フェーズごとの作業と工数はどのくらいですか？")
+    notes: list[str] = Field([], description="見積もりの前提や対象外の費用はありますか？")
 
 
 class ApiDoc(DocHeader, Strict):
-    spec: dict[str, Any]
+    spec: dict[str, Any] = Field(description="OpenAPI 3 の仕様（openapi と paths が必要）")
 
     @field_validator("spec")
     @classmethod
@@ -111,15 +121,15 @@ YAML_MODELS: dict[str, type[DocHeader]] = {
 
 
 class GanttTask(Strict):
-    id: str | None = None
-    name: str
-    start: date | None = None
-    after: str | list[str] | None = None
-    days: int | None = Field(default=None, ge=0)
-    end: date | None = None
-    milestone: bool = False
-    progress: int | None = Field(default=None, ge=0, le=100)
-    owner: str | None = None
+    id: str | None = Field(None, description="ほかのタスクの after から参照するときの id")
+    name: str = Field(description="タスク名")
+    start: date | None = Field(None, description="開始日。start も after もなければ直前のタスクの続き")
+    after: str | list[str] | None = Field(None, description="先行タスクの id（先に書かれたタスクだけ）")
+    days: int | None = Field(default=None, ge=0, description="日数。days か end のどちらかが必要（マイルストーンは不要）")
+    end: date | None = Field(None, description="終了日")
+    milestone: bool = Field(False, description="true でマイルストーン（◆）")
+    progress: int | None = Field(default=None, ge=0, le=100, description="進捗（%）")
+    owner: str | None = Field(None, description="担当")
 
     @model_validator(mode="after")
     def check_length(self) -> "GanttTask":
@@ -140,6 +150,8 @@ class GanttSection(Strict):
 
 
 class GanttBlock(Strict):
+    """```gantt ブロック（ロードマップのスケジュール）。"""
+
     title: str | None = None
     start: date | None = None
     sections: list[GanttSection] = Field(min_length=1)
@@ -218,10 +230,23 @@ def check_mock_elements(items: Any, where: str = "body") -> None:
                         raise ValueError(f"{path}: ボタンに書けない項目 {sorted(set(b) - BUTTON_KEYS)}")
 
 
+def _mock_body_schema(schema: dict[str, Any]) -> None:
+    parts = [f"{k} {{{', '.join(sorted(v))}}}" if v else k for k, v in MOCK_ELEMENTS.items()]
+    schema["items"] = {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "propertyNames": {"enum": list(MOCK_ELEMENTS)},
+        "description": "「- 種類: 中身」の形の部品。使える部品と項目: " + " / ".join(parts),
+    }
+
+
 class MockBlock(Strict):
-    device: Literal["desktop", "mobile"] = "desktop"
-    title: str | None = None
-    body: list[Any] = Field(min_length=1)
+    """```mock ブロック（画面モック）。部品を上から並べる。"""
+
+    device: Literal["desktop", "mobile"] = Field("desktop", description="枠の形")
+    title: str | None = Field(None, description="アドレスバーに出す文字（例: /reservations）")
+    body: list[Any] = Field(min_length=1, json_schema_extra=_mock_body_schema)
 
     @field_validator("body")
     @classmethod
@@ -240,7 +265,7 @@ class ErColumn(Strict):
     name: str
     type: str | None = None
     pk: bool = False
-    fk: str | None = None  # "テーブル名" または "テーブル名.列名"
+    fk: str | None = Field(None, description="参照先。「テーブル名」または「テーブル名.列名」")
     unique: bool = False
     nullable: bool = False
     note: str | None = None
@@ -255,6 +280,8 @@ class ErTable(Strict):
 
 
 class ErBlock(Strict):
+    """```er ブロック（ER図）。"""
+
     domains: list[ErDomain] = []
     tables: list[ErTable] = Field(min_length=1)
 

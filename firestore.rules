@@ -1,7 +1,8 @@
 rules_version = '2';
 
-// 案件の原稿の書き込みは ingest CLI（Admin SDK）だけが行うため、クライアントからは読み取り専用。
-// 管理者（カスタムクレーム admin: true）は全案件を読めて、閲覧権限（access）を編集できる。
+// 案件の原稿を書き込めるのは管理者（カスタムクレーム admin: true）だけ。
+// ingest CLI は Admin SDK（ルールを通らない）か、login した管理者のトークン（ルールを通る）で書き込む。
+// 管理者は全案件を読めて、閲覧権限（access）を編集できる。
 // クライアントは access/{自分のメール}.projects に含まれる案件だけを読める。
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -22,13 +23,34 @@ service cloud.firestore {
       return isAdmin() || (signedIn() && exists(access) && projectId in get(access).data.projects);
     }
 
+    // ingest の ProjectMeta（members を除く）と同じ項目だけを許す
+    function validProject(projectId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["id", "name", "summary", "status", "client", "proposed_at", "version", "color", "updatedAt"])
+        && data.id == projectId
+        && data.name is string
+        && data.status in ["draft", "proposed", "approved", "archived"];
+    }
+
+    function validDoc(docType) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["type", "title", "order", "format", "body", "updatedAt"])
+        && data.type == docType
+        && data.title is string
+        && data.order is int
+        && data.format in ["markdown", "yaml"]
+        && data.body is string;
+    }
+
     match /projects/{projectId} {
       allow read: if canView(projectId);
-      allow write: if false;
+      allow create, update: if isAdmin() && validProject(projectId);
+      allow delete: if isAdmin();
 
       match /docs/{docType} {
         allow read: if canView(projectId);
-        allow write: if false;
+        allow create, update: if isAdmin() && validDoc(docType);
+        allow delete: if isAdmin();
       }
     }
 

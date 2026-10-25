@@ -8,8 +8,8 @@
 pj_kickstarter/
 ├─ web/        閲覧サイト（Vite + React + React Router の SPA、Mantine、Firebase Auth、Mermaid、React Flow）
 ├─ ingest/     取り込み CLI（Python / uv）：原稿を検証して Firestore に投入
-├─ templates/  14種の原稿テンプレート（記入例つき）
-├─ projects/   案件ごとの原稿。templates をコピーして記入する
+├─ templates/  14種の原稿テンプレート（記入例つき）。実体は ingest/src/kickstarter_ingest/templates（CLI に同梱）
+├─ projects/   案件ごとの原稿。`kickstarter-ingest init` で templates から作って記入する
 ├─ firebase.json / firestore.rules / .firebaserc
 ```
 
@@ -17,7 +17,7 @@ pj_kickstarter/
 - 閲覧できるのは **メール確認済み** のユーザーだけで、さらに次のどちらかに当てはまる場合です（`firestore.rules`）。
   - **管理者**：全案件を閲覧でき、サイトの「閲覧権限」画面（`/admin`）で案件ごとの閲覧者を追加・削除できる
   - **クライアント**：管理者がその案件の閲覧者に指定したメールアドレス
-- 原稿の書き込みはクライアント・管理者ともに禁止しています。投入は ingest CLI（Admin SDK）だけが行います。
+- 原稿を書き込めるのは管理者だけです。ingest CLI が、管理者のログイン（`login`）か Admin SDK（サービスアカウント鍵・エミュレータ）で書き込みます。クライアントは書き込めません。
 
 ### Firestore のデータ構造
 
@@ -99,12 +99,48 @@ Markdown の中に次のコードブロックを書くと、図として描画�
 ## 新しい案件を追加する
 
 ```sh
-cp -r templates projects/my-project
-nvim projects/my-project/project.yaml   # id を my-project に（members に初期の閲覧者を書いてもよい）
 cd ingest
+uv run kickstarter-ingest init my-project --parent ../projects   # 雛形を展開し、id を my-project にする
+nvim ../projects/my-project/project.yaml   # members に初期の閲覧者を書いてもよい
 uv run kickstarter-ingest validate ../projects/my-project
-uv run kickstarter-ingest push ../projects/my-project --gcp-project 本番のID   # 本番へ投入
+uv run kickstarter-ingest login https://本番のサイト              # 初回だけ。管理者のアカウントでログイン
+uv run kickstarter-ingest push ../projects/my-project            # ログインしたアカウントで投入
 ```
+
+`push` の書き込み先は次のとおりです。
+
+| 指定 | 書き込み方 |
+| --- | --- |
+| なし | `login` したアカウントのトークンで、`login` したサイトに書く（Firestore のルールを通るので管理者だけが書ける） |
+| `--emulator` | ローカルのエミュレータに Admin SDK で書く |
+| `--gcp-project ID` | サービスアカウント鍵（`GOOGLE_APPLICATION_CREDENTIALS`）で Admin SDK から書く |
+
+## Claude から案件を追加する
+
+サイトは、Claude などのエージェント向けに次のファイルをログインなしで公開しています（`pnpm build` のときに ingest から生成。形式の説明だけで、案件の中身は含みません）。
+
+| パス | 内容 |
+| --- | --- |
+| `/llms.txt` | 案件の追加手順、原稿の形式、CLI の使い方、対話モード（1項目ずつ質問して作る）の進め方 |
+| `/schema/index.json` | ドキュメントの一覧と、それぞれの schema・雛形・質問 |
+| `/schema/*.json` | 各原稿と図のブロックの JSON Schema。項目の `description` は対話モードの質問を兼ねる |
+| `/templates/*` | 雛形 |
+| `/cli-config.json` | `login` が使う Web API キーとプロジェクトID（JS にも含まれる公開情報） |
+
+別のリポジトリの Claude に「https://本番のサイト/llms.txt を読んで、新しい案件を作って」と頼むと、手順どおりに CLI を使って原稿を作ります。CLI はどこからでも次の形で実行できます（インストール不要）。
+
+```sh
+uvx --from git+https://github.com/ngt22/pj_kickstarter#subdirectory=ingest kickstarter-ingest init my-project
+```
+
+ログインは利用者本人が行います（Claude にパスワードやトークンを渡さないため）。
+
+- メールとパスワード: `kickstarter-ingest login https://本番のサイト --email 自分のメール`
+- Google アカウントなど: サイトに管理者でログインし、右上の「CLI ログイン」で表示されたトークンを `kickstarter-ingest login https://本番のサイト` に貼り付ける
+
+ログイン情報は `~/.config/kickstarter-ingest/credentials.json`（本人だけが読める権限）に保存されます。`whoami` で確認、`logout` で削除できます。管理者でないアカウントは `login` の時点で断られ、仮にトークンを使っても Firestore のルールが書き込みを拒否します。
+
+`/llms.txt` や schema の文面は `ingest/src/kickstarter_ingest/schema.py`（手順）、`doctypes.py`（ドキュメントごとの質問）、`models.py`（項目の説明）にあります。ローカルで確かめるときは `cd web && pnpm site-assets` で `web/public/` に書き出されます。
 
 ### 表紙
 
@@ -119,7 +155,7 @@ uv run kickstarter-ingest push ../projects/my-project --gcp-project 本番のID 
 
 概要の数字（開発期間・概算費用・マイルストーン・対応中のリスク）は、ロードマップの ` ```gantt `、`estimate.yaml`、`risks.yaml` から自動で集計します。表紙のために数字を書き直す必要はありません。
 
-本番への投入には、Firebase コンソールで発行したサービスアカウント鍵を `GOOGLE_APPLICATION_CREDENTIALS` に指定してください。鍵はリポジトリに入れないでください。
+`--gcp-project` で投入する場合は、Firebase コンソールで発行したサービスアカウント鍵を `GOOGLE_APPLICATION_CREDENTIALS` に指定してください。鍵はリポジトリに入れないでください。通常は `login` を使えば鍵は不要です。
 
 ## ローカルで動かす（エミュレータ）
 
@@ -128,7 +164,7 @@ uv run kickstarter-ingest push ../projects/my-project --gcp-project 本番のID 
 cd web && pnpm install
 pnpm exec firebase emulators:start --only auth,firestore --project demo-kickstarter
 
-# 2. 別ターミナルでサンプル案件を投入
+# 2. 別ターミナルでサンプル案件を投入（login したアカウントで試すなら login --emulator --email ...）
 cd ingest && uv sync
 uv run kickstarter-ingest push ../projects/sample --emulator
 
@@ -164,7 +200,7 @@ ssh -L 4000:localhost:4000 -L 4400:localhost:4400 -L 9099:localhost:9099 \
 5. 自分のアカウントでサインアップしてから、`uv run kickstarter-ingest admin grant 自分のメール --gcp-project 本番のID` で管理者にする
 
 ```sh
-cd web && pnpm build && cd ..
+cd web && pnpm build && cd ..   # ingest から llms.txt などを生成するので uv も必要
 web/node_modules/.bin/firebase deploy --only hosting,firestore:rules
 ```
 
@@ -176,4 +212,5 @@ web/node_modules/.bin/firebase deploy --only hosting,firestore:rules
 cd ingest && uv run pytest        # 原稿の検証
 cd web && pnpm test                # 表示ロジック
 cd web && pnpm test:rules          # Firestore ルール（エミュレータを自動起動）
+cd web && pnpm test:cli            # login → push を Auth / Firestore エミュレータで通しで確認
 ```

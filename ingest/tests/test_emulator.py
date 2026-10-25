@@ -5,6 +5,7 @@
 """
 
 import os
+import shutil
 import uuid
 from pathlib import Path
 
@@ -52,7 +53,11 @@ def test_admin_can_push(tmp_path):
     assert main(["init", "e2e", "--parent", str(tmp_path)]) == 0
     project = tmp_path / "e2e"
     meta = project / "project.yaml"
-    meta.write_text(meta.read_text(encoding="utf-8").replace("members: []", "members: [client@example.com]"), encoding="utf-8")
+    text = meta.read_text(encoding="utf-8").replace("members: []", "members: [client@example.com]")
+    meta.write_text(text, encoding="utf-8")
+    # 雛形の仮のクライアント名（〇〇）が残っていると push できない
+    assert main(["push", str(project)]) == 1
+    meta.write_text(text.replace("〇〇株式会社 様", "テスト株式会社 様"), encoding="utf-8")
     assert main(["push", str(project)]) == 0
 
     doc = firestore_get("/projects/e2e/docs/requirements").json()
@@ -95,3 +100,20 @@ def test_non_admin_cannot_login_or_write():
 def test_unknown_email_is_explained(capsys):
     assert main(["login", "--emulator", "--email", "nobody@example.com"]) == 1
     assert "pnpm emu:user" in capsys.readouterr().err
+
+
+def test_site_forbidden_terms_block_push(tmp_path, capsys):
+    email = create_user(admin=True)
+    assert main(["login", "--emulator", "--email", email]) == 0
+    requests.patch(
+        firestore_get("").url.split("?")[0] + "/settings/private",
+        json={"fields": {"forbidden_terms": {"arrayValue": {"values": [{"stringValue": "予約受付工数"}]}}}},
+        headers=OWNER,
+    ).raise_for_status()
+    try:
+        project = tmp_path / "sample"
+        shutil.copytree(ROOT / "projects" / "sample", project)
+        assert main(["push", str(project)]) == 1
+        assert "executive-summary.md" in capsys.readouterr().err
+    finally:
+        requests.delete(firestore_get("").url.split("?")[0] + "/settings/private", headers=OWNER)

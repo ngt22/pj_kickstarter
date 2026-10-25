@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { STATUS, type DocRecord, type ProjectRecord } from "../lib/docs";
 import { fromDay, todayDay } from "../lib/gantt";
 import { buildOverview } from "../lib/overview";
+import type { SiteSettings } from "../lib/settings";
 import { DocIcon, ICON_STROKE } from "./icons";
 
 const longDate = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
@@ -45,7 +46,7 @@ function Meta({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-export default function ProjectCover({ project, docs }: { project: ProjectRecord; docs: DocRecord[] }) {
+export default function ProjectCover({ project, docs, site }: { project: ProjectRecord; docs: DocRecord[]; site?: SiteSettings }) {
   const ov = useMemo(() => buildOverview(docs), [docs]);
   const color = project.color ?? "brand";
   const status = STATUS[project.status] ?? { label: project.status, color: "gray" };
@@ -72,6 +73,8 @@ export default function ProjectCover({ project, docs }: { project: ProjectRecord
         {project.summary && <Text className="ks-cover-summary">{project.summary}</Text>}
         <Group gap="xl" className="ks-cover-meta">
           {project.client && <Meta label="クライアント">{project.client}</Meta>}
+          {site?.vendor_name && <Meta label="提案者">{site.vendor_name}</Meta>}
+          {site?.contact && <Meta label="担当">{site.contact}</Meta>}
           {project.proposed_at && <Meta label="提案日">{longDate.format(new Date(project.proposed_at))}</Meta>}
           {project.version && <Meta label="版">第 {project.version} 版</Meta>}
           <Meta label="資料">{docs.length} 種類</Meta>

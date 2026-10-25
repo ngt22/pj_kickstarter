@@ -9,9 +9,9 @@ risks:
     owner: PM
     status: open      # open | closed
   - id: R-02
-    title: Firestore 無料枠の超過
+    title: 想定を上回るアクセス増加
     probability: 低
     impact: 中
-    mitigation: 読み取り回数をモニタリングし、上限前にアラート
+    mitigation: 利用状況を監視し、性能に影響が出る前に構成を見直す
     owner: 開発
     status: open

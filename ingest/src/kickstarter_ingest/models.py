@@ -2,7 +2,7 @@
 
 import re
 from datetime import date
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -38,6 +38,12 @@ class ProjectMeta(Strict):
     members: list[str] = Field(
         [], description="この案件を閲覧するクライアントのメールアドレスは？（初回 push 時だけ閲覧権限に追加される）"
     )
+
+    # push 前に原稿から探す語（社内のあだ名など）。サイトには送らない。サイト共通の禁止語は管理画面で設定する
+    forbidden_terms: list[str] = Field([], description="クライアントに見せてはいけない語（社内のあだ名など）はありますか？")
+
+    # サイトに送らない項目
+    PRIVATE_FIELDS: ClassVar[set[str]] = {"members", "forbidden_terms"}
 
     # YAML は 2026-10-24 を日付型として読むので、文字列に戻す
     @field_validator("proposed_at", mode="before")

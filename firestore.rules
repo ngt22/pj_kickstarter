@@ -55,6 +55,22 @@ service cloud.firestore {
       }
     }
 
+    // サイト共通の設定。site は表紙に出す提案者（自社名・担当者）で、ログインした人なら誰でも読める。
+    // private は push 時の禁止語（社内のあだ名など）で、クライアントに見えないよう管理者だけが読める。
+    match /settings/site {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(["vendor_name", "contact", "updatedAt"])
+        && request.resource.data.vendor_name is string
+        && request.resource.data.contact is string;
+    }
+    match /settings/private {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(["forbidden_terms", "updatedAt"])
+        && request.resource.data.forbidden_terms is list;
+    }
+
     // 閲覧権限。ドキュメントIDは小文字のメールアドレス。
     // 閲覧者リストを案件側に持たないので、クライアント同士でお互いのメールは見えない。
     match /access/{email} {

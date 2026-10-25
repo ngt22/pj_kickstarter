@@ -10,6 +10,7 @@ import Layout from "../components/Layout";
 import ProjectCover from "../components/ProjectCover";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
+import { EMPTY_SITE, loadSiteSettings, type SiteSettings } from "../lib/settings";
 
 // 読み込み中は、表示される紙と同じ形の骨組みを出す（画面が跳ねないように）
 function DocSkeleton() {
@@ -31,6 +32,7 @@ export default function ProjectView() {
   const { projectId = "", docType } = useParams();
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [docs, setDocs] = useState<DocRecord[] | null>(null);
+  const [site, setSite] = useState<SiteSettings>(EMPTY_SITE);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -42,6 +44,8 @@ export default function ProjectView() {
         setDocs(d.docs.map((x) => x.data() as DocRecord).sort((a, b) => a.order - b.order));
       })
       .catch((e) => setError(String(e)));
+    // 提案者は表紙の補足なので、読めなくても資料は表示する
+    loadSiteSettings(db).then(setSite).catch(() => setSite(EMPTY_SITE));
   }, [projectId]);
 
   if (error) return <Layout><Alert color="red" title="読み込めませんでした">{error}</Alert></Layout>;
@@ -78,7 +82,7 @@ export default function ProjectView() {
   );
 
   let content;
-  if (!docType) content = <ProjectCover project={project} docs={docs} />;
+  if (!docType) content = <ProjectCover project={project} docs={docs} site={site} />;
   else if (current)
     content = (
       <DocView doc={current} index={i} total={docs.length} prev={docs[i - 1]} next={docs[i + 1]} basePath={base} />

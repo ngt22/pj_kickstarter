@@ -186,27 +186,88 @@ table {
   font-family: var(--mantine-font-family-monospace);
 }
 
-/* ガントチャート（components/Gantt.tsx） */
+/* ガントチャート（components/Gantt.tsx）: Editorial — 紙の工程表。
+   墨の罫線と白抜きのバーで組み、今日とマイルストーンだけ朱にする */
 .gantt-wrap {
+  --ed-paper: #f6f2ec;
+  --ed-card: #fdfbf7;
+  --ed-ink: #22201c;
+  --ed-rule: rgb(34 32 28 / 0.28);
+  --ed-hair: rgb(34 32 28 / 0.1);
+  --ed-muted: #8a847a;
+  --ed-accent: #c0412b;
   font-family: var(--mantine-font-family);
   line-height: 1.4;
+  color: var(--ed-ink);
+  padding: 20px 24px 16px;
+  background: var(--ed-paper);
+}
+@media (max-width: 48em) {
+  .gantt-wrap {
+    padding: 14px 12px 12px;
+  }
+  .gantt-owner {
+    display: none;
+  }
+}
+[data-mantine-color-scheme="dark"] .gantt-wrap {
+  --ed-paper: #22201d;
+  --ed-card: #2b2925;
+  --ed-ink: #ebe5da;
+  --ed-rule: rgb(235 229 218 / 0.3);
+  --ed-hair: rgb(235 229 218 / 0.09);
+  --ed-muted: #9a9387;
+  --ed-accent: #e2725b;
 }
 .gantt-wrap p {
   margin: 0; /* Typography の段落余白を打ち消す */
 }
+.gantt-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-sm);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid var(--ed-ink);
+}
+.gantt-kicker {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ed-accent);
+}
+.gantt-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.gantt-scale {
+  background: transparent;
+  border: 1px solid var(--ed-rule);
+  border-radius: 0;
+}
+.gantt-scale .mantine-SegmentedControl-indicator {
+  border-radius: 0;
+  background: var(--ed-ink);
+  box-shadow: none;
+}
+.gantt-scale .mantine-SegmentedControl-label[data-active] {
+  color: var(--ed-paper);
+}
 .gantt {
   overflow: auto;
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-lg);
-  background: var(--ks-surface);
+  background: var(--ed-paper);
+  border-top: 1px solid var(--ed-ink);
+  border-bottom: 1px solid var(--ed-ink);
 }
 .gantt-header {
   position: sticky;
   top: 0;
   z-index: 3;
   display: flex;
-  background: var(--ks-subtle);
-  border-bottom: 1px solid var(--mantine-color-default-border);
+  background: var(--ed-paper);
+  border-bottom: 1px solid var(--ed-ink);
 }
 .gantt-label {
   position: sticky;
@@ -214,36 +275,54 @@ table {
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 100%;
   padding: 0 var(--mantine-spacing-sm);
   flex-shrink: 0;
-  background: var(--ks-surface);
-  border-right: 1px solid var(--mantine-color-default-border);
+  background: var(--ed-paper);
+  border-right: 1px solid var(--ed-rule);
   min-width: 0;
 }
 .gantt-corner {
   z-index: 4;
-  background: var(--ks-subtle);
-  font-size: var(--mantine-font-size-sm);
-  font-weight: 700;
+  align-items: flex-end;
+  padding-bottom: 8px;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--ed-muted);
 }
 .gantt-tick {
   position: absolute;
   white-space: nowrap;
-  font-size: var(--mantine-font-size-xs);
-  color: var(--mantine-color-dimmed);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  color: var(--ed-muted);
 }
 .gantt-tick-top {
-  top: 4px;
-  padding-left: 4px;
+  top: 6px;
+  padding-left: 6px;
+  font-family: var(--mantine-font-family);
+  font-size: 12px;
   font-weight: 700;
-  color: var(--mantine-color-text);
-  border-left: 1px solid var(--mantine-color-default-border);
+  letter-spacing: 0.08em;
+  color: var(--ed-ink);
+  border-left: 1px solid var(--ed-ink);
 }
 .gantt-tick-bottom {
-  top: 28px;
-  padding-left: 3px;
+  top: 30px;
+  padding-left: 4px;
+}
+.gantt-today-tag {
+  position: absolute;
+  bottom: 4px;
+  transform: translateX(-50%);
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #fff;
+  background: var(--ed-accent);
 }
 .gantt-grid {
   position: absolute;
@@ -254,71 +333,129 @@ table {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px solid var(--mantine-color-default-border);
+  border-left: 1px solid var(--ed-hair);
 }
 .gantt-weekend {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: var(--mantine-color-default-hover);
+  background: repeating-linear-gradient(135deg, var(--ed-hair) 0 1px, transparent 1px 6px);
 }
 .gantt-today {
   position: absolute;
+  z-index: 1;
   top: 0;
   bottom: 0;
-  border-left: 2px solid var(--mantine-color-red-6);
+  border-left: 1px dashed var(--ed-accent);
 }
 .gantt-row {
   position: relative;
   display: flex;
-  border-bottom: 1px solid var(--mantine-color-default-border);
+  border-bottom: 1px solid var(--ed-hair);
+}
+.gantt-section {
+  border-top: 1px solid var(--ed-ink);
+  border-bottom-color: transparent;
+}
+.gantt-row:first-child {
+  border-top: 0;
 }
 .gantt-section .gantt-label {
   cursor: pointer;
-  background: var(--ks-subtle);
+  user-select: none;
 }
-.gantt-section .gantt-label:hover {
-  background: var(--mantine-color-default);
+.gantt-sec-mark {
+  color: var(--ed-accent);
+  font-weight: 700;
 }
+.gantt-sec-name {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gantt-sec-count {
+  margin-left: auto;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  color: var(--ed-muted);
+  white-space: nowrap;
+}
+.gantt-section .gantt-label:hover .gantt-sec-count {
+  color: var(--ed-ink);
+}
+.gantt-task-label {
+  padding-left: 30px;
+}
+.gantt-owner {
+  margin-left: auto;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  color: var(--ed-muted);
+  white-space: nowrap;
+}
+/* セクションの期間: 両端に爪のある細い墨線（括弧のように範囲を示す） */
 .gantt-summary {
   position: absolute;
-  top: 14px;
-  height: 6px;
-  border-radius: 3px;
-  opacity: 0.7;
+  top: 22px;
+  height: 7px;
+  border: 1px solid var(--ed-ink);
+  border-bottom: 0;
+}
+.gantt-summary-dates {
+  position: absolute;
+  left: 0;
+  bottom: 9px;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 10px;
+  color: var(--ed-muted);
+  white-space: nowrap;
 }
 .gantt-bar {
   position: absolute;
   z-index: 1;
-  top: 6px;
+  top: 7px;
   height: 22px;
   padding: 0 8px;
   overflow: hidden;
   white-space: nowrap;
-  font-size: var(--mantine-font-size-sm);
+  font-size: 13px;
   line-height: 20px;
-  border: 1px solid;
-  border-radius: var(--mantine-radius-sm);
+  color: var(--ed-ink);
+  background: var(--ed-card);
+  border: 1px solid var(--ed-ink);
 }
+/* 進捗: 済んだ分を斜線で塗る（色を使わずに分かるように） */
 .gantt-progress {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 3px;
+  inset: 0 auto 0 0;
+  background: repeating-linear-gradient(135deg, var(--ed-rule) 0 1.5px, transparent 1.5px 5px);
+  border-right: 1px solid var(--ed-ink);
+}
+.gantt-bar[data-done] .gantt-progress {
+  border-right: 0;
+}
+.gantt-bar-text {
+  position: relative;
+  text-shadow: 0 0 3px var(--ed-card), 0 0 3px var(--ed-card);
 }
 .gantt-milestone {
   position: absolute;
   z-index: 1;
-  top: 10px;
-  width: 14px;
-  height: 14px;
+  top: 12px;
+  width: 12px;
+  height: 12px;
   transform: rotate(45deg);
+  background: var(--ed-accent);
+  outline: 2px solid var(--ed-paper);
 }
 .gantt-outside {
   position: absolute;
   top: 0;
-  line-height: 34px;
-  font-size: var(--mantine-font-size-sm);
+  line-height: 36px;
+  font-size: 13px;
   white-space: nowrap;
   pointer-events: none;
 }

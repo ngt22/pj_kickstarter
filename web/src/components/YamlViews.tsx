@@ -1,14 +1,9 @@
-import { Badge, Code, List, Table, Text } from "@mantine/core";
+import { Badge, Code, List, Paper, SimpleGrid, Stack, Table, Text, Title } from "@mantine/core";
+import { estimateTotals, normalizeEstimate, taxLabel } from "../lib/estimate";
 
 type Glossary = { terms: { term: string; reading?: string; definition: string }[] };
 type Risks = {
   risks: { id: string; title: string; probability: string; impact: string; mitigation: string; owner?: string; status: string }[];
-};
-type Estimate = {
-  currency: string;
-  unit_price: number;
-  items: { phase: string; task: string; person_months: number }[];
-  notes?: string[];
 };
 type Api = { spec: { info?: { title?: string; version?: string }; paths: Record<string, Record<string, { summary?: string }>> } };
 
@@ -79,42 +74,113 @@ export function RisksView({ data }: { data: Risks }) {
   );
 }
 
-export function estimateTotal(data: Estimate) {
-  const months = data.items.reduce((sum, i) => sum + i.person_months, 0);
-  return { months, amount: Math.round(months * data.unit_price) };
+const longDate = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+
+function Total({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <Paper p="lg" radius="md" className="ks-estimate-total">
+      <Text size="sm" c="dimmed" fw={500}>{label}</Text>
+      <Text fz={28} fw={700} lh={1.3} className="ks-stat-value">{value}</Text>
+      <Text size="xs" c="dimmed" mt={4}>{sub}</Text>
+    </Paper>
+  );
 }
 
-export function EstimateView({ data }: { data: Estimate }) {
-  const fmt = new Intl.NumberFormat("ja-JP", { style: "currency", currency: data.currency });
-  const total = estimateTotal(data);
+function Conditions({ label, items }: { label: string; items: string[] }) {
+  if (!items.length) return null;
   return (
-    <>
-      <Text mb="sm">人月単価：{fmt.format(data.unit_price)}</Text>
-      <DataTable head={["フェーズ", "作業", "人月", "金額"]} right={["人月", "金額"]}>
-        <Table.Tbody>
-          {data.items.map((i) => (
-            <Table.Tr key={i.phase + i.task}>
-              <Table.Td>{i.phase}</Table.Td>
-              <Table.Td>{i.task}</Table.Td>
-              <Table.Td ta="right">{i.person_months}</Table.Td>
-              <Table.Td ta="right">{fmt.format(Math.round(i.person_months * data.unit_price))}</Table.Td>
+    <div>
+      <Text size="sm" fw={700}>{label}</Text>
+      <List size="sm" mt={4}>
+        {items.map((n) => <List.Item key={n}>{n}</List.Item>)}
+      </List>
+    </div>
+  );
+}
+
+export function EstimateView({ data }: { data: Record<string, unknown> }) {
+  const e = normalizeEstimate(data);
+  const fmt = new Intl.NumberFormat("ja-JP", { style: "currency", currency: e.currency });
+  const total = estimateTotals(e);
+  const tax = taxLabel(e);
+  return (
+    <Stack gap="xl">
+      <SimpleGrid cols={{ base: 1, xs: e.monthly ? 2 : 1 }} spacing="md">
+        <Total
+          label="初期費用"
+          value={fmt.format(total.initial)}
+          sub={`${tax}・${total.months} 人月（人月単価 ${fmt.format(e.initial.unit_price)}）`}
+        />
+        {total.monthly != null && <Total label="月額費用" value={`${fmt.format(total.monthly)} / 月`} sub={`${tax}・本番公開後の継続利用料`} />}
+      </SimpleGrid>
+
+      <section>
+        <Title order={3} mb="sm">初期費用</Title>
+        <DataTable head={["フェーズ", "作業", "人月", "金額"]} right={["人月", "金額"]}>
+          <Table.Tbody>
+            {e.initial.items.map((i) => (
+              <Table.Tr key={i.phase + i.task}>
+                <Table.Td style={{ whiteSpace: "nowrap" }}>{i.phase}</Table.Td>
+                <Table.Td>{i.task}</Table.Td>
+                <Table.Td ta="right">{i.person_months}</Table.Td>
+                <Table.Td ta="right">{fmt.format(Math.round(i.person_months * e.initial.unit_price))}</Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+          <Table.Tfoot>
+            <Table.Tr>
+              <Table.Th colSpan={2}>初期費用 合計（{tax}）</Table.Th>
+              <Table.Th ta="right">{total.months}</Table.Th>
+              <Table.Th ta="right">{fmt.format(total.initial)}</Table.Th>
             </Table.Tr>
-          ))}
-        </Table.Tbody>
-        <Table.Tfoot>
-          <Table.Tr>
-            <Table.Th colSpan={2}>合計</Table.Th>
-            <Table.Th ta="right">{total.months}</Table.Th>
-            <Table.Th ta="right">{fmt.format(total.amount)}</Table.Th>
-          </Table.Tr>
-        </Table.Tfoot>
-      </DataTable>
-      {data.notes && (
-        <List mt="md" size="sm">
-          {data.notes.map((n) => <List.Item key={n}>{n}</List.Item>)}
-        </List>
+          </Table.Tfoot>
+        </DataTable>
+      </section>
+
+      {e.monthly && (
+        <section>
+          <Title order={3} mb="sm">月額費用</Title>
+          <DataTable head={["サービス", "含まれるもの", "月額"]} right={["月額"]}>
+            <Table.Tbody>
+              {e.monthly.items.map((i) => (
+                <Table.Tr key={i.name}>
+                  <Table.Td fw={500} style={{ whiteSpace: "nowrap" }}>{i.name}</Table.Td>
+                  <Table.Td>
+                    {i.includes?.length ? (
+                      <List size="sm">{i.includes.map((n) => <List.Item key={n}>{n}</List.Item>)}</List>
+                    ) : null}
+                    {i.limits && <Text size="xs" c="dimmed" mt={4}>※ {i.limits}</Text>}
+                  </Table.Td>
+                  <Table.Td ta="right" style={{ whiteSpace: "nowrap" }}>{fmt.format(i.amount)}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+            <Table.Tfoot>
+              <Table.Tr>
+                <Table.Th colSpan={2}>月額費用 合計（{tax}）</Table.Th>
+                <Table.Th ta="right" style={{ whiteSpace: "nowrap" }}>{fmt.format(total.monthly!)}</Table.Th>
+              </Table.Tr>
+            </Table.Tfoot>
+          </DataTable>
+        </section>
       )}
-    </>
+
+      <section>
+        <Title order={3} mb="sm">前提条件</Title>
+        <Stack gap="md">
+          <Conditions
+            label="金額について"
+            items={[
+              `金額はすべて${tax}です`,
+              ...(e.valid_until ? [`本見積もりの有効期限は${longDate.format(new Date(e.valid_until))}です`] : []),
+            ]}
+          />
+          <Conditions label="お見積もりに含まれない費用" items={e.excludes} />
+          <Conditions label="お取引条件" items={e.terms} />
+          <Conditions label="その他" items={e.notes} />
+        </Stack>
+      </section>
+    </Stack>
   );
 }
 

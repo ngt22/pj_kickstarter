@@ -1,13 +1,13 @@
-// 表紙のサマリー（期間・概算・マイルストーン・リスク）を各ドキュメントの原稿から集計する。
+// 表紙のサマリー（期間・費用・マイルストーン・リスク）を各ドキュメントの原稿から集計する。
 // 案件ごとに数字を書き直さなくてよいよう、ロードマップのガント・見積もり・リスク管理表から読む
-import { estimateTotal } from "../components/YamlViews";
 import { parseYaml, stripFrontMatter, type DocRecord } from "./docs";
+import { estimateTotals, normalizeEstimate, taxLabel } from "./estimate";
 import { schedule, type GanttSpec } from "./gantt";
 
 export type Overview = {
   period?: { start: number; end: number; weeks: number };
   milestones: { name: string; day: number }[];
-  estimate?: { months: number; amount: number; currency: string };
+  estimate?: { months: number; initial: number; monthly?: number; currency: string; tax: string };
   risks?: { open: number; high: number; total: number };
 };
 
@@ -39,8 +39,8 @@ export function buildOverview(docs: DocRecord[]): Overview {
   const estimate = byType.get("estimate");
   if (estimate) {
     try {
-      const data = parseYaml<Parameters<typeof estimateTotal>[0] & { currency?: string }>(estimate.body);
-      result.estimate = { ...estimateTotal(data), currency: data.currency ?? "JPY" };
+      const data = normalizeEstimate(parseYaml(estimate.body));
+      result.estimate = { ...estimateTotals(data), currency: data.currency, tax: taxLabel(data) };
     } catch {
       // 同上
     }

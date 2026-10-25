@@ -91,11 +91,50 @@ class EstimateItem(Strict):
     person_months: float = Field(ge=0, description="工数（人月）")
 
 
+class InitialCost(Strict):
+    unit_price: int = Field(ge=0, description="人月単価はいくらですか？")
+    items: list[EstimateItem] = Field(min_length=1, description="初期開発のフェーズごとの作業と工数はどのくらいですか？")
+
+
+class MonthlyItem(Strict):
+    name: str = Field(description="サービス名（例: 運用保守サービス）")
+    amount: int = Field(ge=0, description="月額")
+    # 内訳に金額を持たせない（サーバー・クラウド・API などの原価が構造上出ないようにする）
+    includes: list[str] = Field([], description="含まれるもの（金額は書かない）")
+    limits: str | None = Field(None, description="利用の上限や条件（例: 月間 1 万予約まで）")
+
+
+class MonthlyCost(Strict):
+    items: list[MonthlyItem] = Field(
+        min_length=1,
+        description="公開後に毎月いただく費用は？サーバー・クラウド・API などの原価は個別に書かず、"
+        "運用保守サービスなどにまとめて「含まれるもの」に書く",
+    )
+
+
 class EstimateDoc(DocHeader, Strict):
     currency: str = Field("JPY", description="通貨")
-    unit_price: int = Field(ge=0, description="人月単価はいくらですか？")
-    items: list[EstimateItem] = Field(description="フェーズごとの作業と工数はどのくらいですか？")
-    notes: list[str] = Field([], description="見積もりの前提や対象外の費用はありますか？")
+    tax: Literal["excluded", "included"] = Field("excluded", description="金額が税抜（excluded）か税込（included）か")
+    valid_until: str = Field(default="", pattern=r"^(\d{4}-\d{2}-\d{2})?$", description="見積もりの有効期限は？（YYYY-MM-DD）")
+    initial: InitialCost = Field(description="初期費用（開発時に一度だけいただく費用）")
+    monthly: MonthlyCost | None = Field(None, description="月額費用（公開後の継続利用料）")
+    excludes: list[str] = Field([], description="見積もりに含まれない費用はありますか？（例: ドメイン取得費用）")
+    terms: list[str] = Field([], description="支払条件などの取引条件は？（例: 納品検収後の翌月末払い）")
+    notes: list[str] = Field([], description="そのほかの前提はありますか？")
+
+    # 旧形式（トップレベルの unit_price と items）は初期費用として読む
+    @model_validator(mode="before")
+    @classmethod
+    def legacy_to_initial(cls, v: Any) -> Any:
+        if isinstance(v, dict) and "initial" not in v and "items" in v:
+            v = dict(v)
+            v["initial"] = {"unit_price": v.pop("unit_price", None), "items": v.pop("items")}
+        return v
+
+    @field_validator("valid_until", mode="before")
+    @classmethod
+    def date_to_str(cls, v: object) -> object:
+        return v.isoformat() if isinstance(v, date) else v
 
 
 class ApiDoc(DocHeader, Strict):

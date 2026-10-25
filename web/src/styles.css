@@ -712,3 +712,9 @@ table {
 .ks-project-card-foot {
   border-top: 1px solid var(--mantine-color-default-border);
 }
+
+/* 見積もりの合計（初期費用・月額費用） */
+.ks-estimate-total {
+  background: var(--ks-subtle);
+  border-left: 4px solid var(--mantine-primary-color-filled);
+}

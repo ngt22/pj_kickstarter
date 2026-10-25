@@ -629,6 +629,11 @@ function AppTheme({ color, children }: { color: string; children: React.ReactNod
 
 function Screen({ spec, mobile }: { spec: MockSpec; mobile: boolean }) {
   const shell = splitShell(spec.body);
+  // スマホ向けに書いた画面をパソコンで見るときは、下のタブを横のメニューにする
+  if (!mobile && shell.tabbar && !shell.nav) {
+    shell.nav = { nav: kindOf(shell.tabbar)[1] };
+    shell.tabbar = undefined;
+  }
   const main = (
     <Stack className="mock-main" gap="md">
       <Items items={shell.main} />
@@ -684,9 +689,16 @@ function Device({ spec, mobile }: { spec: MockSpec; mobile: boolean }) {
   );
 }
 
+const DEVICES = [
+  { value: "desktop", label: "パソコン", icon: IconDeviceDesktop },
+  { value: "mobile", label: "スマートフォン", icon: IconDeviceMobile },
+] as const;
+
 export default function ScreenMock({ source }: { source: string }) {
   const color = useContext(ProjectColorContext);
   const narrow = useMediaQuery("(max-width: 48em)");
+  // 原稿の device は最初に見せる端末。帯の切り替えで、同じ画面をもう一方の端末でも見られる
+  const [view, setView] = useState<"desktop" | "mobile">();
   const parsed = useMemo(() => {
     try {
       const spec = parseYaml<MockSpec>(source);
@@ -699,7 +711,7 @@ export default function ScreenMock({ source }: { source: string }) {
 
   if ("error" in parsed) return <Code block c="red">画面モックを読めません: {parsed.error}</Code>;
   const { spec, notes, transitions } = parsed;
-  const mobile = spec.device === "mobile";
+  const mobile = (view ?? spec.device ?? "desktop") === "mobile";
   const DeviceIcon = mobile ? IconDeviceMobile : IconDeviceDesktop;
 
   return (
@@ -710,7 +722,14 @@ export default function ScreenMock({ source }: { source: string }) {
           画面イメージ
         </span>
         <span className="mock-band-note">実際のデザインとは異なります</span>
-        <span className="mock-band-meta">{mobile ? "スマートフォン" : "パソコン"}</span>
+        <span className="mock-switch" role="group" aria-label="表示する端末">
+          {DEVICES.map((d) => (
+            <button key={d.value} type="button" aria-pressed={(d.value === "mobile") === mobile} onClick={() => setView(d.value)}>
+              <d.icon size={14} stroke={ICON_STROKE} />
+              {d.label}
+            </button>
+          ))}
+        </span>
       </figcaption>
       <div className="mock-body">
         <div className="mock-device">

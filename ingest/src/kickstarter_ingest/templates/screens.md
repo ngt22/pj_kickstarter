@@ -5,7 +5,8 @@ order: 5
 
 <!--
 ```mock ブロックに YAML で部品を上から並べると、案件カラーの「画面イメージ」として描画されます。
-  device: desktop | mobile（パソコンのブラウザ / スマートフォン）   title: アドレスバーに出すパス
+  device: desktop | mobile（最初に見せる端末。画面の上の切り替えで、もう一方の端末でも見られる）   title: アドレスバーに出すパス
+  パソコンで見ると tabbar は横のメニューに、スマホで見ると nav は上のチップに、row は縦並びになります
 画面の骨組み:
   header {title, links, actions, back, action}（先頭に置くと上のバー。スマホは back: true で戻る矢印）
   nav {brand, items, active}（パソコンの横メニュー）  tabbar {items, active}（スマホの下のタブ）  footer {text, links}

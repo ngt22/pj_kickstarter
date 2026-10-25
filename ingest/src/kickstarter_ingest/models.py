@@ -460,9 +460,98 @@ class UsecaseBlock(Strict):
         return self
 
 
+class FlowLane(Strict):
+    id: str = Field(description="screens と terminals の lane から参照する id")
+    name: str = Field(description="レーン名（例: 日常業務、設定（管理者））")
+    note: str | None = Field(None, description="カードの右に出す補足（例: 業務の流れとは独立した設定画面）")
+
+
+class FlowZone(Strict):
+    id: str = Field(description="screens・terminals の zone と flows から参照する id")
+    name: str = Field(description="区画名（例: 現地、事務所、お客さま、店舗）")
+    note: str | None = Field(None, description="区画の補足（例: タブレット・スマホ／電波がなくても動作）")
+    color: ThemeColor | None = Field(None, description="区画の色（省略すると自動）")
+    footnote: str | None = Field(None, description="区画の下に小さく出す注記（例: SC-06〜SC-09 は将来の拡張用）")
+    lanes: list[FlowLane] = []
+
+
+class FlowScreen(Strict):
+    id: str = Field(description="画面ID。画面仕様の見出し（## SC-01 …）と同じにする")
+    name: str = Field(description="画面名（全角12文字以内が目安）。アイコンは名前から自動で付く")
+    zone: str | None = Field(None, description="置く区画の id（省略すると最初の区画）")
+    lane: str | None = Field(None, description="置くレーンの id（省略すると区画の最初のレーン）")
+
+
+class FlowTerminal(Strict):
+    id: str = Field(description="edges から参照する id")
+    label: str = Field(description="丸に出す文字（例: 開始、提出）。2〜3文字")
+    zone: str | None = None
+    lane: str | None = None
+
+
+class FlowEdge(Strict):
+    from_: str = Field(alias="from", description="遷移元の画面・丸の id")
+    to: str = Field(description="遷移先の画面・丸の id（同じレーンの中）")
+    label: str | None = Field(None, description="線に添える操作（例: 案件を開く）")
+    type: Literal["go", "back"] = Field("go", description="go: 進む / back: 確定・キャンセルで戻る（点線）")
+
+
+class FlowSync(Strict):
+    from_: str = Field(alias="from", description="受け渡し元の区画の id")
+    to: str = Field(description="受け渡し先の区画の id（from と隣り合う区画）")
+    label: str = Field(description="受け渡しの名前（例: 帰社後に同期）")
+    note: str | None = None
+
+
+class FlowBlock(Strict):
+    """```flow ブロック（ページ遷移図）。区画 → レーンの中に画面を左から右へ並べる。"""
+
+    zones: list[FlowZone] = Field(min_length=1)
+    screens: list[FlowScreen] = Field(min_length=1)
+    terminals: list[FlowTerminal] = []
+    edges: list[FlowEdge] = []
+    flows: list[FlowSync] = []
+    notes: list[str] = []
+
+    @model_validator(mode="after")
+    def check_refs(self) -> "FlowBlock":
+        zones = {z.id: z for z in self.zones}
+        nodes = [n.id for n in [*self.screens, *self.terminals]]
+        for kind, ids in (("区画", [z.id for z in self.zones]), ("画面・丸", nodes)):
+            dup = sorted({i for i in ids if ids.count(i) > 1})
+            if dup:
+                raise ValueError(f"{kind}の id が重複しています: {dup}")
+        place: dict[str, str] = {}
+        for n in [*self.screens, *self.terminals]:
+            zone = zones.get(n.zone) if n.zone is not None else self.zones[0]
+            if zone is None:
+                raise ValueError(f"{n.id} の zone: {n.zone} がありません（候補: {', '.join(zones)}）")
+            lanes = [l.id for l in zone.lanes]
+            if n.lane is not None and n.lane not in lanes:
+                raise ValueError(f"{n.id} の lane: {n.lane} が区画 {zone.id} にありません（候補: {', '.join(lanes) or 'lanes が未記入'}）")
+            place[n.id] = f"{zone.id}/{n.lane or (lanes[0] if lanes else '')}"
+        for e in self.edges:
+            for end in (e.from_, e.to):
+                if end not in place:
+                    raise ValueError(f"edges の {end} が画面・丸にありません（候補: {', '.join(nodes)}）")
+            if place[e.from_] != place[e.to]:
+                raise ValueError(
+                    f"edges の {e.from_} → {e.to}: 線は同じ区画・レーンの中だけです（区画の間は flows、レーンの間は note で補足）"
+                )
+        ids = list(zones)
+        for f in self.flows:
+            for end in (f.from_, f.to):
+                if end not in zones:
+                    raise ValueError(f"flows の {end} が区画にありません（候補: {', '.join(ids)}）")
+            if abs(ids.index(f.from_) - ids.index(f.to)) != 1:
+                raise ValueError(f"flows の {f.from_} → {f.to}: 隣り合う区画どうしにしてください")
+        return self
+
+
 BLOCK_MODELS: dict[str, type[BaseModel]] = {
     "gantt": GanttBlock,
     "mock": MockBlock,
     "er": ErBlock,
     "usecase": UsecaseBlock,
+    "flow": FlowBlock,
 }

@@ -8,6 +8,7 @@ import ScreenMock from "./ScreenMock";
 
 const ErDiagram = lazy(() => import("./ErDiagram"));
 const UsecaseDiagram = lazy(() => import("./UsecaseDiagram"));
+const FlowDiagram = lazy(() => import("./FlowDiagram"));
 
 // ```言語名 のコードブロックを図として描画する
 const DIAGRAMS: Record<string, (source: string) => React.ReactElement> = {
@@ -22,6 +23,11 @@ const DIAGRAMS: Record<string, (source: string) => React.ReactElement> = {
   "language-usecase": (s) => (
     <Suspense fallback={<Loader size="sm" />}>
       <UsecaseDiagram source={s} />
+    </Suspense>
+  ),
+  "language-flow": (s) => (
+    <Suspense fallback={<Loader size="sm" />}>
+      <FlowDiagram source={s} />
     </Suspense>
   ),
 };

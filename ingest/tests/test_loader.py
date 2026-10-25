@@ -197,3 +197,28 @@ def test_invalid_usecase_is_reported(tmp_path):
     personas.write_text(text.replace("to: store, label", "to: customer, label"), encoding="utf-8")
     result = load_project(path)
     assert any("隣り合う区画" in e for e in result.errors)
+
+
+def test_invalid_flow_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    flow = path / "page-flow.md"
+    text = flow.read_text(encoding="utf-8")
+    flow.write_text(text.replace("{ from: SC-10, to: SC-11", "{ from: SC-04, to: SC-11", 1), encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("page-flow.md: flow") and "同じ区画・レーン" in e for e in result.errors)
+
+    flow.write_text(text.replace("lane: settings }", "lane: setting }", 1), encoding="utf-8")
+    result = load_project(path)
+    assert any("lane: setting" in e and "候補" in e for e in result.errors)
+
+
+def test_screen_ids_are_cross_checked(tmp_path):
+    path = copy_sample(tmp_path)
+    assert load_project(path).warnings == []
+
+    screens = path / "screens.md"
+    text = screens.read_text(encoding="utf-8").replace("to: SC-10", "to: SC-99", 1)
+    screens.write_text(text + "\n## SC-20 お知らせ\n", encoding="utf-8")
+    warnings = load_project(path).warnings
+    assert any("SC-20" in w and "ページ遷移図" in w for w in warnings)
+    assert any("SC-99" in w for w in warnings)

@@ -393,7 +393,7 @@ table {
 .mock-stage[data-device="mobile"] .mock-device {
   flex: 0 1 400px;
 }
-.mock-scale > div {
+.ks-scaled > div {
   transform-origin: top left;
 }
 
@@ -1280,4 +1280,229 @@ table {
   .uc-row:has(.uc-avatar) .uc-row-body::before {
     display: none;
   }
+}
+
+/* ページ遷移図（components/FlowDiagram.tsx）: 区画の色の面に、アイコンのタイルを持つ白いカードを置き、
+   細く淡い曲線と丸いラベルで結ぶ。枠線は使わず、面の濃淡とごく薄い影で分ける */
+.fl {
+  margin: var(--mantine-spacing-lg) 0;
+  font-family: var(--mantine-font-family);
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+.fl p {
+  margin: 0;
+}
+.fl-defs {
+  position: absolute;
+}
+.fl-zone {
+  padding: var(--mantine-spacing-md) 28px;
+  background: color-mix(in srgb, var(--fl-zone) 9%, var(--ks-surface));
+  border-radius: 20px;
+}
+.fl-zone-head {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  margin-bottom: var(--mantine-spacing-xs);
+}
+.fl-zone-tag {
+  padding: 3px 14px;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 700;
+  color: var(--fl-zone);
+  background: var(--ks-surface);
+  border-radius: var(--mantine-radius-xl);
+}
+.fl-zone-note {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-dimmed);
+}
+.fl-lane {
+  padding-top: var(--mantine-spacing-xs);
+}
+.fl-lane + .fl-lane {
+  border-top: 1px dashed color-mix(in srgb, var(--fl-zone) 25%, transparent);
+}
+.fl-lane-name {
+  font-size: var(--mantine-font-size-xs);
+  letter-spacing: 0.1em;
+  color: var(--mantine-color-dimmed);
+}
+.fl-canvas {
+  position: relative;
+  flex-shrink: 0;
+}
+.fl-edges {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.fl-edge {
+  fill: none;
+  stroke: var(--mantine-color-gray-5);
+  stroke-width: 1.4;
+}
+.fl-edge[data-back] {
+  stroke-dasharray: 4 4;
+  stroke: var(--mantine-color-gray-4);
+}
+.fl-arrow {
+  fill: none;
+  stroke: var(--mantine-color-gray-5);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.fl-edge-label {
+  position: absolute;
+  z-index: 1;
+  padding: 1px 10px;
+  font-size: var(--mantine-font-size-xs);
+  white-space: nowrap;
+  color: var(--mantine-color-gray-7);
+  background: var(--ks-surface);
+  border-radius: var(--mantine-radius-xl);
+  box-shadow: 0 0 0 1px var(--mantine-color-default-border);
+  transform: translate(-50%, -50%);
+}
+.fl-edge-label[data-back] {
+  color: var(--mantine-color-dimmed);
+}
+.fl-card {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: var(--ks-surface);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 4px 12px -4px rgb(0 0 0 / 0.08);
+}
+.fl-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+.fl-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fl-id {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--mantine-color-dimmed);
+}
+.fl-name {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--mantine-color-text);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.fl-terminal {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+  border-radius: 50%;
+}
+.fl-terminal[data-role="start"] {
+  color: var(--mantine-color-orange-light-color);
+  background: var(--mantine-color-orange-light);
+}
+.fl-terminal[data-role="end"] {
+  color: var(--mantine-color-body);
+  background: var(--mantine-color-text);
+}
+.fl-lane-note {
+  position: absolute;
+  top: 50%;
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+  transform: translateY(-50%);
+}
+.fl-footnote {
+  margin-top: var(--mantine-spacing-xs);
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+/* 区画の間の受け渡し（同期など） */
+.fl-flow {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: var(--mantine-spacing-md) 0;
+}
+.fl-flow-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 2px dashed var(--mantine-color-gray-5);
+}
+.fl-flow-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  padding: 6px 14px;
+  margin-left: 220px;
+  background: var(--ks-surface);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: 0 0 0 1px var(--mantine-color-default-border);
+}
+.fl-flow-card > span {
+  display: flex;
+  flex-direction: column;
+}
+.fl-flow-card b {
+  font-size: var(--mantine-font-size-sm);
+}
+.fl-flow-card small {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+.fl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mantine-spacing-xs) var(--mantine-spacing-lg);
+  margin-top: var(--mantine-spacing-md);
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+.fl-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fl-legend-line {
+  width: 24px;
+  border-top: 1.5px solid var(--mantine-color-gray-5);
+}
+.fl-legend-line[data-back] {
+  border-top-style: dashed;
+  border-color: var(--mantine-color-gray-4);
+}
+.fl-legend-line[data-flow] {
+  border-top: 2px dashed var(--mantine-color-gray-6);
+}
+.fl-legend-note {
+  margin-left: auto;
+}
+.fl-full {
+  margin: 0 auto;
 }

@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { GoogleIcon } from "../components/icons";
 import { useAuth } from "../lib/auth";
 import { auth } from "../lib/firebase";
 
@@ -69,7 +70,12 @@ export default function Login() {
               </Stack>
             </form>
             <Divider label="または" labelPosition="center" my="lg" />
-            <Button variant="default" fullWidth onClick={() => run(() => signInWithPopup(auth, new GoogleAuthProvider()))}>
+            <Button
+              variant="default"
+              fullWidth
+              leftSection={<GoogleIcon />}
+              onClick={() => run(() => signInWithPopup(auth, new GoogleAuthProvider()))}
+            >
               Google でログイン
             </Button>
           </>

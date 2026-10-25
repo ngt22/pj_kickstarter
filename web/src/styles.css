@@ -1576,3 +1576,161 @@ table {
 .fl-full {
   margin: 0 auto;
 }
+
+/* ---- 付箋（components/annotations） ----
+   資料（.ks-annot-root）の上に、付箋を描く層（overlay）と書き込みを受ける面（surface）を重ねる */
+.ks-annot-root {
+  position: relative;
+}
+.ks-annot-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.ks-annot-item {
+  position: absolute;
+  inset: 0;
+  transition: opacity 150ms ease;
+}
+.ks-annot-item[data-status="close"] {
+  opacity: 0.35;
+}
+.ks-annot-scaled {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.ks-annot-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+}
+.ks-annot-halo {
+  fill: none;
+  stroke: none;
+}
+.ks-annot-item[data-flash] .ks-annot-halo {
+  fill: color-mix(in srgb, var(--mantine-color-yellow-3) 35%, transparent);
+  stroke: var(--mantine-color-yellow-6);
+  stroke-width: 2;
+  animation: ks-annot-flash 0.8s ease-in-out 3;
+}
+@keyframes ks-annot-flash {
+  50% { opacity: 0.2; }
+}
+.ks-ink-pen {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ks-ink-box {
+  fill: none;
+  stroke-width: 2.5;
+}
+.ks-ink-line {
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+/* 囲みの中の文字：下の資料が透けて読めなくならないよう、文字の部分にだけ紙の色を敷く */
+.ks-ink-boxtext {
+  position: absolute;
+  overflow: hidden;
+  padding: 6px 8px;
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--mantine-color-text);
+}
+.ks-ink-boxtext span {
+  padding: 1px 4px;
+  border-radius: var(--mantine-radius-xs);
+  background: color-mix(in srgb, var(--ks-surface) 88%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.ks-ink-boxinput {
+  position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+  padding: 6px 8px;
+  border: 2px dashed var(--ink);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ks-surface) 70%, transparent);
+  color: var(--mantine-color-text);
+  font: inherit;
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+.ks-annot-surface {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+.ks-annot-pin {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: pointer;
+  color: var(--mantine-color-white);
+  background: var(--mantine-color-red-6);
+  box-shadow: var(--mantine-shadow-sm);
+}
+.ks-annot-item[data-status="close"] .ks-annot-pin {
+  background: var(--mantine-color-gray-6);
+}
+.ks-annot-popover .ks-annot-card {
+  border: 0;
+}
+.ks-annot-toolbar {
+  position: fixed;
+  top: calc(60px + var(--mantine-spacing-sm));
+  right: var(--mantine-spacing-md);
+  z-index: 150;
+  max-width: calc(100vw - 2 * var(--mantine-spacing-md));
+  transition: right 200ms ease;
+}
+@media (min-width: 48em) {
+  .ks-annot-toolbar[data-shifted] {
+    right: calc(400px + var(--mantine-spacing-md));
+  }
+}
+.ks-annot-swatch {
+  flex: none;
+  cursor: pointer;
+  border: 1px solid var(--mantine-color-default-border);
+}
+.ks-annot-swatch[data-selected] {
+  outline: 2px solid var(--mantine-color-brand-6);
+  outline-offset: 2px;
+}
+.ks-annot-drawer {
+  border-left: 1px solid var(--mantine-color-default-border);
+}
+.ks-annot-card[data-status="close"] .ks-annot-text {
+  color: var(--mantine-color-dimmed);
+}
+.ks-annot-jump {
+  border-radius: var(--mantine-radius-sm);
+}
+.ks-annot-jump:hover {
+  background: var(--ks-subtle);
+}

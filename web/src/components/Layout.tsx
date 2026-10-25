@@ -6,7 +6,8 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { auth } from "../lib/firebase";
 
-export default function Layout({ children, sidebar }: { children: ReactNode; sidebar?: ReactNode }) {
+// actions はヘッダー右側に並べるページ固有のボタン（案件の画面の「付箋」など）
+export default function Layout({ children, sidebar, actions }: { children: ReactNode; sidebar?: ReactNode; actions?: ReactNode }) {
   const { user, isAdmin } = useAuth();
   const [opened, { toggle, close }] = useDisclosure();
   return (
@@ -22,9 +23,10 @@ export default function Layout({ children, sidebar }: { children: ReactNode; sid
             <span className="ks-brand-mark">K</span>
             Kickstarter
           </Anchor>
-          {isAdmin && <Button component={Link} to="/admin" variant="subtle" size="xs">案件の管理</Button>}
+          {isAdmin && <Button component={Link} to="/admin" variant="subtle" size="xs" visibleFrom="xs">案件の管理</Button>}
           {isAdmin && <Button component={Link} to="/cli-login" variant="subtle" size="xs" visibleFrom="sm">CLI ログイン</Button>}
-          <Text size="sm" c="dimmed" visibleFrom="xs">{user?.email}</Text>
+          <Text size="sm" c="dimmed" visibleFrom="md">{user?.email}</Text>
+          {actions}
           <Button variant="default" size="xs" onClick={() => signOut(auth)}>ログアウト</Button>
         </Group>
       </AppShell.Header>

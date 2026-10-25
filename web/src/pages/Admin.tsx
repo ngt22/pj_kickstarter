@@ -1,9 +1,11 @@
-import { Alert, Badge, Button, Card, Code, Group, Loader, Modal, Pill, Stack, Text, TextInput, Title } from "@mantine/core";
+import { Alert, Anchor, Badge, Button, Card, Code, Group, Loader, Modal, Pill, Stack, Text, TextInput, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { arrayRemove, arrayUnion, collection, doc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
+import { createProject, loadTemplates, PROJECT_ID_RE, type NewProject } from "../lib/createProject";
 import { deleteProject } from "../lib/deleteProject";
 import type { ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
@@ -17,7 +19,8 @@ export default function Admin() {
   const [projects, setProjects] = useState<ProjectRecord[] | null>(null);
   const [viewers, setViewers] = useState<ViewerMap>({});
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<ReactNode>(null);
+  const [creating, { open: openCreate, close: closeCreate }] = useDisclosure(false);
 
   useEffect(() => {
     Promise.all([getDocs(collection(db, "projects")), getDocs(collection(db, "access"))])
@@ -52,7 +55,7 @@ export default function Admin() {
 
   async function remove(project: ProjectRecord) {
     setError("");
-    setNotice("");
+    setNotice(null);
     try {
       const result = await deleteProject(db, project.id);
       setProjects((ps) => ps?.filter((p) => p.id !== project.id) ?? null);
@@ -64,16 +67,41 @@ export default function Admin() {
     }
   }
 
+  // 雛形はサイトで公開しているものを読む。失敗したらモーダルの中でエラーを出す
+  async function create(meta: NewProject) {
+    const docs = await loadTemplates();
+    await createProject(db, meta, docs);
+    setProjects((ps) => [...(ps ?? []), { ...meta, status: "draft" }].sort((x, y) => x.name.localeCompare(y.name, "ja")));
+    setError("");
+    setNotice(
+      <>
+        「{meta.name}」を作成しました（雛形のドキュメント {docs.length} 件）。{" "}
+        <Anchor component={Link} to={`/projects/${meta.id}`}>案件を開く</Anchor>
+      </>,
+    );
+  }
+
   return (
     <Layout>
-      <Title order={1} mb="xs">案件の管理</Title>
+      <Group justify="space-between" align="flex-start" mb="xs">
+        <Title order={1}>案件の管理</Title>
+        <Button leftSection={<IconPlus size={16} stroke={1.6} />} onClick={openCreate} disabled={projects === null}>
+          新規案件
+        </Button>
+      </Group>
       <Text c="dimmed" mb="lg">
-        案件ごとに閲覧できるクライアントのメールアドレスを指定します。管理者は指定しなくても全案件を閲覧できます。不要になった案件はここから削除できます。
+        案件ごとに閲覧できるクライアントのメールアドレスを指定します。管理者は指定しなくても全案件を閲覧できます。新しい案件の作成や、不要になった案件の削除もここで行います。
       </Text>
       {error && <Alert color="red" mb="md">{error}</Alert>}
-      {notice && <Alert color="green" mb="md" withCloseButton onClose={() => setNotice("")}>{notice}</Alert>}
+      {notice && <Alert color="green" mb="md" withCloseButton onClose={() => setNotice(null)}>{notice}</Alert>}
       {projects === null && !error && <Loader />}
-      {projects?.length === 0 && <Text c="dimmed">案件がありません。ingest CLI で投入してください。</Text>}
+      {projects?.length === 0 && <Text c="dimmed">案件がありません。「新規案件」から作成するか、ingest CLI で投入してください。</Text>}
+      <NewProjectModal
+        opened={creating}
+        onClose={closeCreate}
+        onCreate={create}
+        usedIds={new Set(projects?.map((p) => p.id))}
+      />
       <Stack>
         {projects?.map((p) => (
           <ProjectAccess
@@ -212,6 +240,82 @@ function DeleteProjectModal({ project, viewers, opened, onClose, onDelete }: {
           <Group justify="flex-end" gap="xs">
             <Button variant="default" onClick={close} disabled={busy}>キャンセル</Button>
             <Button type="submit" color="red" loading={busy} disabled={!matched}>削除する</Button>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
+  );
+}
+
+const EMPTY: NewProject = { id: "", name: "", summary: "", client: "", proposed_at: "" };
+
+// 14種の雛形（記入例）を入れた案件を作る。CLI の init と同じ雛形
+function NewProjectModal({ opened, onClose, onCreate, usedIds }: {
+  opened: boolean;
+  onClose: () => void;
+  onCreate: (meta: NewProject) => Promise<void>;
+  usedIds: Set<string>;
+}) {
+  const [form, setForm] = useState(EMPTY);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const meta = { ...form, id: form.id.trim(), name: form.name.trim() };
+  const idError = meta.id === "" ? "" : !PROJECT_ID_RE.test(meta.id)
+    ? "英小文字・数字・ハイフンで入力してください（先頭はハイフン以外）"
+    : usedIds.has(meta.id) ? "この案件IDはすでに使われています" : "";
+  const field = (key: keyof NewProject) => ({
+    value: form[key] ?? "",
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: e.currentTarget.value }),
+  });
+
+  function close() {
+    if (busy) return;
+    setForm(EMPTY);
+    setError("");
+    onClose();
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!meta.id || !meta.name || idError) return;
+    setBusy(true);
+    setError("");
+    try {
+      await onCreate(meta);
+      setBusy(false);
+      setForm(EMPTY);
+      onClose();
+    } catch (err) {
+      setBusy(false);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  return (
+    <Modal opened={opened} onClose={close} title={<Text fw={700}>新規案件</Text>} centered>
+      <form onSubmit={submit}>
+        <Stack>
+          <Text size="sm" c="dimmed">
+            14種のドキュメントの雛形（記入例）を入れて作成します。中身は Claude との対話や ingest CLI の push で書き換えてください。
+          </Text>
+          {error && <Alert color="red">{error}</Alert>}
+          <TextInput
+            label="案件ID"
+            description="URL とフォルダ名に使います。あとから変更できません"
+            placeholder="reservation-app"
+            required
+            error={idError}
+            autoComplete="off"
+            data-autofocus
+            {...field("id")}
+          />
+          <TextInput label="案件名" placeholder="予約管理システム" required {...field("name")} />
+          <TextInput label="概要" description="一覧と表紙に表示します" {...field("summary")} />
+          <TextInput label="クライアント" placeholder="〇〇株式会社 様" {...field("client")} />
+          <TextInput label="提案日" type="date" {...field("proposed_at")} />
+          <Group justify="flex-end" gap="xs">
+            <Button variant="default" onClick={close} disabled={busy}>キャンセル</Button>
+            <Button type="submit" loading={busy} disabled={!meta.id || !meta.name || !!idError}>作成する</Button>
           </Group>
         </Stack>
       </form>

@@ -2,6 +2,7 @@ import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestE
 import { readFileSync } from "node:fs";
 import { arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createProject, type TemplateDoc } from "../src/lib/createProject";
 import { deleteProject } from "../src/lib/deleteProject";
 
 let env: RulesTestEnvironment;
@@ -95,6 +96,7 @@ describe("原稿の書き込み", () => {
     await assertFails(setDoc(doc(db, "projects/other"), project)); // id がドキュメントIDと違う
     await assertFails(setDoc(doc(db, "projects/new"), { ...project, members: ["a@example.com"] })); // 閲覧者は access に持つ
     await assertFails(setDoc(doc(db, "projects/new"), { ...project, status: "done" }));
+    await assertFails(setDoc(doc(db, "projects/New_1"), { ...project, id: "New_1" })); // 英小文字・数字・ハイフン以外
     await assertFails(setDoc(doc(db, "projects/new/docs/risks"), page)); // type がドキュメントIDと違う
     await assertFails(setDoc(doc(db, "projects/new/docs/requirements"), { ...page, format: "html" }));
     await assertFails(setDoc(doc(db, "projects/new/docs/requirements"), { ...page, order: "3" }));
@@ -155,5 +157,30 @@ describe("案件の削除", () => {
     expect((await getDocs(collection(db, "projects/trial/docs"))).size).toBe(0);
     expect((await getDoc(doc(db, "access/a@example.com"))).data()?.projects).toEqual(["sample"]);
     expect((await getDoc(doc(db, "access/b@example.com"))).data()?.projects).toEqual([]);
+  });
+});
+
+describe("案件の作成（管理画面）", () => {
+  const meta = { id: "fresh", name: "新しい案件", summary: "", client: "", proposed_at: "" };
+  const docs: TemplateDoc[] = [
+    { type: "requirements", title: "要件定義書", order: 3, format: "markdown", body: "---\ntitle: 要件定義書\norder: 3\n---\n" },
+    { type: "risks", title: "リスク管理表", order: 11, format: "yaml", body: "title: リスク管理表\norder: 11\nrisks: []\n" },
+  ];
+
+  it("クライアントは案件を作成できない", async () => {
+    await assertFails(createProject(user("member@example.com"), meta, docs));
+  });
+
+  it("管理者は雛形の原稿ごと案件を作成できる", async () => {
+    const db = user("admin@example.com", { admin: true });
+    await assertSucceeds(createProject(db, meta, docs));
+    expect((await getDoc(doc(db, "projects/fresh"))).data()).toMatchObject({ ...meta, status: "draft", color: "brand" });
+    expect((await getDocs(collection(db, "projects/fresh/docs"))).size).toBe(2);
+  });
+
+  it("同じIDの案件があれば上書きしない", async () => {
+    const db = user("admin@example.com", { admin: true });
+    await expect(createProject(db, { ...meta, name: "別の案件" }, docs)).rejects.toThrow("すでに使われています");
+    expect((await getDoc(doc(db, "projects/fresh"))).data()?.name).toBe("新しい案件");
   });
 });

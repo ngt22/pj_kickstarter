@@ -1,8 +1,11 @@
 // ```er ブロック（YAML）を React Flow で描画する。配置は ELK で自動計算する。
 // ドメインごとに枠でまとめ、枠の中は外部キーの向きに左から右へ並べる。
+// ユースケース図（カード）やページ遷移図（色の面とタイル）と見分けやすいよう、技術文書らしい青図（Blueprint）の見た目にする:
+// 方眼の地に点線のドメイン枠、細い罫線のテーブル、等幅の列名。ライトでは方眼紙、ダークでは青焼き風になる
 // React Flow と ELK は大きいので、Markdown.tsx から遅延読み込みする
 import {
   Background,
+  BackgroundVariant,
   Controls,
   Handle,
   MiniMap,
@@ -52,10 +55,10 @@ function nodeHeight(columns: number) {
 function TableNode({ data }: NodeProps<Node<TableData>>) {
   const { table, color, columns, keys } = data;
   return (
-    <div className="er-table" style={{ width: NODE_W, borderColor: `var(--mantine-color-${color}-filled)` }}>
-      <div className="er-table-head" style={{ background: `var(--mantine-color-${color}-light)` }}>
-        <Text size="sm" fw={700} truncate>{table.name}</Text>
-        {table.label && <Text size="xs" c="dimmed" truncate>{table.label}</Text>}
+    <div className="er-table" style={{ width: NODE_W, "--er-domain": `var(--mantine-color-${color}-filled)` } as React.CSSProperties}>
+      <div className="er-table-head">
+        <span className="er-table-name">{table.name}</span>
+        {table.label && <span className="er-table-label">{table.label}</span>}
       </div>
       {columns.map((c, i) => (
         <div key={c.name} className="er-col" style={{ height: ROW_H }}>
@@ -87,11 +90,8 @@ function TableNode({ data }: NodeProps<Node<TableData>>) {
 
 function DomainNode({ data }: NodeProps<Node<DomainData>>) {
   return (
-    <div
-      className="er-domain"
-      style={{ background: `var(--mantine-color-${data.color}-light)`, borderColor: `var(--mantine-color-${data.color}-outline)` }}
-    >
-      <Text fw={700} size="sm" c={`var(--mantine-color-${data.color}-light-color)`}>{data.name}</Text>
+    <div className="er-domain" style={{ "--er-domain": `var(--mantine-color-${data.color}-filled)` } as React.CSSProperties}>
+      <span className="er-domain-tag">{data.name}</span>
     </div>
   );
 }
@@ -187,24 +187,24 @@ async function layout(model: ErModel, visible: Set<string>, keyOnly: boolean): P
 
 // 鳥の足記法のマーカー（x=22 がテーブル側の端）
 function Markers() {
-  const stroke = "var(--mantine-color-gray-6)";
+  const stroke = "var(--bp-line)";
   const common = { markerWidth: 22, markerHeight: 22, viewBox: "0 0 22 22", refX: 22, refY: 11, orient: "auto-start-reverse", markerUnits: "userSpaceOnUse" };
   return (
     <svg style={{ position: "absolute", width: 0, height: 0 }}>
       <defs>
         <marker id="er-one" {...common}>
-          <path d="M0,11 H22 M9,4 V18 M14,4 V18" stroke={stroke} fill="none" strokeWidth={1.4} />
+          <path d="M0,11 H22 M9,4 V18 M14,4 V18" style={{ stroke, fill: "none" }} strokeWidth={1.4} />
         </marker>
         <marker id="er-zero-one" {...common}>
-          <path d="M0,11 H22 M16,4 V18" stroke={stroke} fill="none" strokeWidth={1.4} />
-          <circle cx={7} cy={11} r={4} stroke={stroke} fill="var(--mantine-color-body)" strokeWidth={1.4} />
+          <path d="M0,11 H22 M16,4 V18" style={{ stroke, fill: "none" }} strokeWidth={1.4} />
+          <circle cx={7} cy={11} r={4} style={{ stroke, fill: "var(--bp-bg)" }} strokeWidth={1.4} />
         </marker>
         <marker id="er-many" {...common}>
-          <path d="M0,11 H22 M22,3 L12,11 L22,19 M8,4 V18" stroke={stroke} fill="none" strokeWidth={1.4} />
+          <path d="M0,11 H22 M22,3 L12,11 L22,19 M8,4 V18" style={{ stroke, fill: "none" }} strokeWidth={1.4} />
         </marker>
         <marker id="er-zero-many" {...common}>
-          <path d="M0,11 H22 M22,3 L12,11 L22,19" stroke={stroke} fill="none" strokeWidth={1.4} />
-          <circle cx={7} cy={11} r={4} stroke={stroke} fill="var(--mantine-color-body)" strokeWidth={1.4} />
+          <path d="M0,11 H22 M22,3 L12,11 L22,19" style={{ stroke, fill: "none" }} strokeWidth={1.4} />
+          <circle cx={7} cy={11} r={4} style={{ stroke, fill: "var(--bp-bg)" }} strokeWidth={1.4} />
         </marker>
       </defs>
     </svg>
@@ -303,7 +303,7 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
   if (error) return <Code block c="red">{error}</Code>;
 
   return (
-    <div className="er" style={{ height }}>
+    <div className="er er-bp" style={{ height }}>
       <Markers />
       <Stack className="er-side" gap="xs">
         <TextInput size="xs" placeholder="テーブル・列を検索" value={query} onChange={(e) => setQuery(e.currentTarget.value)} />
@@ -352,7 +352,7 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
           maxZoom={2}
           onlyRenderVisibleElements
         >
-          <Background gap={24} />
+          <Background variant={BackgroundVariant.Lines} gap={24} />
           <Controls showInteractive={false} />
           {model.tables.length > 15 && ( // 小さい図ではミニマップが本体を隠すだけなので出さない
           <MiniMap
@@ -384,7 +384,7 @@ export default function ErDiagram({ source }: { source: string }) {
     <DiagramFrame
       title="ER図"
       summary={`${model.tables.length} テーブル / ${model.relations.length} リレーション / ${model.domains.length} ドメイン`}
-      height="75vh"
+      height="min(75vh, 620px)"
     >
       {(height) => <Explorer model={model} height={height} />}
     </DiagramFrame>

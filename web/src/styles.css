@@ -521,10 +521,36 @@ table {
 .mock-band-note {
   color: var(--mock-on-stage-dim);
 }
-.mock-band-meta {
+.mock-switch {
+  display: inline-flex;
   margin-left: auto;
+  padding: 2px;
+  border: 1px solid var(--mock-stage-line);
+  border-radius: var(--mantine-radius-xl);
+  background: var(--mock-chip);
+}
+.mock-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  font: inherit;
+  font-size: var(--mantine-font-size-xs);
   color: var(--mock-on-stage-dim);
-  letter-spacing: 0.04em;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mantine-radius-xl);
+  cursor: pointer;
+}
+.mock-switch button[aria-pressed="true"] {
+  font-weight: 700;
+  color: var(--mock-num-fg);
+  background: var(--mock-on-stage);
+}
+@media print {
+  .mock-switch button:not([aria-pressed="true"]) {
+    display: none;
+  }
 }
 .mock-body {
   display: flex;
@@ -1014,7 +1040,7 @@ table {
   .mock-stage {
     padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm) var(--mantine-spacing-sm);
   }
-  .mock-band-meta {
+  .mock-band-note {
     display: none;
   }
   .mock-stage[data-device="mobile"] .mock-body {

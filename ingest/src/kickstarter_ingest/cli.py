@@ -29,6 +29,8 @@ def report(path: Path):
         print(f"[skip] {m} がないため省略します")
     for e in result.errors:
         print(f"[error] {e}", file=sys.stderr)
+    for w in result.warnings:
+        print(f"[warn] {w}")
     return result
 
 

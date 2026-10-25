@@ -26,6 +26,7 @@ class LoadResult:
     meta_text: str | None = None  # project.yaml の原文（表現チェック用）
     docs: list[LoadedDoc] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)  # push は止めないが確認してほしいこと
     missing: list[str] = field(default_factory=list)
 
 
@@ -93,4 +94,34 @@ def load_project(path: Path) -> LoadResult:
             continue
         result.docs.append(LoadedDoc(dt.key, parsed.title, parsed.order, dt.format, text))
 
+    result.warnings.extend(check_screen_ids(result.docs))
     return result
+
+
+SCREEN_HEADING_RE = re.compile(r"^##\s+(SC-[\w-]+)", re.M)
+
+
+def check_screen_ids(docs: list[LoadedDoc]) -> list[str]:
+    """画面仕様（## SC-xx と ```mock の to:）とページ遷移図（```flow の screens）の画面IDを突き合わせる。"""
+    bodies = {d.type: d.body for d in docs}
+    flow_ids: set[str] = set()
+    for m in FENCE_RE.finditer(bodies.get("page-flow", "")):
+        if m.group(1) == "flow":
+            spec = yaml.safe_load(m.group(2)) or {}
+            flow_ids |= {s["id"] for s in spec.get("screens", [])}
+    screens = bodies.get("screens", "")
+    headings = SCREEN_HEADING_RE.findall(screens)
+    known = flow_ids | set(headings)
+    warnings = []
+    if flow_ids:
+        for sc in headings:
+            if sc not in flow_ids:
+                warnings.append(f"screens.md: {sc} がページ遷移図（page-flow.md の ```flow）にありません")
+    targets: list[str] = []
+    for m in FENCE_RE.finditer(screens):
+        if m.group(1) == "mock":
+            targets += re.findall(r"\bto:\s*([\w-]+)", m.group(2))
+    for to in dict.fromkeys(targets):
+        if known and to not in known:
+            warnings.append(f"screens.md: 画面モックの遷移先 {to} が、画面仕様の見出しにもページ遷移図にもありません")
+    return warnings

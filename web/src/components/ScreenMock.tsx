@@ -81,6 +81,7 @@ import {
   type Props,
 } from "../lib/mock";
 import { ProjectColorContext } from "../lib/projectColor";
+import Scaled from "./Scaled";
 import { cssVariablesResolver, theme } from "../theme";
 import { ICON_STROKE } from "./icons";
 
@@ -561,36 +562,6 @@ function MockElement({ el }: { el: Element }) {
   const render = kind ? ELEMENTS[kind] : undefined;
   if (!render) return <Code c="red">不明な部品: {String(kind)}</Code>;
   return <>{render(value, mobile)}</>;
-}
-
-// 論理幅で組んだ画面を、置き場所の幅に合わせて縮小する
-function Scaled({ width, children }: { width: number; children: React.ReactNode }) {
-  const outer = useRef<HTMLDivElement>(null);
-  const inner = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState<{ scale: number; height?: number }>({ scale: 1 });
-
-  useLayoutEffect(() => {
-    const o = outer.current;
-    const i = inner.current;
-    if (!o || !i || typeof ResizeObserver === "undefined") return;
-    const update = () => {
-      const scale = Math.min(1, o.clientWidth / width);
-      setSize({ scale, height: i.offsetHeight * scale });
-    };
-    const ro = new ResizeObserver(update);
-    ro.observe(o);
-    ro.observe(i);
-    update();
-    return () => ro.disconnect();
-  }, [width]);
-
-  return (
-    <div ref={outer} className="mock-scale" style={{ height: size.height }}>
-      <div ref={inner} style={{ width, transform: `scale(${size.scale})` }}>
-        {children}
-      </div>
-    </div>
-  );
 }
 
 // 画面イメージは資料のダークモードに関係なく、常にライトテーマで描く。

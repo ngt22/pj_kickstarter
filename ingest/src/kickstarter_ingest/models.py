@@ -352,8 +352,64 @@ class ErBlock(Strict):
         return self
 
 
+ThemeColor = Literal[
+    "brand", "blue", "indigo", "violet", "grape", "pink", "red", "orange", "yellow", "lime", "green", "teal", "cyan", "gray"
+]
+
+
+class UsecaseActor(Strict):
+    id: str = Field(description="cases の actors から参照する id")
+    name: str = Field(description="アクター名（例: 利用者、店舗スタッフ、決済サービス）")
+    note: str | None = Field(None, description="補足（例: 30代・会社員）")
+    side: Literal["left", "right"] = Field("left", description="図の左右どちらに置くか。主な利用者は left、管理者や外部システムは right")
+    color: ThemeColor | None = Field(None, description="線の色（省略すると自動）")
+
+
+class UsecaseCase(Strict):
+    id: str = Field(description="relations から参照する id（例: UC-01）")
+    name: str = Field(description="ユースケース名。「〜する」の形で短く（例: 予約する）")
+    actors: list[str] = Field([], description="このユースケースを使うアクターの id")
+    note: str | None = Field(None, description="補足（クリックすると表示）")
+
+
+class UsecaseRelation(Strict):
+    from_: str = Field(alias="from", description="元のユースケースの id")
+    to: str = Field(description="先のユースケースの id")
+    type: Literal["include", "extend"] = Field(
+        description="include: from が必ず to を含む / extend: from が条件付きで to を拡張する"
+    )
+
+
+class UsecaseBlock(Strict):
+    """```usecase ブロック（ユースケース図）。"""
+
+    system: str | None = Field(None, description="システム境界の名前（例: 予約サービス）")
+    actors: list[UsecaseActor] = Field(min_length=1)
+    cases: list[UsecaseCase] = Field(min_length=1)
+    relations: list[UsecaseRelation] = []
+
+    @model_validator(mode="after")
+    def check_refs(self) -> "UsecaseBlock":
+        actors = [a.id for a in self.actors]
+        cases = [c.id for c in self.cases]
+        for kind, ids in (("アクター", actors), ("ユースケース", cases)):
+            dup = sorted({i for i in ids if ids.count(i) > 1})
+            if dup:
+                raise ValueError(f"{kind}の id が重複しています: {dup}")
+        for c in self.cases:
+            for a in c.actors:
+                if a not in actors:
+                    raise ValueError(f"ユースケース {c.id} の actors: {a} がありません（候補: {', '.join(actors)}）")
+        for r in self.relations:
+            for end in (r.from_, r.to):
+                if end not in cases:
+                    raise ValueError(f"relations の {end} がユースケースにありません（候補: {', '.join(cases)}）")
+        return self
+
+
 BLOCK_MODELS: dict[str, type[BaseModel]] = {
     "gantt": GanttBlock,
     "mock": MockBlock,
     "er": ErBlock,
+    "usecase": UsecaseBlock,
 }

@@ -411,11 +411,11 @@ table {
 }
 
 /* ER図（components/ErDiagram.tsx） */
-.er-wrap {
+.ks-diagram {
   font-family: var(--mantine-font-family);
   line-height: 1.4;
 }
-.er-wrap p {
+.ks-diagram p {
   margin: 0;
 }
 .er {
@@ -717,4 +717,80 @@ table {
 .ks-estimate-total {
   background: var(--ks-subtle);
   border-left: 4px solid var(--mantine-primary-color-filled);
+}
+
+/* ユースケース図: 無地の背景に、細い線のシステム境界と白い楕円。色はアクターの線だけに使う */
+.uc {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+  overflow: hidden;
+}
+.uc .react-flow {
+  --xy-background-color: transparent;
+}
+.uc-system {
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid var(--mantine-color-gray-5);
+  border-radius: var(--mantine-radius-xl);
+  background: var(--ks-subtle);
+}
+.uc-system-name {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-lg);
+  color: var(--mantine-color-dimmed);
+  letter-spacing: 0.04em;
+}
+.uc-case {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--mantine-spacing-md);
+  border: 1.5px solid var(--mantine-color-gray-6);
+  border-radius: 50%;
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-xs);
+  cursor: pointer;
+}
+.uc-actor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.uc-handle {
+  opacity: 0;
+  pointer-events: none;
+}
+.uc .uc-rel .react-flow__edge-path {
+  stroke: var(--mantine-color-gray-6);
+}
+.uc .uc-rel .react-flow__edge-text {
+  font-size: 11px;
+  fill: var(--mantine-color-dimmed);
+}
+.uc .uc-rel .react-flow__edge-textbg {
+  fill: var(--ks-surface);
+}
+.uc-selected .uc-case {
+  border-color: var(--mantine-color-text);
+  border-width: 2px;
+}
+.uc .uc-dim {
+  opacity: 0.2;
+}
+.uc-detail {
+  max-width: 280px;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-sm);
+}
+/* スマホでは図が小さいので操作ボタンは出さない（「全画面で見る」で操作する） */
+@media (max-width: 48em) {
+  .uc .react-flow__controls {
+    display: none;
+  }
 }

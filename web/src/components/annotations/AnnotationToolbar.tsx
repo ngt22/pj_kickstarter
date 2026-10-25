@@ -1,15 +1,14 @@
 import { ActionIcon, Button, ColorSwatch, Divider, Group, Paper, Popover, Slider, Stack, Text, Tooltip, useMantineTheme } from "@mantine/core";
-import { IconAdjustmentsHorizontal, IconArrowBackUp, IconArrowUpLeft, IconHandStop, IconPencil, IconSquare, IconTrash } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconArrowBackUp, IconHandStop, IconMessage, IconPencil, IconTrash } from "@tabler/icons-react";
 import { INK_COLORS, INK_LABELS, sampleSpacing, type InkColor } from "../../lib/annotations";
 import { ICON_STROKE } from "../icons";
 
-export type Tool = "view" | "pen" | "box" | "line";
+export type Tool = "view" | "pen" | "memo";
 
 const TOOLS: { value: Tool; label: string; icon: typeof IconPencil }[] = [
   { value: "view", label: "閲覧（スクロール・付箋を開く）", icon: IconHandStop },
   { value: "pen", label: "ペン", icon: IconPencil },
-  { value: "box", label: "囲み（中に文字を書ける）", icon: IconSquare },
-  { value: "line", label: "引出線（指したい箇所から引き出す）", icon: IconArrowUpLeft },
+  { value: "memo", label: "メモ（気になる箇所を押して、指示を書く）", icon: IconMessage },
 ];
 
 type Props = {

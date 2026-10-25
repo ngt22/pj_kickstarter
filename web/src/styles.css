@@ -2237,3 +2237,15 @@ table {
   opacity: 1;
   background: var(--mantine-color-brand-1);
 }
+/* メモ：点と引出線の先のメモ欄。メモ欄は下の資料が透けないよう紙の色で塗る */
+.ks-ink-memo {
+  fill: var(--ks-surface);
+  stroke-width: 2;
+}
+.ks-ink-dot {
+  stroke: var(--ks-surface);
+  stroke-width: 2;
+}
+.ks-ink-boxtext[data-kind="memo"] span {
+  background: none;
+}

@@ -6,8 +6,11 @@ import {
   bounds,
   createSmoother,
   flatten,
-  orientLine,
+  isTextItem,
+  memoAttach,
+  MEMO_SIZE,
   PEN_WIDTH,
+  placeMemo,
   placement,
   simplify,
   smoothPath,
@@ -58,6 +61,16 @@ function InkShapes({ items }: { items: InkItem[] }) {
           return <path key={i} d={smoothPath(unflatten(it.points))} stroke={ink(it.color)} strokeWidth={it.width} className="ks-ink-pen" />;
         if (it.kind === "box")
           return <rect key={i} x={it.x} y={it.y} width={it.w} height={it.h} rx={6} stroke={ink(it.color)} className="ks-ink-box" />;
+        if (it.kind === "memo") {
+          const at = memoAttach(it);
+          return (
+            <g key={i} stroke={ink(it.color)}>
+              <line x1={it.px} y1={it.py} x2={at.x} y2={at.y} className="ks-ink-line" />
+              <rect x={it.x} y={it.y} width={it.w} height={it.h} rx={6} className="ks-ink-memo" />
+              <circle cx={it.px} cy={it.py} r={5} fill={ink(it.color)} className="ks-ink-dot" />
+            </g>
+          );
+        }
         const [tip, end] = unflatten(it.points);
         return (
           <g key={i} stroke={ink(it.color)} fill={ink(it.color)}>
@@ -77,8 +90,8 @@ function BoxTexts({ items }: { items: InkItem[] }) {
   return (
     <>
       {items.map((it, i) =>
-        it.kind === "box" && it.text.trim() ? (
-          <div key={i} className="ks-ink-boxtext" style={{ left: it.x, top: it.y, width: it.w, maxHeight: it.h, ["--ink" as string]: ink(it.color) }}>
+        isTextItem(it) && it.text.trim() ? (
+          <div key={i} className="ks-ink-boxtext" data-kind={it.kind} style={{ left: it.x, top: it.y, width: it.w, maxHeight: it.h, ["--ink" as string]: ink(it.color) }}>
             <span>{it.text}</span>
           </div>
         ) : null,
@@ -93,7 +106,7 @@ type Placed = { a: Annotation; x: number; y: number; scale: number };
 type Resize = { id?: string; index: number; startX: number; startY: number; w: number; h: number; scale: number };
 
 function withSize(items: InkItem[], index: number, w: number, h: number): InkItem[] {
-  return items.map((it, i) => (i === index && it.kind === "box" ? { ...it, w, h } : it));
+  return items.map((it, i) => (i === index && isTextItem(it) ? { ...it, w, h } : it));
 }
 
 // 資料の上に重ねる付箋レイヤー。付箋モードの間だけ付箋を表示し、道具を選ぶと書き込める
@@ -217,10 +230,6 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
       if (changed) setLive({ kind: "pen", color, width: PEN_WIDTH, points: flatten(g.smoother.points) });
       return;
     }
-    const p = local(e);
-    if (tool === "box")
-      setLive({ kind: "box", color, x: Math.min(g.start.x, p.x), y: Math.min(g.start.y, p.y), w: Math.abs(p.x - g.start.x), h: Math.abs(p.y - g.start.y), text: "" });
-    else if (tool === "line") setLive({ kind: "line", color, points: flatten([g.start, p]) });
   };
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -240,28 +249,22 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
     if (g.smoother) {
       g.smoother.finish(p);
       item = withTarget({ kind: "pen", color, width: PEN_WIDTH, points: flatten(simplify(g.smoother.points)) }, g.start);
-    } else if (Math.hypot(p.x - g.start.x, p.y - g.start.y) >= MIN_DRAG) {
-      if (tool === "box") {
-        const box = { kind: "box" as const, color, x: Math.min(g.start.x, p.x), y: Math.min(g.start.y, p.y), w: Math.abs(p.x - g.start.x), h: Math.abs(p.y - g.start.y), text: "" };
-        item = withTarget(box, { x: box.x + box.w / 2, y: box.y + box.h / 2 });
-      } else {
-        const [tip, end] = orientLine(draft.items, g.start, p);
-        item = withTarget({ kind: "line", color, points: flatten([tip, end]) }, tip);
-      }
-    } else if (tool === "box") {
-      // 囲みの中をクリックしたら、その囲みの文字を書き直す
+    } else if (tool === "memo") {
+      // メモ欄の上を押したら、そのメモを書き直す。それ以外の場所なら、そこに点を打って新しいメモを置く
       for (let i = draft.items.length - 1; i >= 0; i--) {
         const it = draft.items[i];
-        if (it.kind === "box" && p.x >= it.x && p.x <= it.x + it.w && p.y >= it.y && p.y <= it.y + it.h) return setEditing(i);
+        if (isTextItem(it) && p.x >= it.x && p.x <= it.x + it.w && p.y >= it.y && p.y <= it.y + it.h) return setEditing(i);
       }
-      return;
+      if (Math.hypot(p.x - g.start.x, p.y - g.start.y) >= MIN_DRAG) return;
+      const box = placeMemo(p, rootRect.width);
+      item = withTarget({ kind: "memo", color, px: p.x, py: p.y, ...box, ...MEMO_SIZE, text: "" }, p);
     }
     if (!item) return;
     // 最初の 1 本を書いた位置の要素を、この付箋の目印にする
     const anchor = draft.anchor ?? anchorAt(rootRef.current!, g.client.x, g.client.y);
     const index = draft.items.length;
     setDraft({ items: [...draft.items, item], anchor });
-    if (item.kind === "box") setEditing(index);
+    if (item.kind === "memo") setEditing(index);
   };
 
   const startResize = (e: React.PointerEvent<HTMLElement>, r: Omit<Resize, "startX" | "startY">) => {
@@ -295,7 +298,7 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
   });
 
   const setBoxText = (i: number, text: string) =>
-    setDraft((d) => ({ ...d, items: d.items.map((it, j) => (j === i && it.kind === "box" ? { ...it, text } : it)) }));
+    setDraft((d) => ({ ...d, items: d.items.map((it, j) => (j === i && isTextItem(it) ? { ...it, text } : it)) }));
 
   const drawing = active && tool !== "view";
   const editingBox = editing !== null ? draft.items[editing] : undefined;
@@ -320,12 +323,12 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
                 </div>
                 {canResize &&
                   items.map((it, i) =>
-                    it.kind === "box" ? (
+                    isTextItem(it) ? (
                       <span
                         key={i}
                         className="ks-annot-resize"
                         style={{ left: x + (it.x + it.w) * scale, top: y + (it.y + it.h) * scale }}
-                        aria-label="囲みの大きさを変える"
+                        aria-label="メモ欄の大きさを変える"
                         {...handleProps({ id: a.id, index: i, w: it.w, h: it.h, scale })}
                       />
                     ) : null,
@@ -356,16 +359,16 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
             <svg className="ks-annot-svg">
               <InkShapes items={live ? [...draft.items, live] : draft.items} />
             </svg>
-            <BoxTexts items={draft.items.map((it, i) => (i === editing && it.kind === "box" ? { ...it, text: "" } : it))} />
+            <BoxTexts items={draft.items.map((it, i) => (i === editing && isTextItem(it) ? { ...it, text: "" } : it))} />
           </div>
           {draft.items.map((it, i) =>
-            it.kind === "box" ? (
+            isTextItem(it) ? (
               <span
                 key={i}
                 className="ks-annot-resize"
                 data-draft
                 style={{ left: it.x + it.w, top: it.y + it.h }}
-                aria-label="囲みの大きさを変える"
+                aria-label="メモ欄の大きさを変える"
                 {...handleProps({ index: i, w: it.w, h: it.h, scale: 1 })}
               />
             ) : null,
@@ -383,18 +386,31 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
               }}
             />
           )}
-          {editingBox?.kind === "box" && (
+          {editingBox && isTextItem(editingBox) && (
             <textarea
               className="ks-ink-boxinput"
               style={{ left: editingBox.x, top: editingBox.y, width: editingBox.w, height: editingBox.h, ["--ink" as string]: ink(editingBox.color) }}
               value={editingBox.text}
-              placeholder="指示を入力"
+              placeholder="指示を入力（右下のつまみで大きさを変えられます）"
               autoFocus
               onChange={(e) => {
                 const el = e.currentTarget;
                 setBoxText(editing!, el.value);
-                // 文字が囲みからあふれたら、囲みを下に伸ばす（スクショで見切れないように）
-                if (el.scrollHeight > el.clientHeight) setDraft((d) => ({ ...d, items: withSize(d.items, editing!, editingBox.w, el.scrollHeight + 4) }));
+                // 文字があふれたらメモ欄を伸ばす（スクショで見切れないように）。
+                // 点より上にあるメモ欄は、引出線の長さが変わらないよう上へ伸ばす
+                if (el.scrollHeight > el.clientHeight) {
+                  const h = el.scrollHeight + 4;
+                  setDraft((d) => ({
+                    ...d,
+                    items: d.items.map((it, i) =>
+                      i !== editing || !isTextItem(it)
+                        ? it
+                        : it.kind === "memo" && it.y + it.h <= it.py
+                          ? { ...it, y: it.y - (h - it.h), h }
+                          : { ...it, h },
+                    ),
+                  }));
+                }
               }}
               onBlur={() => setEditing(null)}
             />

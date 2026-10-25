@@ -7,7 +7,7 @@ import { useAnnotations } from "./AnnotationContext";
 export default function AnnotationButtons() {
   const { active, setActive, listOpen, setListOpen, annotations } = useAnnotations();
   const open = annotations.filter((a) => a.status === "open").length;
-  const label = active ? "付箋モードを終える" : "付箋モード：ペン・囲み・引出線で書き込む";
+  const label = active ? "付箋モードを終える" : "付箋モード：ペンとメモで書き込む";
   return (
     <>
       <Tooltip label={label}>

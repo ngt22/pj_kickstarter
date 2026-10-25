@@ -828,38 +828,88 @@ table {
   border-top: 1px solid var(--mantine-color-default-border);
   padding-top: var(--mantine-spacing-xs);
 }
+/* 青図（Blueprint）: ライトでは方眼紙に紺のインク、ダークでは紺地に水色の線 */
+.er-bp {
+  --bp-bg: color-mix(in srgb, var(--mantine-color-blue-0) 55%, var(--mantine-color-white));
+  --bp-grid: color-mix(in srgb, var(--mantine-color-blue-5) 9%, transparent);
+  --bp-line: var(--mantine-color-blue-6);
+  --bp-rule: color-mix(in srgb, var(--mantine-color-blue-6) 22%, transparent);
+  --bp-card: var(--mantine-color-white);
+  --bp-ink: var(--mantine-color-blue-9);
+  --bp-accent: var(--mantine-color-cyan-8);
+  --bp-dim: color-mix(in srgb, var(--mantine-color-blue-9) 55%, transparent);
+}
+[data-mantine-color-scheme="dark"] .er-bp {
+  --bp-bg: color-mix(in oklch, var(--mantine-color-dark-8) 80%, var(--mantine-color-blue-9) 20%);
+  --bp-grid: color-mix(in srgb, var(--mantine-color-cyan-4) 7%, transparent);
+  --bp-line: color-mix(in srgb, var(--mantine-color-cyan-3) 70%, transparent);
+  --bp-rule: color-mix(in srgb, var(--mantine-color-cyan-3) 22%, transparent);
+  --bp-card: color-mix(in oklch, var(--mantine-color-dark-8) 70%, var(--mantine-color-blue-9) 30%);
+  --bp-ink: var(--mantine-color-dark-0);
+  --bp-accent: var(--mantine-color-cyan-3);
+  --bp-dim: color-mix(in srgb, var(--mantine-color-dark-0) 55%, transparent);
+}
+.er-bp .er-canvas {
+  background: var(--bp-bg);
+}
+.er-bp .react-flow {
+  --xy-background-color: var(--bp-bg);
+  --xy-edge-stroke: var(--bp-line);
+  --xy-edge-stroke-width: 1.2;
+}
+.er-bp .react-flow__background path {
+  stroke: var(--bp-grid);
+}
 .er-table {
-  font-family: var(--mantine-font-family);
-  background: var(--ks-surface);
-  border: 1.5px solid;
-  border-radius: var(--mantine-radius-md);
-  box-shadow: var(--mantine-shadow-xs);
+  font-family: var(--mantine-font-family-monospace);
+  color: var(--bp-ink);
+  background: var(--bp-card);
+  border: 1px solid var(--bp-line);
+  border-radius: 2px;
   overflow: hidden;
   cursor: pointer;
 }
 .er-table-head {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   height: 40px;
-  padding: 10px 8px 0;
-  border-bottom: 1px solid var(--mantine-color-default-border);
+  padding: 11px 10px 0;
+  border-bottom: 1px solid var(--bp-line);
 }
-.er-table-head p {
-  margin: 0;
+.er-table-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--bp-accent);
+}
+.er-table-label {
+  overflow: hidden;
+  font-family: var(--mantine-font-family);
+  font-size: var(--mantine-font-size-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--bp-dim);
 }
 .er-col {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
-  font-size: var(--mantine-font-size-xs);
+  padding: 0 10px;
+  font-size: 12px;
+}
+.er-col + .er-col {
+  border-top: 1px dotted var(--bp-rule);
 }
 .er-key {
   width: 18px;
-  font-size: var(--mantine-font-size-xs);
+  font-size: 10px;
   font-weight: 700;
-  color: var(--mantine-color-dimmed);
+  letter-spacing: 0.04em;
+  color: var(--bp-accent);
 }
 .er-col-name {
   flex: 1;
@@ -868,8 +918,8 @@ table {
   white-space: nowrap;
 }
 .er-col-type {
-  color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
+  font-size: 11px;
+  color: var(--bp-dim);
 }
 .er-handle {
   opacity: 0;
@@ -883,8 +933,28 @@ table {
   width: 100%;
   height: 100%;
   padding: 10px 14px;
-  border: 1.5px dashed;
-  border-radius: var(--mantine-radius-md);
+  border: 1px dashed var(--bp-line);
+  border-radius: 2px;
+}
+.er-domain-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--bp-accent);
+  background: var(--bp-bg);
+  border: 1px solid var(--bp-line);
+  border-radius: 2px;
+}
+/* ドメインの色は札の小さな四角だけに使う（図全体は単色の青図に保つ） */
+.er-domain-tag::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  background: var(--er-domain);
 }
 .react-flow__node.er-dim,
 .react-flow__edge.er-dim {

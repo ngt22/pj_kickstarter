@@ -59,17 +59,18 @@
 .doc-body > p {
   margin-bottom: var(--mantine-spacing-md);
 }
-.doc-body h2 {
+/* 画面イメージ（.mock-stage）の中は実際の画面に似せるので、本文の見出し・箇条書きの体裁を当てない */
+.doc-body h2:where(:not(.mock-stage *)) {
   margin-top: calc(var(--mantine-spacing-xl) * 1.4);
   margin-bottom: var(--mantine-spacing-sm);
   color: var(--mantine-color-text);
 }
-.doc-body h3 {
+.doc-body h3:where(:not(.mock-stage *)) {
   margin-top: var(--mantine-spacing-xl);
   margin-bottom: var(--mantine-spacing-sm);
   color: var(--mantine-color-text);
 }
-.doc-body h4 {
+.doc-body h4:where(:not(.mock-stage *)) {
   margin-top: var(--mantine-spacing-lg);
   margin-bottom: var(--mantine-spacing-xs);
   color: var(--mantine-color-text);
@@ -81,17 +82,17 @@
 .doc-body > :is(table, .mermaid, div) {
   margin-bottom: var(--mantine-spacing-lg);
 }
-.doc-body :is(ul, ol) {
+.doc-body :is(ul, ol):where(:not(.mock-stage *)) {
   padding-left: 1.5em;
   margin-bottom: var(--mantine-spacing-md);
 }
-.doc-body li + li {
+.doc-body li:where(:not(.mock-stage *)) + li {
   margin-top: var(--mantine-spacing-xs);
 }
-.doc-body li::marker {
+.doc-body li:where(:not(.mock-stage *))::marker {
   color: var(--mantine-color-dimmed);
 }
-.doc-body strong {
+.doc-body strong:where(:not(.mock-stage *)) {
   font-weight: 700;
   color: var(--mantine-color-text);
 }
@@ -112,7 +113,7 @@
   border: 1px solid var(--mantine-color-default-border);
 }
 /* 表の中は本文より一段小さく、字間も詰める */
-.doc-body table {
+.doc-body table:where(:not(.mock-stage *)) {
   letter-spacing: 0.02em;
 }
 
@@ -328,86 +329,439 @@ table {
   overflow: visible;
 }
 
-/* 画面モック（components/ScreenMock.tsx） */
-.mock {
+/* 画面イメージ（components/ScreenMock.tsx）
+   資料の本文と取り違えないよう、ライト・ダークどちらでも暗いステージに端末を置く。
+   端末の中（.mock-app）は案件カラーのライトテーマで、実際の画面に近い見た目にする */
+.mock-stage {
+  --mock-stage: color-mix(in oklch, var(--mantine-color-dark-8) 92%, var(--mantine-color-indigo-9) 8%);
+  --mock-on-stage: color-mix(in srgb, var(--mantine-color-white) 85%, transparent);
+  --mock-on-stage-dim: color-mix(in srgb, var(--mantine-color-white) 55%, transparent);
+  --mock-stage-line: color-mix(in srgb, var(--mantine-color-white) 8%, transparent);
+  margin: var(--mantine-spacing-lg) 0;
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-lg) var(--mantine-spacing-lg);
   font-family: var(--mantine-font-family);
-  line-height: 1.4;
-  margin: var(--mantine-spacing-md) 0;
-  border: 1px solid var(--mantine-color-default-border);
+  line-height: 1.5;
+  color: var(--mock-on-stage);
+  background:
+    radial-gradient(var(--mock-stage-line) 1px, transparent 1px) 0 0 / 16px 16px,
+    var(--mock-stage);
+  border: 1px solid var(--mock-stage-line);
   border-radius: var(--mantine-radius-lg);
-  background: var(--ks-surface);
-  box-shadow: var(--mantine-shadow-md);
-  overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
 }
-.mock p {
-  margin: 0;
-}
-.mock-desktop {
-  max-width: 760px;
-}
-.mock-mobile {
-  max-width: 360px;
-  border-width: 8px;
-  border-radius: 28px;
-  border-color: var(--mantine-color-gray-8);
-}
-.mock-chrome {
+.mock-band {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  margin-bottom: var(--mantine-spacing-md);
+  font-size: var(--mantine-font-size-xs);
+}
+.mock-band-pill {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  background: var(--ks-subtle);
-  border-bottom: 1px solid var(--mantine-color-default-border);
+  padding: 2px 10px;
+  font-weight: 700;
+  color: var(--mock-on-stage);
+  border: 1px solid color-mix(in srgb, var(--mantine-color-white) 20%, transparent);
+  border-radius: var(--mantine-radius-xl);
 }
-.mock-chrome i {
-  width: 10px;
-  height: 10px;
+.mock-band-note {
+  color: var(--mock-on-stage-dim);
+}
+.mock-band-meta {
+  margin-left: auto;
+  color: var(--mock-on-stage-dim);
+  letter-spacing: 0.04em;
+}
+.mock-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+}
+.mock-stage[data-device="mobile"] .mock-body {
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--mantine-spacing-xl);
+}
+.mock-device {
+  min-width: 0;
+}
+.mock-stage[data-device="mobile"] .mock-device {
+  flex: 0 1 400px;
+}
+.mock-scale > div {
+  transform-origin: top left;
+}
+
+/* 注釈（端末の外に番号と名前を並べる） */
+.mock-stage .mock-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px var(--mantine-spacing-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--mantine-font-size-sm);
+}
+.mock-stage[data-device="mobile"] .mock-notes {
+  flex: 0 1 220px;
+  flex-direction: column;
+  padding-top: var(--mantine-spacing-xl);
+}
+.mock-stage .mock-notes li {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  margin: 0;
+}
+.mock-note-num,
+.mock-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: var(--mantine-radius-xl);
+}
+.mock-note-num {
+  color: var(--mock-stage);
+  background: var(--mock-on-stage);
+}
+/* 画面の中の番号は、画面の部品ではないことが分かるようステージの色で描く */
+.mock-note {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: -26px;
+  color: var(--mantine-color-white);
+  background: var(--mock-stage);
+  box-shadow: 0 0 0 2px var(--mantine-color-white);
+}
+
+.mock-note[data-edge] {
+  top: 6px;
+  left: 6px;
+}
+
+/* 画面遷移の一覧 */
+.mock-transitions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--mantine-spacing-md);
+  padding-top: var(--mantine-spacing-sm);
+  font-size: var(--mantine-font-size-xs);
+  border-top: 1px solid var(--mock-stage-line);
+}
+.mock-transitions-label {
+  margin-right: 4px;
+  color: var(--mock-on-stage-dim);
+}
+.mock-transition {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 10px;
+  color: var(--mock-on-stage);
+  background: color-mix(in srgb, var(--mantine-color-white) 8%, transparent);
+  border-radius: var(--mantine-radius-xl);
+}
+.mock-transition b {
+  font-family: var(--mantine-font-family-monospace);
+  font-weight: 600;
+}
+
+/* 端末の枠 */
+.mock-browser {
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(0 0 0 / 0.3);
+}
+.mock-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--mantine-color-gray-1);
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+}
+.mock-lights {
+  display: flex;
+  gap: 8px;
+}
+.mock-lights i {
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--mantine-color-gray-4);
 }
 .mock-url {
-  margin-left: 12px;
-  padding: 1px 12px;
-  font-size: var(--mantine-font-size-xs);
-  color: var(--mantine-color-dimmed);
-  background: var(--ks-surface);
-  border-radius: var(--mantine-radius-xl);
-}
-.mock-mobile .mock-chrome {
+  position: absolute;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 40%;
   justify-content: center;
-  height: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  color: var(--mantine-color-gray-6);
+  background: var(--mantine-color-white);
+  border-radius: var(--mantine-radius-md);
+  transform: translateX(-50%);
+}
+.mock-phone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 720px;
+  overflow: hidden;
+  border: 12px solid var(--mantine-color-dark-7);
+  border-radius: 44px;
+  background: var(--mantine-color-gray-0);
+  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 0 0 1px color-mix(in srgb, var(--mantine-color-white) 12%, transparent);
+}
+.mock-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 22px 0 28px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mantine-color-black);
+  background: var(--mantine-color-white);
+}
+.mock-island {
+  width: 96px;
+  height: 26px;
+  border-radius: 14px;
+  background: var(--mantine-color-black);
+}
+.mock-status-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mock-home-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  width: 120px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--mantine-color-black);
+  transform: translateX(-50%);
+}
+
+/* 画面の中身 */
+.mock-app {
+  color-scheme: light;
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-md);
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+.mock-app :where(h1, h2, h3, h4, h5, h6, p, ul, ol, table) {
+  margin: 0;
+}
+.mock-app :where(h1, h2, h3, h4, h5, h6) {
+  padding: 0;
   border: 0;
 }
-.mock-notch {
-  width: 80px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--mantine-color-gray-8);
+.mock-phone .mock-app {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 .mock-screen {
-  padding: var(--mantine-spacing-md);
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+  background: var(--mantine-color-gray-0);
 }
-.mock-header {
-  margin: calc(var(--mantine-spacing-md) * -1) calc(var(--mantine-spacing-md) * -1) 0;
-  padding: 8px var(--mantine-spacing-md);
-  border-bottom: 1px solid var(--mantine-color-default-border);
+.mock-phone .mock-screen {
+  flex: 1;
+  min-height: 0;
 }
-.mock-image {
+.mock-main {
+  flex: 1;
+  padding: var(--mantine-spacing-xl);
+}
+.mock-phone .mock-main {
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-lg) var(--mantine-spacing-xl);
+}
+.mock-with-nav {
+  display: flex;
+  flex: 1;
+}
+.mock-with-nav > .mock-noted {
+  display: flex;
+}
+.mock-topbar {
+  height: 56px;
+  padding: 0 var(--mantine-spacing-xl);
+  background: var(--mantine-color-white);
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+}
+.mock-appbar {
+  height: 48px;
+  padding: 0 var(--mantine-spacing-sm);
+  background: var(--mantine-color-white);
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+}
+.mock-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-sm);
+  background: var(--mantine-color-white);
+  border-right: 1px solid var(--mantine-color-gray-2);
+}
+.mock-navitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-7);
+  border-radius: var(--mantine-radius-md);
+}
+.mock-navitem[data-active] {
+  font-weight: 700;
+  color: var(--mantine-primary-color-light-color);
+  background: var(--mantine-primary-color-light);
+}
+.mock-navchips {
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  overflow: hidden;
+  background: var(--mantine-color-white);
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+}
+.mock-tabbar {
+  height: 64px;
+  padding-bottom: 10px;
+  background: var(--mantine-color-white);
+  border-top: 1px solid var(--mantine-color-gray-2);
+}
+.mock-tab {
+  font-size: 10px;
+  color: var(--mantine-color-gray-6);
+}
+.mock-tab[data-active] {
+  font-weight: 700;
+  color: var(--mantine-primary-color-filled);
+}
+.mock-footer {
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-xl);
+  border-top: 1px solid var(--mantine-color-gray-2);
+}
+.mock-card {
+  background: var(--mantine-color-white);
+  border: 1px solid var(--mantine-color-gray-2);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+.mock-app .mock-thead {
+  background: var(--mantine-color-gray-0);
+}
+.mock-list-row {
+  padding: 12px var(--mantine-spacing-md);
+}
+.mock-list-row + .mock-list-row {
+  border-top: 1px solid var(--mantine-color-gray-2);
+}
+.mock-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--mantine-font-size-sm);
-  color: var(--mantine-color-dimmed);
-  background: repeating-linear-gradient(45deg, var(--mantine-color-default-hover) 0 10px, transparent 10px 20px);
-  border: 1px dashed var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-sm);
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  color: var(--mantine-primary-color-light-color);
+  background: var(--mantine-primary-color-light);
+  border-radius: var(--mantine-radius-md);
 }
-.mock-note {
-  position: absolute;
-  z-index: 1;
-  top: -8px;
-  left: -10px;
+.mock-dim-icon {
+  flex-shrink: 0;
+  color: var(--mantine-color-gray-5);
+}
+.mock-empty {
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-md);
+  background: var(--mantine-color-white);
+  border: 1px dashed var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+}
+.mock-toast {
+  box-shadow: var(--mantine-shadow-md);
+}
+.mock-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-primary-color-light-color);
+  background: linear-gradient(135deg, var(--mantine-primary-color-light), color-mix(in srgb, var(--mantine-primary-color-light) 40%, var(--mantine-color-white)));
+  border-radius: var(--mantine-radius-md);
+}
+.mock-app [data-to] {
+  cursor: pointer;
+}
+
+/* スマホで資料を見るときは、注釈を端末の下に回す */
+@media (max-width: 48em) {
+  .mock-stage {
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm) var(--mantine-spacing-sm);
+  }
+  .mock-band-meta {
+    display: none;
+  }
+  .mock-stage[data-device="mobile"] .mock-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mock-stage[data-device="mobile"] .mock-device {
+    flex: none;
+    width: min(100%, 320px);
+    margin: 0 auto;
+  }
+  .mock-stage[data-device="mobile"] .mock-notes {
+    flex: none;
+    flex-direction: row;
+    padding-top: 0;
+  }
+}
+
+/* 印刷ではステージを白にして、インクを使いすぎないようにする */
+@media print {
+  .mock-stage {
+    --mock-stage: var(--mantine-color-gray-8);
+    --mock-on-stage: var(--mantine-color-gray-9);
+    --mock-on-stage-dim: var(--mantine-color-gray-6);
+    --mock-stage-line: var(--mantine-color-gray-3);
+    background: var(--mantine-color-white);
+    break-inside: avoid;
+    content-visibility: visible;
+  }
+  .mock-note-num {
+    color: var(--mantine-color-white);
+    background: var(--mantine-color-gray-8);
+  }
+  .mock-browser,
+  .mock-phone {
+    box-shadow: none;
+  }
 }
 
 /* ER図（components/ErDiagram.tsx） */

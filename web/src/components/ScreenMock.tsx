@@ -1,10 +1,13 @@
-// ```mock ブロック（YAML）を Mantine の部品で画面モックとして描画する。
+// ```mock ブロック（YAML）を「画面イメージ」として描画する。
+// 資料の本文と見分けがつくよう、暗いステージの上に端末の枠を置き、中身は案件カラーのライトテーマで実際の画面風に描く。
 // 部品は「- 種類: 中身」の形で並べる。使える種類は ELEMENTS を参照。
 import {
   Alert,
   Anchor,
+  Avatar,
   Badge,
   Box,
+  Breadcrumbs,
   Button,
   Card,
   Checkbox,
@@ -12,29 +15,79 @@ import {
   Divider,
   Group,
   List,
+  MantineProvider,
   NativeSelect,
+  Notification,
+  Pagination,
   PasswordInput,
   Radio,
   SimpleGrid,
   Stack,
+  Stepper,
   Table,
   Tabs,
   Text,
   Textarea,
   TextInput,
+  ThemeIcon,
   Title,
+  Tooltip,
+  UnstyledButton,
+  type MantineColorSchemeManager,
 } from "@mantine/core";
-import { useMemo } from "react";
+import {
+  IconBattery3,
+  IconBell,
+  IconCalendar,
+  IconChartBar,
+  IconChevronLeft,
+  IconChevronRight,
+  IconCircle,
+  IconDeviceDesktop,
+  IconDeviceMobile,
+  IconDots,
+  IconFileText,
+  IconHeart,
+  IconHome,
+  IconInbox,
+  IconList,
+  IconLock,
+  IconMapPin,
+  IconMessage,
+  IconPhoto,
+  IconSearch,
+  IconSettings,
+  IconShoppingCart,
+  IconStar,
+  IconUser,
+  IconUsers,
+  IconWifi,
+  type Icon,
+} from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
+import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { parseYaml } from "../lib/docs";
+import {
+  collectNotes,
+  collectTransitions,
+  DARK_SCHEME,
+  excludeMock,
+  kindOf,
+  normalize,
+  props,
+  splitShell,
+  type Element,
+  type MockSpec,
+  type Props,
+} from "../lib/mock";
+import { ProjectColorContext } from "../lib/projectColor";
+import { cssVariablesResolver, theme } from "../theme";
+import { ICON_STROKE } from "./icons";
 
-type Props = Record<string, any>;
-type Element = Record<string, any>;
+export type { MockSpec };
 
-export type MockSpec = {
-  device?: "desktop" | "mobile";
-  title?: string;
-  body: Element[];
-};
+// 端末の論理幅。資料の幅に合わせて縮小表示する。スマホで資料を見るときは、パソコンの画面を狭めて文字を読める大きさに保つ
+const DEVICE_WIDTH = { desktop: 1024, desktopNarrow: 720, mobile: 375 };
 
 const BUTTON_VARIANT: Record<string, { variant: string; color?: string }> = {
   primary: { variant: "filled" },
@@ -43,43 +96,59 @@ const BUTTON_VARIANT: Record<string, { variant: string; color?: string }> = {
   link: { variant: "subtle" },
 };
 
-// 「種類: 文字列」の短縮形を props に揃える
-function props(value: unknown, key = "label"): Props {
-  if (value == null) return {};
-  if (typeof value === "object" && !Array.isArray(value)) return value as Props;
-  return { [key]: value };
+// メニューやタブの名前から、それらしいアイコンを選ぶ
+const ICON_WORDS: [RegExp, Icon][] = [
+  [/ホーム|トップ|home/i, IconHome],
+  [/検索|探す|さがす|search/i, IconSearch],
+  [/予約|予定|カレンダー|日程|スケジュール/, IconCalendar],
+  [/お気に入り|いいね|保存/, IconHeart],
+  [/通知|お知らせ/, IconBell],
+  [/メッセージ|チャット|問い合わせ|お問い合わせ/, IconMessage],
+  [/カート|購入|注文|買い物/, IconShoppingCart],
+  [/設定|管理/, IconSettings],
+  [/マイ|アカウント|プロフィール|会員/, IconUser],
+  [/顧客|ユーザー|メンバー|スタッフ|会員一覧/, IconUsers],
+  [/分析|レポート|集計|ダッシュボード|売上/, IconChartBar],
+  [/一覧|リスト|履歴/, IconList],
+  [/記事|ドキュメント|書類|請求|帳票/, IconFileText],
+  [/写真|画像|ギャラリー/, IconPhoto],
+  [/地図|アクセス|店舗/, IconMapPin],
+  [/レビュー|評価/, IconStar],
+];
+
+function iconFor(label: string): Icon {
+  return ICON_WORDS.find(([re]) => re.test(label))?.[1] ?? IconCircle;
 }
 
-// 仕様表と対応させる番号（note: 1 など）
-function Note({ n }: { n?: number | string }) {
-  if (n == null) return null;
-  return (
-    <Badge className="mock-note" circle size="sm" color="red">
-      {n}
-    </Badge>
-  );
-}
+const labelOf = (item: unknown) => String(props(item).label ?? "");
 
-function Noted({ note, children, grow }: { note?: number | string; children: React.ReactNode; grow?: boolean }) {
+// 仕様表と対応させる番号（note: 1 など）。画面の一部ではなく注釈なので、ステージと同じ色で描く
+// 画面の端まで広がる部品（ヘッダーやメニュー）は、番号を内側に置く
+function Noted({ note, children, edge }: { note?: number | string; children: React.ReactNode; edge?: boolean }) {
   if (note == null) return <>{children}</>;
   return (
-    <Box pos="relative" style={grow ? { flex: 1 } : undefined}>
-      <Note n={note} />
+    <Box pos="relative" className="mock-noted">
+      <span className="mock-note" data-edge={edge || undefined} aria-label={`注釈 ${note}`}>{note}</span>
       {children}
     </Box>
   );
 }
 
-function MockButton({ p }: { p: Props }) {
+// 遷移先は画面には書かず、ボタンに data-to とツールチップで持たせる（一覧はステージの下に出す）
+function ToTip({ to, children }: { to?: string; children: React.ReactElement }) {
+  if (!to) return children;
+  return <Tooltip label={`${to} へ遷移`}>{children}</Tooltip>;
+}
+
+function MockButton({ p, size = "sm" }: { p: Props; size?: string }) {
   const v = BUTTON_VARIANT[p.variant ?? "default"] ?? BUTTON_VARIANT.default;
   return (
     <Noted note={p.note}>
-      <Group gap={4} wrap="nowrap">
-        <Button size="xs" variant={v.variant} color={v.color} disabled={p.disabled} fullWidth={p.full}>
+      <ToTip to={p.to}>
+        <Button size={size} variant={v.variant} color={v.color} disabled={p.disabled} fullWidth={p.full} data-to={p.to}>
           {p.label}
         </Button>
-        {p.to && <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>→ {p.to}</Text>}
-      </Group>
+      </ToTip>
     </Noted>
   );
 }
@@ -88,9 +157,9 @@ function MockButton({ p }: { p: Props }) {
 function Cell({ value }: { value: unknown }) {
   const s = String(value ?? "");
   const button = /^\[(.+)\]$/.exec(s);
-  if (button) return <Button size="compact-xs" variant="light">{button[1]}</Button>;
+  if (button) return <Button size="compact-sm" variant="light">{button[1]}</Button>;
   const badge = /^\((.+)\)$/.exec(s);
-  if (badge) return <Badge size="sm" variant="light">{badge[1]}</Badge>;
+  if (badge) return <Badge variant="light">{badge[1]}</Badge>;
   return <>{s}</>;
 }
 
@@ -104,80 +173,209 @@ function Items({ items }: { items?: Element[] }) {
   );
 }
 
-const ELEMENTS: Record<string, (value: any) => React.ReactNode> = {
-  header: (v) => {
-    const p = props(v, "title");
+// 一覧の行: 文字列だけなら箇条書き、{title, sub, meta, thumb} なら写真つきの行
+function ListRow({ item }: { item: Props }) {
+  const thumb = item.thumb ?? item.avatar;
+  return (
+    <Group className="mock-list-row" gap="sm" wrap="nowrap" data-to={item.to}>
+      {thumb != null &&
+        (item.avatar != null ? (
+          <Avatar radius="xl" color="initials" name={String(item.title ?? "")} />
+        ) : (
+          <Box className="mock-thumb" aria-hidden>
+            <IconPhoto size={18} stroke={ICON_STROKE} />
+          </Box>
+        ))}
+      <Box flex={1} miw={0}>
+        <Text size="sm" fw={600} truncate>{item.title}</Text>
+        {item.sub && <Text size="xs" c="dimmed" truncate>{item.sub}</Text>}
+      </Box>
+      {item.meta && <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>{item.meta}</Text>}
+      {item.badge && <Badge variant="light">{item.badge}</Badge>}
+      {item.to && <IconChevronRight size={16} stroke={ICON_STROKE} className="mock-dim-icon" />}
+    </Group>
+  );
+}
+
+const ELEMENTS: Record<string, (value: any, mobile: boolean) => React.ReactNode> = {
+  // 上のバー。デスクトップはロゴ・リンク・ボタン、スマホは戻る・タイトル・右のボタン
+  header: (v, mobile) => {
+    const p = normalize("header", v);
+    if (mobile)
+      return (
+        <Noted note={p.note} edge>
+          <Group className="mock-appbar" justify="space-between" wrap="nowrap">
+            <Box w={28}>{p.back && <IconChevronLeft size={22} stroke={ICON_STROKE} />}</Box>
+            <Text fw={700} size="md" truncate>{p.title ?? "サービス名"}</Text>
+            <Box w={28} ta="right">
+              {p.action ? (
+                <Text size="sm" c="var(--mantine-primary-color-filled)" fw={600}>{labelOf(p.action)}</Text>
+              ) : (
+                <IconDots size={20} stroke={ICON_STROKE} className="mock-dim-icon" />
+              )}
+            </Box>
+          </Group>
+        </Noted>
+      );
     return (
-      <Noted note={p.note}>
-        <Group className="mock-header" justify="space-between" wrap="nowrap">
-          <Text fw={700}>{p.title ?? "ロゴ"}</Text>
-          <Group gap="sm" wrap="nowrap">
-            {(p.links ?? []).map((l: string) => <Anchor key={l} size="sm">{l}</Anchor>)}
-            {(p.actions ?? []).map((a: unknown, i: number) => <MockButton key={i} p={props(a)} />)}
+      <Noted note={p.note} edge>
+        <Group className="mock-topbar" justify="space-between" wrap="nowrap">
+          <Group gap="xs" wrap="nowrap">
+            <ThemeIcon size="md" radius="md" variant="filled" aria-hidden>
+              <IconStar size={16} stroke={ICON_STROKE} />
+            </ThemeIcon>
+            <Text fw={700}>{p.title ?? "サービス名"}</Text>
+          </Group>
+          <Group gap="lg" wrap="nowrap">
+            {(p.links ?? []).map((l: unknown) => (
+              <Anchor key={labelOf(l)} size="sm" c="dimmed" underline="never">{labelOf(l)}</Anchor>
+            ))}
+            {[...(p.actions ?? []), ...(p.action ? [p.action] : [])].map((a: unknown, i: number) => (
+              <MockButton key={i} p={props(a)} size="xs" />
+            ))}
+          </Group>
+        </Group>
+      </Noted>
+    );
+  },
+  // 横のメニュー（デスクトップ）。スマホでは上に横並びのタブとして出す
+  nav: (v, mobile) => {
+    const p = normalize("nav", v);
+    const items: unknown[] = p.items ?? [];
+    const active = p.active ?? labelOf(items[0]);
+    if (mobile)
+      return (
+        <Group className="mock-navchips" gap={6} wrap="nowrap">
+          {items.map((it) => (
+            <Badge key={labelOf(it)} size="lg" variant={labelOf(it) === active ? "filled" : "default"} radius="xl">
+              {labelOf(it)}
+            </Badge>
+          ))}
+        </Group>
+      );
+    return (
+      <Noted note={p.note} edge>
+        <Stack className="mock-sidebar" gap={2}>
+          {p.brand && <Text fw={700} size="sm" px="sm" pb="sm">{p.brand}</Text>}
+          {items.map((it) => {
+            const label = labelOf(it);
+            const I = iconFor(label);
+            return (
+              <UnstyledButton key={label} className="mock-navitem" data-active={label === active || undefined} data-to={props(it).to}>
+                <I size={18} stroke={ICON_STROKE} />
+                <span>{label}</span>
+              </UnstyledButton>
+            );
+          })}
+        </Stack>
+      </Noted>
+    );
+  },
+  // 下のタブバー（スマホ）
+  tabbar: (v) => {
+    const p = normalize("tabbar", v);
+    const items: unknown[] = p.items ?? [];
+    const active = p.active ?? labelOf(items[0]);
+    return (
+      <Noted note={p.note} edge>
+        <Group className="mock-tabbar" grow gap={0} wrap="nowrap">
+          {items.map((it) => {
+            const label = labelOf(it);
+            const I = iconFor(label);
+            return (
+              <Stack key={label} className="mock-tab" gap={2} align="center" data-active={label === active || undefined} data-to={props(it).to}>
+                <I size={22} stroke={ICON_STROKE} />
+                <span>{label}</span>
+              </Stack>
+            );
+          })}
+        </Group>
+      </Noted>
+    );
+  },
+  footer: (v) => {
+    const p = normalize("footer", v);
+    return (
+      <Noted note={p.note} edge>
+        <Group className="mock-footer" justify="space-between" wrap="nowrap">
+          <Text size="xs" c="dimmed">{p.text ?? "© サービス名"}</Text>
+          <Group gap="md" wrap="nowrap">
+            {(p.links ?? []).map((l: unknown) => <Anchor key={labelOf(l)} size="xs" c="dimmed">{labelOf(l)}</Anchor>)}
           </Group>
         </Group>
       </Noted>
     );
   },
   heading: (v) => {
-    const p = props(v, "text");
+    const p = normalize("heading", v);
     return <Noted note={p.note}><Title order={p.level ?? 3}>{p.text}</Title></Noted>;
   },
   text: (v) => {
-    const p = props(v, "text");
+    const p = normalize("text", v);
     return <Noted note={p.note}><Text size="sm" c={p.dimmed ? "dimmed" : undefined}>{p.text}</Text></Noted>;
   },
   input: (v) => {
-    const p = props(v);
-    const common = { label: p.label, placeholder: p.placeholder, defaultValue: p.value, withAsterisk: p.required, description: p.help, error: p.error, size: "xs" as const };
+    const p = normalize("input", v);
+    const common = { label: p.label, placeholder: p.placeholder, defaultValue: p.value, withAsterisk: p.required, description: p.help, error: p.error };
     if (p.type === "password") return <Noted note={p.note}><PasswordInput {...common} /></Noted>;
-    if (p.type === "textarea") return <Noted note={p.note}><Textarea {...common} autosize minRows={2} /></Noted>;
+    if (p.type === "textarea") return <Noted note={p.note}><Textarea {...common} autosize minRows={3} /></Noted>;
     return <Noted note={p.note}><TextInput {...common} type={p.type ?? "text"} /></Noted>;
   },
-  select: (v) => {
-    const p = props(v);
+  search: (v) => {
+    const p = normalize("search", v);
     return (
       <Noted note={p.note}>
-        <NativeSelect size="xs" label={p.label} withAsterisk={p.required} data={(p.options ?? []).map(String)} defaultValue={p.value} />
+        <TextInput radius="xl" placeholder={p.placeholder ?? "検索"} leftSection={<IconSearch size={16} stroke={ICON_STROKE} />} />
+      </Noted>
+    );
+  },
+  select: (v) => {
+    const p = normalize("select", v);
+    return (
+      <Noted note={p.note}>
+        <NativeSelect label={p.label} withAsterisk={p.required} data={(p.options ?? []).map(String)} defaultValue={p.value} />
       </Noted>
     );
   },
   checkbox: (v) => {
-    const p = props(v);
-    return <Noted note={p.note}><Checkbox size="xs" label={p.label} defaultChecked={p.checked} /></Noted>;
+    const p = normalize("checkbox", v);
+    return <Noted note={p.note}><Checkbox label={p.label} defaultChecked={p.checked} /></Noted>;
   },
   radio: (v) => {
-    const p = props(v);
+    const p = normalize("radio", v);
     return (
       <Noted note={p.note}>
-        <Radio.Group size="xs" label={p.label} defaultValue={p.value}>
-          <Group gap="md" mt={4}>
-            {(p.options ?? []).map((o: string) => <Radio key={o} size="xs" value={o} label={o} />)}
+        <Radio.Group label={p.label} defaultValue={p.value}>
+          <Group gap="md" mt={6}>
+            {(p.options ?? []).map((o: string) => <Radio key={o} value={o} label={o} />)}
           </Group>
         </Radio.Group>
       </Noted>
     );
   },
-  button: (v) => <MockButton p={props(v)} />,
-  buttons: (v) => (
-    <Group gap="xs" justify={Array.isArray(v) ? "flex-end" : (v.align ?? "flex-end")}>
-      {(Array.isArray(v) ? v : v.items).map((b: unknown, i: number) => <MockButton key={i} p={props(b)} />)}
-    </Group>
-  ),
-  row: (v) => {
-    const items: Element[] = Array.isArray(v) ? v : v.items;
+  button: (v) => <MockButton p={normalize("button", v)} />,
+  buttons: (v) => {
+    const p = normalize("buttons", v);
     return (
-      <SimpleGrid cols={{ base: 1, xs: items.length }} spacing="sm">
+      <Group gap="xs" justify={p.align ?? "flex-end"} mt={4}>
+        {(p.items ?? []).map((b: unknown, i: number) => <MockButton key={i} p={props(b)} />)}
+      </Group>
+    );
+  },
+  row: (v, mobile) => {
+    const items: Element[] = normalize("row", v).items ?? [];
+    return (
+      <SimpleGrid cols={mobile ? 1 : items.length} spacing="md">
         <Items items={items} />
       </SimpleGrid>
     );
   },
   card: (v) => {
-    const p = props(v, "title");
+    const p = normalize("card", v);
     return (
       <Noted note={p.note}>
-        <Card withBorder padding="sm" radius="md">
-          <Stack gap="xs">
+        <Card className="mock-card" padding="md" radius="md">
+          <Stack gap="sm">
             {p.title && <Text fw={700} size="sm">{p.title}</Text>}
             <Items items={p.items} />
           </Stack>
@@ -185,52 +383,167 @@ const ELEMENTS: Record<string, (value: any) => React.ReactNode> = {
       </Noted>
     );
   },
-  table: (v) => {
-    const p = props(v);
+  // 数値のサマリー: [{label, value, delta}]
+  stats: (v, mobile) => {
+    const p = normalize("stats", v);
+    const items: Props[] = (p.items ?? []).map((s: unknown) => props(s));
     return (
       <Noted note={p.note}>
-        <Table.ScrollContainer minWidth={300}>
-          <Table withTableBorder fz="xs" verticalSpacing={4}>
-            <Table.Thead>
-              <Table.Tr>{(p.columns ?? []).map((c: string) => <Table.Th key={c}>{c}</Table.Th>)}</Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {(p.rows ?? []).map((r: unknown[], i: number) => (
-                <Table.Tr key={i}>{r.map((c, j) => <Table.Td key={j}><Cell value={c} /></Table.Td>)}</Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <SimpleGrid cols={mobile ? 2 : Math.min(items.length, 4)} spacing="md">
+          {items.map((s, i) => {
+            // YAML の「+2」は数値の 2 になるので、符号を付け直す
+            const delta = typeof s.delta === "number" ? (s.delta > 0 ? `+${s.delta}` : String(s.delta)) : String(s.delta ?? "");
+            const down = delta.startsWith("-") || delta.startsWith("−");
+            return (
+              <Card key={i} className="mock-card" padding="md" radius="md">
+                <Text size="xs" c="dimmed">{s.label}</Text>
+                <Group gap={6} align="baseline" mt={4}>
+                  <Text fz={22} fw={700} lh={1.2}>{s.value}</Text>
+                  {delta && <Text size="xs" fw={600} c={down ? "red.7" : "teal.7"}>{delta}</Text>}
+                </Group>
+              </Card>
+            );
+          })}
+        </SimpleGrid>
+      </Noted>
+    );
+  },
+  table: (v) => {
+    const p = normalize("table", v);
+    return (
+      <Noted note={p.note}>
+        <Card className="mock-card" padding={0} radius="md">
+          <Table.ScrollContainer minWidth={300}>
+            <Table fz="sm" verticalSpacing="sm" highlightOnHover>
+              <Table.Thead className="mock-thead">
+                <Table.Tr>{(p.columns ?? []).map((c: string, i: number) => <Table.Th key={i}>{c}</Table.Th>)}</Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {(p.rows ?? []).map((r: unknown[], i: number) => (
+                  <Table.Tr key={i}>{r.map((c, j) => <Table.Td key={j}><Cell value={c} /></Table.Td>)}</Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        </Card>
       </Noted>
     );
   },
   list: (v) => {
-    const p = Array.isArray(v) ? { items: v } : props(v);
+    const p = normalize("list", v);
+    const items: unknown[] = p.items ?? [];
+    const rich = items.some((it) => it && typeof it === "object");
+    if (!rich)
+      return (
+        <Noted note={p.note}>
+          <List size="sm" spacing={4}>{items.map((s, i) => <List.Item key={i}>{String(s)}</List.Item>)}</List>
+        </Noted>
+      );
     return (
       <Noted note={p.note}>
-        <List size="sm" spacing={2}>{p.items.map((s: string, i: number) => <List.Item key={i}>{s}</List.Item>)}</List>
+        <Card className="mock-card" padding={0} radius="md">
+          {items.map((it, i) => (
+            <ListRow key={i} item={props(it, "title")} />
+          ))}
+        </Card>
       </Noted>
     );
   },
   tabs: (v) => {
-    const p = Array.isArray(v) ? { items: v } : props(v);
+    const p = normalize("tabs", v);
+    const items: string[] = (p.items ?? []).map(String);
     return (
       <Noted note={p.note}>
-        <Tabs defaultValue={p.active ?? p.items[0]}>
-          <Tabs.List>{p.items.map((t: string) => <Tabs.Tab key={t} value={t}>{t}</Tabs.Tab>)}</Tabs.List>
+        <Tabs defaultValue={p.active ?? items[0]}>
+          <Tabs.List>{items.map((t) => <Tabs.Tab key={t} value={t}>{t}</Tabs.Tab>)}</Tabs.List>
         </Tabs>
       </Noted>
     );
   },
-  alert: (v) => {
-    const p = props(v, "text");
-    return <Noted note={p.note}><Alert color={p.color ?? "blue"} title={p.title} p="xs">{p.text}</Alert></Noted>;
-  },
-  image: (v) => {
-    const p = props(v);
+  breadcrumb: (v) => {
+    const p = normalize("breadcrumb", v);
+    const items: string[] = (p.items ?? []).map(labelOf);
     return (
       <Noted note={p.note}>
-        <Box className="mock-image" h={p.height ?? 120}>{p.label ?? "画像"}</Box>
+        <Breadcrumbs separator={<IconChevronRight size={14} stroke={ICON_STROKE} />} fz="xs">
+          {items.map((s, i) => (i < items.length - 1 ? <Anchor key={i} size="xs">{s}</Anchor> : <Text key={i} size="xs" c="dimmed">{s}</Text>))}
+        </Breadcrumbs>
+      </Noted>
+    );
+  },
+  stepper: (v) => {
+    const p = normalize("stepper", v);
+    const items: string[] = (p.items ?? []).map(labelOf);
+    const active = typeof p.active === "number" ? p.active - 1 : Math.max(0, items.indexOf(p.active));
+    return (
+      <Noted note={p.note}>
+        <Stepper active={active} size="xs">
+          {items.map((s) => <Stepper.Step key={s} label={s} />)}
+        </Stepper>
+      </Noted>
+    );
+  },
+  pagination: (v) => {
+    const p = props(v, "total");
+    return (
+      <Noted note={p.note}>
+        <Group justify="center"><Pagination total={Number(p.total ?? 5)} defaultValue={Number(p.page ?? 1)} size="sm" /></Group>
+      </Noted>
+    );
+  },
+  avatar: (v) => {
+    const p = normalize("avatar", v);
+    return (
+      <Noted note={p.note}>
+        <Group gap="sm" wrap="nowrap">
+          <Avatar radius="xl" color="initials" name={String(p.name ?? "")} />
+          <Box>
+            <Text size="sm" fw={600}>{p.name}</Text>
+            {p.role && <Text size="xs" c="dimmed">{p.role}</Text>}
+          </Box>
+        </Group>
+      </Noted>
+    );
+  },
+  badge: (v) => {
+    const p = normalize("badge", v);
+    return <Noted note={p.note}><Badge variant="light" color={p.color}>{p.text}</Badge></Noted>;
+  },
+  alert: (v) => {
+    const p = props(v, "text");
+    return <Noted note={p.note}><Alert color={p.color ?? "blue"} title={p.title}>{p.text}</Alert></Noted>;
+  },
+  toast: (v) => {
+    const p = normalize("toast", v);
+    const color = { success: "teal", error: "red", info: undefined }[String(p.tone ?? "success")] ?? undefined;
+    return (
+      <Noted note={p.note}>
+        <Notification color={color} title={p.title} withCloseButton withBorder className="mock-toast">{p.text}</Notification>
+      </Noted>
+    );
+  },
+  // データがないときの表示
+  empty: (v) => {
+    const p = normalize("empty", v);
+    return (
+      <Noted note={p.note}>
+        <Stack className="mock-empty" align="center" gap="xs">
+          <ThemeIcon size={48} radius="xl" variant="light" aria-hidden><IconInbox size={24} stroke={ICON_STROKE} /></ThemeIcon>
+          <Text fw={700} size="sm">{p.title ?? "まだデータがありません"}</Text>
+          {p.hint && <Text size="xs" c="dimmed" ta="center">{p.hint}</Text>}
+          {p.action && <Box mt={4}><MockButton p={{ variant: "primary", ...props(p.action) }} /></Box>}
+        </Stack>
+      </Noted>
+    );
+  },
+  image: (v) => {
+    const p = normalize("image", v);
+    return (
+      <Noted note={p.note}>
+        <Box className="mock-image" h={p.height ?? 160}>
+          <IconPhoto size={28} stroke={ICON_STROKE} />
+          {p.label && <span>{p.label}</span>}
+        </Box>
       </Noted>
     );
   },
@@ -240,37 +553,214 @@ const ELEMENTS: Record<string, (value: any) => React.ReactNode> = {
 
 export const ELEMENT_TYPES = Object.keys(ELEMENTS);
 
+const MobileContext = createContext(false);
+
 function MockElement({ el }: { el: Element }) {
-  const [kind, value] = Object.entries(el ?? {})[0] ?? [];
+  const mobile = useContext(MobileContext);
+  const [kind, value] = kindOf(el);
   const render = kind ? ELEMENTS[kind] : undefined;
   if (!render) return <Code c="red">不明な部品: {String(kind)}</Code>;
-  return <>{render(value)}</>;
+  return <>{render(value, mobile)}</>;
+}
+
+// 論理幅で組んだ画面を、置き場所の幅に合わせて縮小する
+function Scaled({ width, children }: { width: number; children: React.ReactNode }) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<{ scale: number; height?: number }>({ scale: 1 });
+
+  useLayoutEffect(() => {
+    const o = outer.current;
+    const i = inner.current;
+    if (!o || !i || typeof ResizeObserver === "undefined") return;
+    const update = () => {
+      const scale = Math.min(1, o.clientWidth / width);
+      setSize({ scale, height: i.offsetHeight * scale });
+    };
+    const ro = new ResizeObserver(update);
+    ro.observe(o);
+    ro.observe(i);
+    update();
+    return () => ro.disconnect();
+  }, [width]);
+
+  return (
+    <div ref={outer} className="mock-scale" style={{ height: size.height }}>
+      <div ref={inner} style={{ width, transform: `scale(${size.scale})` }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// 画面イメージは資料のダークモードに関係なく、常にライトテーマで描く。
+// Mantine の部品のダーク用の配色は「:where([data-mantine-color-scheme='dark']) .クラス」の形で書かれていて、
+// ページ全体がダークのときは画面イメージの中にも効いてしまう。ダーク用の規則に「.mock-app の中では使わない」条件を足して外す
+let darkRulesScoped = false;
+
+function scopeDarkRules() {
+  if (darkRulesScoped || typeof document === "undefined") return;
+  darkRulesScoped = true;
+  const visit = (rules: CSSRuleList) => {
+    for (const rule of Array.from(rules)) {
+      if (rule instanceof CSSStyleRule && DARK_SCHEME.test(rule.selectorText)) rule.selectorText = excludeMock(rule.selectorText);
+      else if (rule instanceof CSSGroupingRule) visit(rule.cssRules);
+    }
+  };
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      visit(sheet.cssRules);
+    } catch {
+      // 別オリジンのスタイルシートは読めないので飛ばす
+    }
+  }
+}
+
+const lightOnly: MantineColorSchemeManager = {
+  get: () => "light",
+  set: () => {},
+  subscribe: () => {},
+  unsubscribe: () => {},
+  clear: () => {},
+};
+
+function AppTheme({ color, children }: { color: string; children: React.ReactNode }) {
+  const root = useRef<HTMLDivElement>(null);
+  const primary = color in (theme.colors ?? {}) ? color : "brand";
+  const appTheme = useMemo(() => ({ ...theme, primaryColor: primary, primaryShade: 6 as const }), [primary]);
+  useLayoutEffect(scopeDarkRules, []);
+  return (
+    <MantineProvider
+      theme={appTheme}
+      cssVariablesResolver={cssVariablesResolver}
+      cssVariablesSelector={`.mock-app-${primary}`}
+      colorSchemeManager={lightOnly}
+      forceColorScheme="light"
+      getRootElement={() => root.current ?? undefined}
+      withGlobalClasses={false}
+    >
+      <div ref={root} className={`mock-app mock-app-${primary}`} data-mantine-color-scheme="light">
+        {children}
+      </div>
+    </MantineProvider>
+  );
+}
+
+function Screen({ spec, mobile }: { spec: MockSpec; mobile: boolean }) {
+  const shell = splitShell(spec.body);
+  const main = (
+    <Stack className="mock-main" gap="md">
+      <Items items={shell.main} />
+    </Stack>
+  );
+  return (
+    <MobileContext.Provider value={mobile}>
+      <div className="mock-screen">
+        {shell.header && <MockElement el={shell.header} />}
+        {shell.nav && mobile && <MockElement el={shell.nav} />}
+        {shell.nav && !mobile ? (
+          <div className="mock-with-nav">
+            <MockElement el={shell.nav} />
+            {main}
+          </div>
+        ) : (
+          main
+        )}
+        {shell.footer && <MockElement el={shell.footer} />}
+        {shell.tabbar && <MockElement el={shell.tabbar} />}
+      </div>
+    </MobileContext.Provider>
+  );
+}
+
+function Device({ spec, mobile }: { spec: MockSpec; mobile: boolean }) {
+  if (mobile)
+    return (
+      <div className="mock-phone">
+        <div className="mock-statusbar">
+          <span>9:41</span>
+          <span className="mock-island" />
+          <span className="mock-status-icons">
+            <IconWifi size={14} stroke={2} />
+            <IconBattery3 size={18} stroke={1.8} />
+          </span>
+        </div>
+        <Screen spec={spec} mobile />
+        <div className="mock-home-indicator" />
+      </div>
+    );
+  return (
+    <div className="mock-browser">
+      <div className="mock-toolbar">
+        <span className="mock-lights"><i /><i /><i /></span>
+        <span className="mock-url">
+          <IconLock size={12} stroke={2} />
+          {`example.com${spec.title?.startsWith("/") ? spec.title : `/${spec.title ?? ""}`}`}
+        </span>
+      </div>
+      <Screen spec={spec} mobile={false} />
+    </div>
+  );
 }
 
 export default function ScreenMock({ source }: { source: string }) {
+  const color = useContext(ProjectColorContext);
+  const narrow = useMediaQuery("(max-width: 48em)");
   const parsed = useMemo(() => {
     try {
       const spec = parseYaml<MockSpec>(source);
       if (!Array.isArray(spec?.body)) throw new Error("body に部品を並べてください");
-      return { spec };
+      return { spec, notes: collectNotes(spec.body), transitions: collectTransitions(spec.body) };
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
   }, [source]);
 
   if ("error" in parsed) return <Code block c="red">画面モックを読めません: {parsed.error}</Code>;
-  const { spec } = parsed;
+  const { spec, notes, transitions } = parsed;
   const mobile = spec.device === "mobile";
+  const DeviceIcon = mobile ? IconDeviceMobile : IconDeviceDesktop;
 
   return (
-    <div className={`mock mock-${mobile ? "mobile" : "desktop"}`}>
-      <div className="mock-chrome">
-        {mobile ? <span className="mock-notch" /> : <><i /><i /><i /></>}
-        {!mobile && spec.title && <span className="mock-url">{spec.title}</span>}
+    <figure className="mock-stage" data-device={mobile ? "mobile" : "desktop"}>
+      <figcaption className="mock-band">
+        <span className="mock-band-pill">
+          <DeviceIcon size={14} stroke={ICON_STROKE} />
+          画面イメージ
+        </span>
+        <span className="mock-band-note">実際のデザインとは異なります</span>
+        <span className="mock-band-meta">{mobile ? "スマートフォン" : "パソコン"}</span>
+      </figcaption>
+      <div className="mock-body">
+        <div className="mock-device">
+          <Scaled width={mobile ? DEVICE_WIDTH.mobile + 24 : DEVICE_WIDTH[narrow ? "desktopNarrow" : "desktop"]}>
+            <AppTheme color={color}>
+              <Device spec={spec} mobile={mobile} />
+            </AppTheme>
+          </Scaled>
+        </div>
+        {notes.length > 0 && (
+          <ol className="mock-notes" aria-label="注釈">
+            {notes.map((n, i) => (
+              <li key={i}>
+                <span className="mock-note-num">{n.n}</span>
+                {n.label}
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
-      <Stack className="mock-screen" gap="sm">
-        <Items items={spec.body} />
-      </Stack>
-    </div>
+      {transitions.length > 0 && (
+        <div className="mock-transitions">
+          <span className="mock-transitions-label">画面遷移</span>
+          {transitions.map((t, i) => (
+            <span key={i} className="mock-transition">
+              {t.label && <>{t.label}<IconChevronRight size={12} stroke={2} /></>}
+              <b>{t.to}</b>
+            </span>
+          ))}
+        </div>
+      )}
+    </figure>
   );
 }

@@ -4,16 +4,23 @@ order: 5
 ---
 
 <!--
-```mock ブロックに YAML で部品を上から並べると、画面モックとして描画されます。
-  device: desktop | mobile（枠の形）   title: アドレスバーに出す文字
+```mock ブロックに YAML で部品を上から並べると、案件カラーの「画面イメージ」として描画されます。
+  device: desktop | mobile（パソコンのブラウザ / スマートフォン）   title: アドレスバーに出すパス
+画面の骨組み:
+  header {title, links, actions, back, action}（先頭に置くと上のバー。スマホは back: true で戻る矢印）
+  nav {brand, items, active}（パソコンの横メニュー）  tabbar {items, active}（スマホの下のタブ）  footer {text, links}
+  メニューやタブはアイコンが名前から自動で付きます（ホーム・検索・予約・通知・設定・マイページ など）
 部品（「- 種類: 中身」）:
-  header {title, links, actions}  heading  text  alert {title, text, color}
+  heading  text  breadcrumb [名前...]  stepper {items, active}  alert {title, text, color}  toast {title, text, tone}
   input {label, type: text|email|date|number|password|textarea, placeholder, value, required, help, error}
-  select {label, options}  checkbox {label, checked}  radio {label, options}
-  button {label, variant: primary|default|danger|link, to: 遷移先}  buttons [ボタン...]
-  row [部品...]（横並び）  card {title, items: [部品...]}  tabs [名前...]  list [文字...]
-  table {columns, rows}（セルの "[予約]" はボタン、"(満席)" はバッジ）  image {label, height}  divider  space
-どの部品にも note: 番号 を付けると赤い丸番号が付き、下の項目表と対応させられます。
+  search {placeholder}  select {label, options}  checkbox {label, checked}  radio {label, options}
+  button {label, variant: primary|default|danger|link, to: 遷移先の画面ID, full}  buttons [ボタン...]
+  row [部品...]（横並び）  card {title, items: [部品...]}  tabs [名前...]
+  stats [{label, value, delta}]（数値カード）  list [文字...] または [{title, sub, meta, badge, thumb, avatar, to}]
+  table {columns, rows}（セルの "[予約]" はボタン、"(満席)" はバッジ）  pagination {total}  empty {title, hint, action}
+  avatar {name, role}  badge {text, color}  image {label, height}  divider  space
+どの部品にも note: 番号 を付けると画面の外に注釈が並び、下の項目表と対応させられます。
+to: に書いた遷移先は画面の下に「画面遷移」として一覧になります。
 -->
 
 ## SC-01 トップ
@@ -22,7 +29,7 @@ order: 5
 device: desktop
 title: /
 body:
-  - header: { title: サービス名, actions: [{ label: ログイン, to: SC-10 }] }
+  - header: { title: サービス名, links: [お知らせ, ヘルプ], actions: [{ label: ログイン, to: SC-10 }] }
   - heading: 見出し
   - row:
       - input: { label: 項目A, note: 1 }
@@ -40,7 +47,10 @@ body:
 ```mock
 device: mobile
 body:
-  - header: { title: サービス名 }
+  - header: { title: 入力, back: true }
   - input: { label: 氏名, required: true }
+  - list:
+      - { title: 項目の名前, sub: 補足の説明, thumb: true }
   - buttons: [{ label: 戻る, to: SC-01 }, { label: 次へ, variant: primary }]
+  - tabbar: { items: [ホーム, 検索, マイページ], active: ホーム }
 ```

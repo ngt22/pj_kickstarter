@@ -32,6 +32,7 @@ const SHORT_KEY: Record<string, string> = {
   avatar: "name",
   search: "placeholder",
   footer: "text",
+  drawing: "title",
 };
 
 export function normalize(kind: string, value: unknown): Props {
@@ -53,6 +54,7 @@ const KIND_LABEL: Record<string, string> = {
   list: "リスト",
   tabs: "タブ",
   image: "画像",
+  drawing: "図面",
   stats: "数値サマリー",
   search: "検索",
   breadcrumb: "パンくず",

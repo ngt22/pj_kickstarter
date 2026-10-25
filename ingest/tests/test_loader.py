@@ -89,6 +89,20 @@ def test_unknown_list_row_key_is_reported(tmp_path):
     assert any("list の行に書けない項目 ['image']" in e for e in result.errors)
 
 
+def test_drawing_pins_are_checked(tmp_path):
+    path = copy_sample(tmp_path)
+    screens = path / "screens.md"
+    text = screens.read_text(encoding="utf-8")
+    drawing = "  - drawing: { rooms: [教室1, 教室2], pins: [{ x: 20, y: 30, status: new }], selected: 1 }\n"
+    screens.write_text(text.replace("  - heading:", drawing + "  - heading:", 1), encoding="utf-8")
+    assert load_project(path).errors == []
+
+    screens.write_text(text.replace("  - heading:", drawing.replace("x: 20", "x: 120") + "  - heading:", 1), encoding="utf-8")
+    assert any("0〜100" in e for e in load_project(path).errors)
+    screens.write_text(text.replace("  - heading:", drawing.replace("status: new", "status: open") + "  - heading:", 1), encoding="utf-8")
+    assert any("status は" in e for e in load_project(path).errors)
+
+
 def test_mock_elements_match_web():
     import re
 

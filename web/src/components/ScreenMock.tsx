@@ -1,5 +1,5 @@
 // ```mock ブロック（YAML）を「画面イメージ」として描画する。
-// 資料の本文と見分けがつくよう、暗いステージの上に端末の枠を置き、中身は案件カラーのライトテーマで実際の画面風に描く。
+// 資料の本文と見分けがつくよう、方眼のステージの上に端末の枠を置き、中身は案件カラーのライトテーマで実際の画面風に描く。
 // 部品は「- 種類: 中身」の形で並べる。使える種類は ELEMENTS を参照。
 import {
   Alert,
@@ -81,6 +81,7 @@ import {
   type Props,
 } from "../lib/mock";
 import { ProjectColorContext } from "../lib/projectColor";
+import MockDrawing from "./MockDrawing";
 import Scaled from "./Scaled";
 import { cssVariablesResolver, theme } from "../theme";
 import { ICON_STROKE } from "./icons";
@@ -545,6 +546,15 @@ const ELEMENTS: Record<string, (value: any, mobile: boolean) => React.ReactNode>
           <IconPhoto size={28} stroke={ICON_STROKE} />
           {p.label && <span>{p.label}</span>}
         </Box>
+      </Noted>
+    );
+  },
+  // 図面と指摘位置のピン
+  drawing: (v, mobile) => {
+    const p = normalize("drawing", v);
+    return (
+      <Noted note={p.note}>
+        <MockDrawing p={p} narrow={mobile} />
       </Noted>
     );
   },

@@ -81,6 +81,14 @@ def test_unknown_mock_element_is_reported(tmp_path):
     assert any(e.startswith("screens.md: mock") and "chekbox" in e for e in result.errors)
 
 
+def test_unknown_list_row_key_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    text = (path / "screens.md").read_text(encoding="utf-8").replace("badge: 確定, thumb: true", "badge: 確定, image: true", 1)
+    (path / "screens.md").write_text(text, encoding="utf-8")
+    result = load_project(path)
+    assert any("list の行に書けない項目 ['image']" in e for e in result.errors)
+
+
 def test_mock_elements_match_web():
     import re
 

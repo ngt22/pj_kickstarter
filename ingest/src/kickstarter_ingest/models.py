@@ -223,10 +223,15 @@ class GanttBlock(Strict):
 # 画面モック（```mock）の部品と、それぞれに書ける項目。web/src/components/ScreenMock.tsx と揃える
 # None は中身を自由に書ける部品（文字列や数値の短縮形のみ）
 MOCK_ELEMENTS: dict[str, set[str] | None] = {
-    "header": {"title", "links", "actions", "note"},
+    # 画面の骨組み: 先頭の header は上のバー、nav は横のメニュー、tabbar は下のタブ、footer は最下部
+    "header": {"title", "links", "actions", "action", "back", "note"},
+    "nav": {"brand", "items", "active", "note"},
+    "tabbar": {"items", "active", "note"},
+    "footer": {"text", "links", "note"},
     "heading": {"text", "level", "note"},
     "text": {"text", "dimmed", "note"},
     "input": {"label", "type", "placeholder", "value", "required", "help", "error", "note"},
+    "search": {"placeholder", "note"},
     "select": {"label", "options", "value", "required", "note"},
     "checkbox": {"label", "checked", "note"},
     "radio": {"label", "options", "value", "note"},
@@ -234,14 +239,26 @@ MOCK_ELEMENTS: dict[str, set[str] | None] = {
     "buttons": {"items", "align"},
     "row": {"items"},
     "card": {"title", "items", "note"},
+    "stats": {"items", "note"},
     "table": {"columns", "rows", "note"},
     "list": {"items", "note"},
     "tabs": {"items", "active", "note"},
+    "breadcrumb": {"items", "note"},
+    "stepper": {"items", "active", "note"},
+    "pagination": {"total", "page", "note"},
+    "avatar": {"name", "role", "note"},
+    "badge": {"text", "color", "note"},
     "alert": {"title", "text", "color", "note"},
+    "toast": {"title", "text", "tone", "note"},
+    "empty": {"title", "hint", "action", "note"},
     "image": {"label", "height", "note"},
     "divider": None,
     "space": None,
 }
+# list の行（{title, sub, ...} で書いたとき）と、stats の数値カードに書ける項目
+LIST_ITEM_KEYS = {"title", "sub", "meta", "badge", "thumb", "avatar", "to"}
+STAT_KEYS = {"label", "value", "delta"}
+LIST_KINDS = {"buttons", "row", "list", "tabs", "nav", "tabbar", "breadcrumb", "stats", "stepper"}
 BUTTON_KEYS = MOCK_ELEMENTS["button"]
 CONTAINERS = {"row", "card"}
 
@@ -257,7 +274,7 @@ def check_mock_elements(items: Any, where: str = "body") -> None:
         if kind not in MOCK_ELEMENTS:
             raise ValueError(f"{path}: 不明な部品 {kind}（使える部品: {', '.join(MOCK_ELEMENTS)}）")
         allowed = MOCK_ELEMENTS[kind]
-        if kind in ("buttons", "row", "list", "tabs") and isinstance(value, list):
+        if kind in LIST_KINDS and isinstance(value, list):
             value = {"items": value}
         if isinstance(value, dict) and allowed is not None:
             unknown = set(value) - allowed
@@ -270,9 +287,13 @@ def check_mock_elements(items: Any, where: str = "body") -> None:
                     if isinstance(b, dict) and set(b) - BUTTON_KEYS:
                         raise ValueError(f"{path}: ボタンに書けない項目 {sorted(set(b) - BUTTON_KEYS)}")
             if kind == "header":
-                for b in value.get("actions", []):
+                for b in [*value.get("actions", []), value.get("action")]:
                     if isinstance(b, dict) and set(b) - BUTTON_KEYS:
                         raise ValueError(f"{path}: ボタンに書けない項目 {sorted(set(b) - BUTTON_KEYS)}")
+            item_keys = {"list": LIST_ITEM_KEYS, "stats": STAT_KEYS}.get(kind)
+            for it in value.get("items", []) if item_keys else []:
+                if isinstance(it, dict) and set(it) - item_keys:
+                    raise ValueError(f"{path}: {kind} の行に書けない項目 {sorted(set(it) - item_keys)}（書ける項目: {sorted(item_keys)}）")
 
 
 def _mock_body_schema(schema: dict[str, Any]) -> None:

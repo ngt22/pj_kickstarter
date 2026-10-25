@@ -10,6 +10,7 @@ import Layout from "../components/Layout";
 import ProjectCover from "../components/ProjectCover";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
+import { ProjectColorContext } from "../lib/projectColor";
 import { EMPTY_SITE, loadSiteSettings, type SiteSettings } from "../lib/settings";
 
 // 読み込み中は、表示される紙と同じ形の骨組みを出す（画面が跳ねないように）
@@ -85,7 +86,9 @@ export default function ProjectView() {
   if (!docType) content = <ProjectCover project={project} docs={docs} site={site} />;
   else if (current)
     content = (
-      <DocView doc={current} index={i} total={docs.length} prev={docs[i - 1]} next={docs[i + 1]} basePath={base} />
+      <ProjectColorContext.Provider value={project.color || "brand"}>
+        <DocView doc={current} index={i} total={docs.length} prev={docs[i - 1]} next={docs[i + 1]} basePath={base} />
+      </ProjectColorContext.Provider>
     );
   else
     content = (

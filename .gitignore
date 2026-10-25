@@ -6,3 +6,8 @@ __pycache__/
 .firebase/
 # サービスアカウント鍵は絶対にコミットしない
 *service-account*.json
+# 環境変数ファイルはコミットしない（.env.example だけ残す）
+.env
+.env.*
+*.local
+!.env.example

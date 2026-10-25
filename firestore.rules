@@ -2,7 +2,7 @@ rules_version = '2';
 
 // 案件の原稿を書き込めるのは管理者（カスタムクレーム admin: true）だけ。
 // ingest CLI は Admin SDK（ルールを通らない）か、login した管理者のトークン（ルールを通る）で書き込む。
-// 管理者は全案件を読めて、閲覧権限（access）を編集でき、案件を削除できる（Web の「案件の管理」画面から）。
+// 管理者は全案件を読めて、閲覧権限（access）を編集でき、案件を作成・削除できる（Web の「案件の管理」画面から）。
 // クライアントは access/{自分のメール}.projects に含まれる案件だけを読める。
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -28,6 +28,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasOnly(["id", "name", "summary", "status", "client", "proposed_at", "version", "color", "updatedAt"])
         && data.id == projectId
+        && projectId.matches('^[a-z0-9][a-z0-9-]*$')
         && data.name is string
         && data.status in ["draft", "proposed", "approved", "archived"];
     }

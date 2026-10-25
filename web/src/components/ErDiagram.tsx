@@ -1,7 +1,6 @@
 // ```er ブロック（YAML）を React Flow で描画する。配置は ELK で自動計算する。
 // ドメインごとに枠でまとめ、枠の中は外部キーの向きに左から右へ並べる。
 // React Flow と ELK は大きいので、Markdown.tsx から遅延読み込みする
-import "@xyflow/react/dist/style.css";
 import {
   Background,
   Controls,
@@ -9,7 +8,6 @@ import {
   MiniMap,
   Position,
   ReactFlow,
-  ReactFlowProvider,
   useReactFlow,
   type Edge,
   type Node,
@@ -24,7 +22,6 @@ import {
   Chip,
   Code,
   Group,
-  Modal,
   ScrollArea,
   Stack,
   Switch,
@@ -35,9 +32,9 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
 import { useEffect, useMemo, useState } from "react";
 import { parseYaml } from "../lib/docs";
+import DiagramFrame from "./DiagramFrame";
 import { buildErModel, matchesQuery, neighbors, type ErModel, type ErSpec, type ErTableSpec } from "../lib/er";
 
 const NODE_W = 250;
@@ -372,7 +369,6 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
 }
 
 export default function ErDiagram({ source }: { source: string }) {
-  const [full, { open, close }] = useDisclosure(false);
   const parsed = useMemo(() => {
     try {
       return { model: buildErModel(parseYaml<ErSpec>(source)) };
@@ -385,21 +381,12 @@ export default function ErDiagram({ source }: { source: string }) {
   const { model } = parsed;
 
   return (
-    <Box className="er-wrap" my="md">
-      <Group justify="space-between" mb="xs">
-        <Text size="sm" c="dimmed">
-          {model.tables.length} テーブル / {model.relations.length} リレーション / {model.domains.length} ドメイン
-        </Text>
-        <Button size="xs" variant="light" onClick={open}>全画面で見る</Button>
-      </Group>
-      <ReactFlowProvider>
-        <Explorer model={model} height="75vh" />
-      </ReactFlowProvider>
-      <Modal opened={full} onClose={close} fullScreen title="ER図">
-        <ReactFlowProvider>
-          <Explorer model={model} height="calc(100vh - 90px)" />
-        </ReactFlowProvider>
-      </Modal>
-    </Box>
+    <DiagramFrame
+      title="ER図"
+      summary={`${model.tables.length} テーブル / ${model.relations.length} リレーション / ${model.domains.length} ドメイン`}
+      height="75vh"
+    >
+      {(height) => <Explorer model={model} height={height} />}
+    </DiagramFrame>
   );
 }

@@ -168,3 +168,16 @@ def test_estimate_cannot_mix_legacy_and_initial(tmp_path):
     (path / "estimate.yaml").write_text(text, encoding="utf-8")
     result = load_project(path)
     assert any(e.startswith("estimate.yaml") for e in result.errors)
+
+
+def test_invalid_usecase_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    personas = path / "personas.md"
+    text = personas.read_text(encoding="utf-8")
+    personas.write_text(text.replace("actors: [staff] }", "actors: [nobody] }", 1), encoding="utf-8")
+    result = load_project(path)
+    assert any(e.startswith("personas.md: usecase") and "nobody" in e and "候補" in e for e in result.errors)
+
+    personas.write_text(text.replace("to: UC-01, type: include", "to: UC-99, type: include"), encoding="utf-8")
+    result = load_project(path)
+    assert any("UC-99" in e for e in result.errors)

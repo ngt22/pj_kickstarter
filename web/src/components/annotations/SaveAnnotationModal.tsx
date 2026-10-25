@@ -1,6 +1,6 @@
 import { Alert, Button, Group, Modal, Stack, TagsInput, Text, Textarea } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
-import { addAnnotation, annotationText, MAX_ITEMS } from "../../lib/annotations";
+import { addAnnotation, annotationText, linkLines, MAX_ITEMS } from "../../lib/annotations";
 import { useAuth } from "../../lib/auth";
 import { db } from "../../lib/firebase";
 import { useAnnotations } from "./AnnotationContext";
@@ -43,7 +43,7 @@ export default function SaveAnnotationModal({
         authorUid: user.uid,
         authorName: user.displayName || user.email || "",
         authorEmail: (user.email ?? "").toLowerCase(),
-        items: draft.items,
+        items: linkLines(draft.items),
         comment,
         tags,
         anchor: draft.anchor,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { annotationText, bounds, createSmoother, flatten, normalizeTags, simplify, smoothPath, unflatten } from "./annotations";
+import { annotationText, bounds, createSmoother, flatten, formatForPrompt, linkLines, normalizeTags, orientLine, simplify, smoothPath, unflatten } from "./annotations";
 
 describe("ペンの線", () => {
   it("滑らかさを上げるほど点を間引く", () => {
@@ -66,5 +66,45 @@ describe("付箋の中身", () => {
     ];
     expect(annotationText({ items, comment: "急ぎ" })).toBe("ここを直す — 急ぎ");
     expect(annotationText({ items: [], comment: "" })).toBe("");
+  });
+});
+
+describe("引出線と囲みの紐付け・書き出し", () => {
+  const box = { kind: "box" as const, color: "red" as const, x: 100, y: 0, w: 100, h: 40, text: "矢印の先の文言を直す" };
+
+  it("囲みから引き出した線は、囲みの反対側を矢じりにする", () => {
+    expect(orientLine([box], { x: 150, y: 20 }, { x: 10, y: 200 })).toEqual([{ x: 10, y: 200 }, { x: 150, y: 20 }]);
+    expect(orientLine([box], { x: 10, y: 200 }, { x: 150, y: 20 })).toEqual([{ x: 10, y: 200 }, { x: 150, y: 20 }]);
+  });
+
+  it("引き出した先の近くの囲みに結び付ける", () => {
+    const near = { kind: "line" as const, color: "red" as const, points: [10, 200, 95, 30] };
+    const far = { kind: "line" as const, color: "red" as const, points: [10, 200, 10, 300] };
+    const out = linkLines([box, near, far]);
+    expect(out[1]).toMatchObject({ box: 0 });
+    expect(out[2]).not.toHaveProperty("box");
+  });
+
+  it("矢印が指す要素と指示をまとめた Markdown にする", () => {
+    const target = { selector: "article > p:nth-of-type(1)", section: "目的", text: "予約受付をWeb化し…", rx: 12, ry: 40 };
+    const a = {
+      id: "x",
+      docType: "requirements",
+      authorUid: "u",
+      authorName: "ノブ",
+      authorEmail: "n@example.com",
+      items: [box, { kind: "line" as const, color: "red" as const, points: [10, 200, 95, 30], target, box: 0 }],
+      comment: "急ぎ",
+      tags: ["文言"],
+      status: "open" as const,
+      anchor: { path: [], left: 0, top: 0 },
+      width: 800,
+    };
+    const md = formatForPrompt([a], { projectName: "サンプル案件", pageTitles: { requirements: "要件定義書" }, pageUrl: (t) => `https://x/projects/s/${t}` });
+    expect(md).toContain("## 1. 要件定義書");
+    expect(md).toContain("- 指示: 矢印の先の文言を直す");
+    expect(md).toContain("矢印が指している箇所: 見出し「目的」の中、「予約受付をWeb化し…」（要素内 12%, 40% の位置、セレクタ `article > p:nth-of-type(1)`）");
+    expect(md).toContain("- 補足: 急ぎ");
+    expect(md).toContain("#文言");
   });
 });

@@ -29,11 +29,18 @@ export const INK_LABELS: Record<InkColor, string> = {
 
 export type Point = { x: number; y: number };
 
+// 書き込んだ箇所にある資料の要素。指摘を LLM に渡すとき「どこの話か」を伝えるために保存する
+// selector は付箋レイヤーからの CSS セレクタ、section は直前の見出し、text は要素の文字（先頭だけ）、
+// rx / ry は要素の中のどこを指したか（左上 0、右下 100 の %）
+export type Target = { selector: string; section: string; text: string; rx: number; ry: number };
+
 // Firestore は配列の中に配列を持てないので、点の列は [x0, y0, x1, y1, ...] の平らな配列にする
-export type PenItem = { kind: "pen"; color: InkColor; width: number; points: number[] };
-export type BoxItem = { kind: "box"; color: InkColor; x: number; y: number; w: number; h: number; text: string };
-// 引出線：points[0..1] が指している箇所（矢じり側）、points[2..3] が引き出した先
-export type LineItem = { kind: "line"; color: InkColor; points: number[] };
+// target はペンなら書き始め、囲みなら中心、引出線なら矢じりの下にある要素
+export type PenItem = { kind: "pen"; color: InkColor; width: number; points: number[]; target?: Target };
+export type BoxItem = { kind: "box"; color: InkColor; x: number; y: number; w: number; h: number; text: string; target?: Target };
+// 引出線：points[0..1] が指している箇所（矢じり側）、points[2..3] が引き出した先。
+// box は引き出した先にある囲み（items の番号）。囲みに書いた指示が、この矢印の指す箇所の話になる
+export type LineItem = { kind: "line"; color: InkColor; points: number[]; target?: Target; box?: number };
 export type InkItem = PenItem | BoxItem | LineItem;
 
 export type AnnotationStatus = "open" | "close";
@@ -185,6 +192,124 @@ export function annotationText(a: Pick<Annotation, "items" | "comment">): string
   return [boxText, a.comment.trim()].filter(Boolean).join(" — ");
 }
 
+// ---- 引出線と囲みの紐付け ----
+const LINK_MARGIN = 24;
+
+export function boxAt(items: InkItem[], p: Point, margin = LINK_MARGIN): number {
+  let best = -1;
+  let bestDist = Infinity;
+  items.forEach((it, i) => {
+    if (it.kind !== "box") return;
+    // 囲みの外なら、囲みまでの距離
+    const dx = Math.max(it.x - p.x, 0, p.x - (it.x + it.w));
+    const dy = Math.max(it.y - p.y, 0, p.y - (it.y + it.h));
+    const d = Math.hypot(dx, dy);
+    if (d <= margin && d < bestDist) [best, bestDist] = [i, d];
+  });
+  return best;
+}
+
+// 囲みから引き出すように描いた線は、向きを逆にして囲みの反対側を矢じりにする（どちら向きに描いてもよい）
+export function orientLine(items: InkItem[], start: Point, end: Point): [Point, Point] {
+  return boxAt(items, start) >= 0 && boxAt(items, end) < 0 ? [end, start] : [start, end];
+}
+
+// 保存する直前に、引出線ごとに引き出した先の囲みを結び付ける
+export function linkLines(items: InkItem[]): InkItem[] {
+  return items.map((it) => {
+    if (it.kind !== "line") return it;
+    const [, end] = unflatten(it.points);
+    const box = boxAt(items, end);
+    const { box: _, ...rest } = it;
+    return box >= 0 ? { ...rest, box } : rest;
+  });
+}
+
+// ---- 書き込んだ箇所の要素（target） ----
+const clip = (s: string, n: number) => {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length > n ? `${t.slice(0, n)}…` : t;
+};
+
+function selectorOf(root: Element, el: Element): string {
+  const parts: string[] = [];
+  for (let e: Element | null = el; e && e !== root && parts.length < 6; e = e.parentElement) {
+    const tag = e.tagName.toLowerCase();
+    // Mantine が自動で付けるクラス（m_xxx, mantine-xxx, __m__-xxx）は描画のたびに変わりうるので使わない
+    const cls = [...e.classList].find((c) => !/^(m_|mantine-|__)/.test(c));
+    const same = e.parentElement ? [...e.parentElement.children].filter((c) => c.tagName === e!.tagName) : [];
+    const nth = same.length > 1 ? `:nth-of-type(${same.indexOf(e) + 1})` : "";
+    parts.unshift(`${tag}${cls ? `.${cls}` : ""}${nth}`);
+  }
+  return parts.join(" > ");
+}
+
+function sectionOf(root: Element, el: Element): string {
+  let last = "";
+  for (const h of root.querySelectorAll("h1, h2, h3, h4")) {
+    if (h === el || h.contains(el) || h.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) last = h.textContent ?? "";
+    else break;
+  }
+  return clip(last, 40);
+}
+
+export function targetAt(root: HTMLElement, clientX: number, clientY: number): Target | undefined {
+  const el = document
+    .elementsFromPoint(clientX, clientY)
+    .find((e) => root.contains(e) && e !== root && !e.closest("[data-annot-ui]"));
+  if (!el) return undefined;
+  // 文字のない要素（余白・図の線など）は、文字を持つ親まで上がる
+  let textEl: Element = el;
+  while (!(textEl as HTMLElement).innerText?.trim() && textEl.parentElement && textEl.parentElement !== root) textEl = textEl.parentElement;
+  const r = el.getBoundingClientRect();
+  const pct = (v: number, len: number) => (len > 0 ? Math.round(Math.min(100, Math.max(0, (v / len) * 100))) : 0);
+  return {
+    selector: selectorOf(root, el),
+    section: sectionOf(root, el),
+    text: clip((textEl as HTMLElement).innerText ?? "", 80),
+    rx: pct(clientX - r.left, r.width),
+    ry: pct(clientY - r.top, r.height),
+  };
+}
+
+// ---- LLM に渡すための書き出し ----
+export type ExportContext = { projectName: string; pageTitles: Record<string, string>; pageUrl: (docType: string) => string };
+
+const describe = (t?: Target) =>
+  t ? `${t.section ? `見出し「${t.section}」の中、` : ""}「${t.text || "（文字のない箇所）"}」（要素内 ${t.rx}%, ${t.ry}% の位置、セレクタ \`${t.selector}\`）` : "（位置の情報なし）";
+
+// 付箋をまとめて、そのままプロンプトに貼れる Markdown にする
+export function formatForPrompt(list: Annotation[], ctx: ExportContext, now = new Date()): string {
+  const fmt = new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short" });
+  const out = [
+    `# 提案資料「${ctx.projectName}」への指摘（${list.length} 件）`,
+    "",
+    `以下は、提案資料サイトの閲覧者がページに書き込んだ指摘です（${fmt.format(now)} 時点）。`,
+    "「指している箇所」は、矢印・囲み・手書きが重なっていた資料の要素です（見出し、要素の文字、要素内の位置、CSS セレクタ）。",
+    "",
+  ];
+  list.forEach((a, n) => {
+    const title = ctx.pageTitles[a.docType] ?? a.docType;
+    out.push(`## ${n + 1}. ${title}`, "");
+    out.push(`- 状態: ${a.status}${a.tags.length ? ` / タグ: ${a.tags.map((t) => `#${t}`).join(" ")}` : ""}`);
+    out.push(`- 記入: ${a.authorName}${a.createdAt ? `（${fmt.format(a.createdAt.toDate())}）` : ""}`);
+    out.push(`- ページ: ${ctx.pageUrl(a.docType)}`);
+    const lines = a.items.filter((i): i is LineItem => i.kind === "line");
+    a.items.forEach((it, i) => {
+      if (it.kind !== "box") return;
+      const arrows = lines.filter((l) => l.box === i);
+      out.push(`- 指示: ${it.text.trim() || "（文字なし）"}`);
+      if (arrows.length) arrows.forEach((l) => out.push(`  - 矢印が指している箇所: ${describe(l.target)}`));
+      else out.push(`  - 囲んだ箇所: ${describe(it.target)}`);
+    });
+    lines.filter((l) => l.box === undefined).forEach((l) => out.push(`- 矢印（指示なし）が指している箇所: ${describe(l.target)}`));
+    if (!a.items.some((it) => it.kind !== "pen") && a.items.length) out.push(`- 手書きした箇所: ${describe(a.items[0].target)}`);
+    if (a.comment.trim()) out.push(`- 補足: ${a.comment.trim()}`);
+    out.push("");
+  });
+  return out.join("\n").trimEnd() + "\n";
+}
+
 // ---- 目印（anchor） ----
 const MAX_ANCHOR_DEPTH = 6;
 
@@ -275,7 +400,7 @@ export function updateAnnotation(
   db: Firestore,
   projectId: string,
   id: string,
-  patch: Partial<Pick<Annotation, "status" | "tags" | "comment">>,
+  patch: Partial<Pick<Annotation, "status" | "tags" | "comment" | "items">>,
 ) {
   const data = patch.tags ? { ...patch, tags: normalizeTags(patch.tags) } : patch;
   return updateDoc(doc(annotationsOf(db, projectId), id), { ...data, updatedAt: serverTimestamp() });

@@ -72,7 +72,8 @@ service cloud.firestore {
       // 付箋（閲覧中に書き込む指示）。案件を見られる人なら誰でも貼れる。
       // クライアントは自分の付箋だけを読み書きでき、ほかのクライアントや管理者の付箋は見えない。
       // 管理者は案件のすべての付箋を読めて、状態（open / close）・ハッシュタグ・補足の変更と削除ができる。
-      // 書いた人（authorUid など）・書いた位置・作成時刻は、あとから誰も書き換えられない。
+      // 書き込み（items）は、囲みの大きさを後から変えるために書き換えられる。
+      // 書いた人（authorUid など）・目印の位置・作成時刻は、あとから誰も書き換えられない。
       match /annotations/{annotationId} {
         allow read: if isAdmin() || (canView(projectId) && resource.data.authorUid == request.auth.uid);
         allow create: if canView(projectId) && validAnnotation()
@@ -82,7 +83,7 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time;
         allow update: if (isAdmin() || (canView(projectId) && resource.data.authorUid == request.auth.uid))
           && validAnnotation()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "tags", "comment", "updatedAt"]);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "tags", "comment", "items", "updatedAt"]);
         allow delete: if isAdmin() || (canView(projectId) && resource.data.authorUid == request.auth.uid);
       }
     }

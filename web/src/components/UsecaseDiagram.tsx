@@ -1,6 +1,7 @@
 // ```usecase ブロック（YAML）を React Flow でユースケース図として描画する。
-// ER図（色の面で囲んだ表の集まり）やページ遷移図と見分けやすいよう、UML のユースケース図に近い表現にする:
-// 人型のアクターを境界の外に置き、楕円のユースケースを無地のシステム境界で囲む。線は矢印なしの細い実線
+// ER図（色の面で囲んだ表の集まり）やページ遷移図と見分けやすいよう、無地のキャンバスにフラットなチップを並べる:
+// 人型のアクターを境界の外に置き、ユースケースは左端にアクターの色を持つ角丸のチップにして、薄い面のシステム境界に入れる。
+// 線は細く淡い曲がり線で、アクターから幹が出て枝分かれし、ユースケース側は小さな丸で終わる
 import {
   Controls,
   Handle,
@@ -24,12 +25,13 @@ type Case = UsecaseLayout["cases"][number];
 
 const SIDES = { l: Position.Left, r: Position.Right, t: Position.Top, b: Position.Bottom } as const;
 
-function Handles({ sides }: { sides: (keyof typeof SIDES)[] }) {
+// top: 辺の上での位置（省略すると中央）。アクターはアバターの中心から線を出す
+function Handles({ sides, top }: { sides: (keyof typeof SIDES)[]; top?: number }) {
   return (
     <>
       {sides.flatMap((s) =>
         (["s", "t"] as const).map((k) => (
-          <Handle key={s + k} id={`${s}:${k}`} type={k === "s" ? "source" : "target"} position={SIDES[s]} isConnectable={false} className="uc-handle" />
+          <Handle key={s + k} id={`${s}:${k}`} type={k === "s" ? "source" : "target"} position={SIDES[s]} isConnectable={false} className="uc-handle" style={top != null ? { top } : undefined} />
         )),
       )}
     </>
@@ -41,22 +43,31 @@ function ActorNode({ data }: NodeProps<Node<{ actor: Actor }>>) {
   const color = `var(--mantine-color-${actor.color}-filled)`;
   return (
     <div className="uc-actor" style={{ width: ACTOR_W, height: ACTOR_H }}>
-      {/* 人型のアイコン（頭と肩） */}
-      <svg width={40} height={40} viewBox="0 0 40 40" aria-hidden>
-        <circle cx={20} cy={12} r={8} fill="none" stroke={color} strokeWidth={2} />
-        <path d="M5,38 C5,27 12,23 20,23 C28,23 35,27 35,38" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      </svg>
-      <Text size="sm" fw={700} ta="center" lh={1.3}>{actor.name}</Text>
+      {/* 人型のアイコン（頭と肩）を丸いアバターに入れる */}
+      <div
+        className="uc-avatar"
+        style={{
+          background: `var(--mantine-color-${actor.color}-light)`,
+          borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+        }}
+      >
+        <svg width={28} height={28} viewBox="0 0 40 40" aria-hidden>
+          <circle cx={20} cy={13} r={7.5} fill="none" stroke={color} strokeWidth={2.4} />
+          <path d="M7,36 C7,27 13,23.5 20,23.5 C27,23.5 33,27 33,36" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+        </svg>
+      </div>
+      <Text size="sm" fw={600} ta="center" lh={1.3}>{actor.name}</Text>
       {actor.note && <Text size="xs" c="dimmed" ta="center" lh={1.3}>{actor.note}</Text>}
-      <Handles sides={[actor.side === "left" ? "r" : "l"]} />
+      <Handles sides={[actor.side === "left" ? "r" : "l"]} top={24} />
     </div>
   );
 }
 
-function CaseNode({ data }: NodeProps<Node<{ case: Case }>>) {
+function CaseNode({ data }: NodeProps<Node<{ case: Case; accent: string }>>) {
   return (
-    <div className="uc-case" style={{ width: CASE_W, height: CASE_H }}>
-      <Text size="sm" fw={500} ta="center" lh={1.35}>{data.case.name}</Text>
+    <div className="uc-case" style={{ width: CASE_W, minHeight: CASE_H, borderLeftColor: data.accent }}>
+      <Text size="xs" fw={600} c="dimmed" className="uc-case-id">{data.case.id}</Text>
+      <Text size="sm" fw={500} lh={1.35}>{data.case.name}</Text>
       <Handles sides={["l", "r", "t", "b"]} />
     </div>
   );
@@ -65,7 +76,7 @@ function CaseNode({ data }: NodeProps<Node<{ case: Case }>>) {
 function SystemNode({ data }: NodeProps<Node<{ name?: string }>>) {
   return (
     <div className="uc-system">
-      {data.name && <Text size="sm" fw={700} className="uc-system-name">{data.name}</Text>}
+      {data.name && <span className="uc-system-name">{data.name}</span>}
     </div>
   );
 }
@@ -73,6 +84,12 @@ function SystemNode({ data }: NodeProps<Node<{ name?: string }>>) {
 const nodeTypes = { actor: ActorNode, case: CaseNode, system: SystemNode };
 
 function build(spec: UsecaseSpec, l: UsecaseLayout): { nodes: Node[]; edges: Edge[] } {
+  const actorOf = new Map(l.actors.map((a) => [a.id, a]));
+  // チップの左端の色。使うアクターが1人ならその色、複数なら無彩色
+  const accentOf = (c: Case) => {
+    const colors = new Set((c.actors ?? []).map((id) => actorOf.get(id)!.color));
+    return colors.size === 1 ? `color-mix(in srgb, var(--mantine-color-${[...colors][0]}-filled) 70%, transparent)` : "var(--mantine-color-gray-5)";
+  };
   const nodes: Node[] = [
     {
       id: "system",
@@ -85,10 +102,16 @@ function build(spec: UsecaseSpec, l: UsecaseLayout): { nodes: Node[]; edges: Edg
       zIndex: -1,
     },
     ...l.actors.map((a) => ({ id: `actor:${a.id}`, type: "actor", position: { x: a.x, y: a.y }, width: ACTOR_W, height: ACTOR_H, data: { actor: a } })),
-    ...l.cases.map((c) => ({ id: `case:${c.id}`, type: "case", position: { x: c.x, y: c.y }, width: CASE_W, height: CASE_H, data: { case: c } })),
+    ...l.cases.map((c) => ({
+      id: `case:${c.id}`,
+      type: "case",
+      position: { x: c.x, y: c.y },
+      width: CASE_W,
+      height: CASE_H,
+      data: { case: c, accent: accentOf(c) },
+    })),
   ];
 
-  const actorOf = new Map(l.actors.map((a) => [a.id, a]));
   const caseOf = new Map(l.cases.map((c) => [c.id, c]));
   const edges: Edge[] = [];
   for (const c of l.cases) {
@@ -100,9 +123,13 @@ function build(spec: UsecaseSpec, l: UsecaseLayout): { nodes: Node[]; edges: Edg
         target: `case:${c.id}`,
         sourceHandle: a.side === "left" ? "r:s" : "l:s",
         targetHandle: a.side === "left" ? "l:t" : "r:t",
-        type: "straight",
-        style: { stroke: `var(--mantine-color-${a.color}-filled)`, strokeWidth: 1.5 },
-      });
+        // アクターのすぐ横で曲げ、1本の幹から枝分かれして見えるようにする
+        type: "smoothstep",
+        pathOptions: { borderRadius: 12, offset: 24 },
+        className: "uc-use",
+        style: { stroke: `color-mix(in srgb, var(--mantine-color-${a.color}-filled) 55%, transparent)` },
+        markerEnd: `uc-dot-${a.color}`,
+      } as Edge);
     }
   }
   for (const r of spec.relations ?? []) {
@@ -117,15 +144,29 @@ function build(spec: UsecaseSpec, l: UsecaseLayout): { nodes: Node[]; edges: Edg
       sourceHandle: `${fs}:s`,
       targetHandle: `${ts}:t`,
       type: "default",
-      label: `«${r.type}»`,
+      label: r.type,
       className: "uc-rel",
-      labelBgPadding: [6, 2],
-      labelBgBorderRadius: 4,
-      style: { strokeDasharray: "6 4", strokeWidth: 1.5 },
-      markerEnd: { type: MarkerType.Arrow, width: 18, height: 18 },
+      labelBgPadding: [8, 3],
+      labelBgBorderRadius: 999,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: "var(--mantine-color-gray-5)" },
     });
   }
   return { nodes, edges };
+}
+
+// 線のユースケース側の端に付ける丸（アクターの色ごと）
+function Markers({ colors }: { colors: string[] }) {
+  return (
+    <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
+      <defs>
+        {colors.map((c) => (
+          <marker key={c} id={`uc-dot-${c}`} viewBox="0 0 10 10" refX={5} refY={5} markerWidth={7} markerHeight={7} markerUnits="userSpaceOnUse">
+            <circle cx={5} cy={5} r={4} fill={`var(--mantine-color-${c}-filled)`} stroke="var(--mantine-color-body)" strokeWidth={1.5} />
+          </marker>
+        ))}
+      </defs>
+    </svg>
+  );
 }
 
 // 選んだアクター・ユースケースとつながるものの id
@@ -139,6 +180,8 @@ function related(edges: Edge[], id: string) {
 }
 
 // height が "auto" なら図の縦横比に合わせる（スマホで縦に余白だらけにならないように）
+const layoutColors = (nodes: Node[]) => nodes.filter((n) => n.type === "actor").map((n) => (n.data as { actor: Actor }).actor.color);
+
 function Canvas({ spec, height, aspect }: { spec: UsecaseSpec; height: string; aspect: string }) {
   const scheme = useComputedColorScheme("light");
   const rf = useReactFlow();
@@ -159,6 +202,7 @@ function Canvas({ spec, height, aspect }: { spec: UsecaseSpec; height: string; a
 
   return (
     <div className="uc" style={height === "auto" ? { aspectRatio: aspect, maxHeight: "70vh" } : { height }}>
+      <Markers colors={[...new Set(layoutColors(graph.nodes))]} />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -187,17 +231,26 @@ function Canvas({ spec, height, aspect }: { spec: UsecaseSpec; height: string; a
 }
 
 function Legend({ types }: { types: Set<string> }) {
-  const line = (dashed: boolean) => (
-    <svg width={36} height={10} aria-hidden>
-      <line x1={2} y1={5} x2={dashed ? 28 : 34} y2={5} stroke="var(--mantine-color-dimmed)" strokeWidth={1.5} strokeDasharray={dashed ? "5 3" : undefined} />
-      {dashed && <path d="M27,1 L34,5 L27,9" fill="none" stroke="var(--mantine-color-dimmed)" strokeWidth={1.5} />}
+  const sample = (rel: boolean) => (
+    <svg width={40} height={10} aria-hidden>
+      <line
+        x1={2}
+        y1={5}
+        x2={rel ? 30 : 34}
+        y2={5}
+        stroke="var(--mantine-color-gray-5)"
+        strokeWidth={1.5}
+        strokeDasharray={rel ? "1 4" : undefined}
+        strokeLinecap="round"
+      />
+      {rel ? <path d="M30,1.5 L37,5 L30,8.5 Z" fill="var(--mantine-color-gray-5)" /> : <circle cx={35} cy={5} r={3} fill="var(--mantine-color-gray-5)" />}
     </svg>
   );
   return (
     <Group gap="lg" mt="xs" className="uc-legend">
-      <Group gap={6}>{line(false)}<Text size="xs" c="dimmed">アクターが利用する</Text></Group>
-      {types.has("include") && <Group gap={6}>{line(true)}<Text size="xs" c="dimmed">«include» 必ず含む</Text></Group>}
-      {types.has("extend") && <Group gap={6}>{line(true)}<Text size="xs" c="dimmed">«extend» 条件によって追加される</Text></Group>}
+      <Group gap={6}>{sample(false)}<Text size="xs" c="dimmed">アクターが利用する</Text></Group>
+      {types.has("include") && <Group gap={6}>{sample(true)}<Text size="xs" c="dimmed">include：必ず含む</Text></Group>}
+      {types.has("extend") && <Group gap={6}>{sample(true)}<Text size="xs" c="dimmed">extend：条件によって追加される</Text></Group>}
     </Group>
   );
 }

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseYaml } from "./docs";
-import { layoutUsecase, type UsecaseSpec } from "./usecase";
+import { ACTOR_H, ACTOR_W, CASE_H, layoutUsecase, type UsecaseSpec } from "./usecase";
 
 const sample = readFileSync(new URL("../../../projects/sample/personas.md", import.meta.url), "utf-8");
 const spec = parseYaml<UsecaseSpec>(/```usecase\n([\s\S]*?)\n```/.exec(sample)![1]);
@@ -18,15 +18,15 @@ describe("usecase", () => {
   });
 
   it("アクターはシステム境界の外の左右に置き、重ねない", () => {
-    expect(actorOf("user").x + 140).toBeLessThan(l.boundary.x);
+    expect(actorOf("user").x + ACTOR_W).toBeLessThan(l.boundary.x);
     expect(actorOf("staff").x).toBeGreaterThan(l.boundary.x + l.boundary.width);
-    expect(Math.abs(actorOf("staff").y - actorOf("mail").y)).toBeGreaterThanOrEqual(96);
+    expect(Math.abs(actorOf("staff").y - actorOf("mail").y)).toBeGreaterThanOrEqual(ACTOR_H);
   });
 
   it("ユースケースはすべてシステム境界の中に入る", () => {
     for (const c of l.cases) {
       expect(c.y).toBeGreaterThan(l.boundary.y);
-      expect(c.y + 60).toBeLessThan(l.boundary.y + l.boundary.height);
+      expect(c.y + CASE_H).toBeLessThan(l.boundary.y + l.boundary.height);
     }
   });
 

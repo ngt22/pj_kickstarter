@@ -9,16 +9,16 @@ export type UsecaseSpec = {
   relations?: { from: string; to: string; type: "include" | "extend" }[];
 };
 
-export const CASE_W = 200;
-export const CASE_H = 60;
-export const ACTOR_W = 140;
+export const CASE_W = 240;
+export const CASE_H = 56;
+export const ACTOR_W = 132;
 export const ACTOR_H = 96;
-const COL_GAP = 56;
-const ROW_GAP = 22;
+const COL_GAP = 72; // include の弧とラベルの分
+const ROW_GAP = 16;
 const PAD_X = 36;
-const PAD_TOP = 56; // システム名の分
+const PAD_TOP = 40; // システム名のタグの分
 const PAD_BOTTOM = 32;
-const ACTOR_GAP = 96; // アクターとシステム境界の間
+const ACTOR_GAP = 112; // アクターとシステム境界の間（線が幹から分かれる分）
 const ACTOR_MIN_GAP = 24;
 
 // アクターの色（color を省略したとき）。ブランド色は本文の見出しなどと紛れるので使わない

@@ -1,6 +1,6 @@
 import { Alert, Button, Group, Modal, Stack, TagsInput, Text, Textarea } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
-import { addAnnotation, annotationText, linkLines, MAX_ITEMS } from "../../lib/annotations";
+import { addAnnotation, annotationText, MAX_ITEMS } from "../../lib/annotations";
 import { useAuth } from "../../lib/auth";
 import { db } from "../../lib/firebase";
 import { useAnnotations } from "./AnnotationContext";
@@ -43,7 +43,7 @@ export default function SaveAnnotationModal({
         authorUid: user.uid,
         authorName: user.displayName || user.email || "",
         authorEmail: (user.email ?? "").toLowerCase(),
-        items: linkLines(draft.items),
+        items: draft.items,
         comment,
         tags,
         anchor: draft.anchor,
@@ -62,7 +62,7 @@ export default function SaveAnnotationModal({
   return (
     <Modal opened={opened} onClose={onClose} title={<Text fw={700}>付箋を保存</Text>}>
       <Stack gap="sm">
-        <Text size="sm" c={text ? undefined : "dimmed"}>{text || "囲みに文字が入っていません（手書きだけの付箋になります）"}</Text>
+        <Text size="sm" c={text ? undefined : "dimmed"}>{text || "メモに文字が入っていません（手書きだけの付箋になります）"}</Text>
         <TagsInput
           label="ハッシュタグ"
           description="自由に入力して Enter。# は付けなくてもかまいません"

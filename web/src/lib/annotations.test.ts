@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { annotationText, bounds, createSmoother, flatten, formatForPrompt, linkLines, normalizeTags, orientLine, simplify, smoothPath, unflatten } from "./annotations";
+import { annotationText, bounds, createSmoother, flatten, formatForPrompt, memoAttach, normalizeTags, placeMemo, simplify, smoothPath, unflatten } from "./annotations";
 
 describe("ペンの線", () => {
   it("滑らかさを上げるほど点を間引く", () => {
@@ -69,42 +69,41 @@ describe("付箋の中身", () => {
   });
 });
 
-describe("引出線と囲みの紐付け・書き出し", () => {
-  const box = { kind: "box" as const, color: "red" as const, x: 100, y: 0, w: 100, h: 40, text: "矢印の先の文言を直す" };
-
-  it("囲みから引き出した線は、囲みの反対側を矢じりにする", () => {
-    expect(orientLine([box], { x: 150, y: 20 }, { x: 10, y: 200 })).toEqual([{ x: 10, y: 200 }, { x: 150, y: 20 }]);
-    expect(orientLine([box], { x: 10, y: 200 }, { x: 150, y: 20 })).toEqual([{ x: 10, y: 200 }, { x: 150, y: 20 }]);
+describe("メモと書き出し", () => {
+  it("メモ欄は点の右上に置き、右端・上端では左・下へ折り返す", () => {
+    expect(placeMemo({ x: 100, y: 200 }, 800)).toEqual({ x: 128, y: 108 });
+    expect(placeMemo({ x: 700, y: 200 }, 800)).toEqual({ x: 452, y: 108 });
+    expect(placeMemo({ x: 100, y: 10 }, 800)).toEqual({ x: 128, y: 38 });
   });
 
-  it("引き出した先の近くの囲みに結び付ける", () => {
-    const near = { kind: "line" as const, color: "red" as const, points: [10, 200, 95, 30] };
-    const far = { kind: "line" as const, color: "red" as const, points: [10, 200, 10, 300] };
-    const out = linkLines([box, near, far]);
-    expect(out[1]).toMatchObject({ box: 0 });
-    expect(out[2]).not.toHaveProperty("box");
+  it("引出線は点にいちばん近いメモ欄の縁につなぐ", () => {
+    const m = { kind: "memo" as const, color: "red" as const, px: 100, py: 200, x: 128, y: 108, w: 220, h: 64, text: "" };
+    expect(memoAttach(m)).toEqual({ x: 128, y: 172 }); // 左下の角
+    expect(memoAttach({ ...m, h: 120 })).toEqual({ x: 128, y: 200 }); // 下に伸ばしたら左の縁
+    expect(bounds([m])).toEqual({ x: 100, y: 108, w: 248, h: 92 });
   });
 
-  it("矢印が指す要素と指示をまとめた Markdown にする", () => {
-    const target = { selector: "article > p:nth-of-type(1)", section: "目的", text: "予約受付をWeb化し…", rx: 12, ry: 40 };
+  it("メモごとに指示と指している要素を Markdown にする", () => {
+    const target = { selector: "div.doc-body > table:nth-of-type(1) > tbody > tr:nth-of-type(2) > td:nth-of-type(2)", section: "機能要件", text: "利用者は会員登録なしで予約できる", rx: 23, ry: 50 };
+    const memo = (text: string) => ({ kind: "memo" as const, color: "red" as const, px: 0, py: 0, x: 0, y: 0, w: 1, h: 1, text, target });
     const a = {
       id: "x",
       docType: "requirements",
       authorUid: "u",
       authorName: "ノブ",
       authorEmail: "n@example.com",
-      items: [box, { kind: "line" as const, color: "red" as const, points: [10, 200, 95, 30], target, box: 0 }],
+      items: [memo("電話番号だけで予約できる意味ですか"), memo("本人確認の方法も書く")],
       comment: "急ぎ",
-      tags: ["文言"],
+      tags: ["仕様確認"],
       status: "open" as const,
       anchor: { path: [], left: 0, top: 0 },
       width: 800,
     };
     const md = formatForPrompt([a], { projectName: "サンプル案件", pageTitles: { requirements: "要件定義書" }, pageUrl: (t) => `https://x/projects/s/${t}` });
     expect(md).toContain("## 1. 要件定義書");
-    expect(md).toContain("- 指示: 矢印の先の文言を直す");
-    expect(md).toContain("矢印が指している箇所: 見出し「目的」の中、「予約受付をWeb化し…」（要素内 12%, 40% の位置、セレクタ `article > p:nth-of-type(1)`）");
+    expect(md).toContain("- 指示: 電話番号だけで予約できる意味ですか\n  - 指している箇所: 見出し「機能要件」の中、「利用者は会員登録なしで予約できる」（要素内 23%, 50% の位置");
+    expect(md).toContain("- 指示: 本人確認の方法も書く");
     expect(md).toContain("- 補足: 急ぎ");
-    expect(md).toContain("#文言");
+    expect(annotationText(a)).toBe("電話番号だけで予約できる意味ですか / 本人確認の方法も書く — 急ぎ");
   });
 });

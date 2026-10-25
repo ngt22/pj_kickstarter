@@ -39,9 +39,35 @@ export type Target = { selector: string; section: string; text: string; rx: numb
 export type PenItem = { kind: "pen"; color: InkColor; width: number; points: number[]; target?: Target };
 export type BoxItem = { kind: "box"; color: InkColor; x: number; y: number; w: number; h: number; text: string; target?: Target };
 // 引出線：points[0..1] が指している箇所（矢じり側）、points[2..3] が引き出した先。
-// box は引き出した先にある囲み（items の番号）。囲みに書いた指示が、この矢印の指す箇所の話になる
-export type LineItem = { kind: "line"; color: InkColor; points: number[]; target?: Target; box?: number };
-export type InkItem = PenItem | BoxItem | LineItem;
+// 囲みと引出線は初期の書き方で、いまはメモ（MemoItem）で書く。保存済みの付箋を表示するために残している
+export type LineItem = { kind: "line"; color: InkColor; points: number[]; target?: Target };
+// メモ：気になった箇所（px, py）に点を打ち、決まった長さの引出線の先にメモ欄（x, y, w, h）を置く。
+// target は点の下にある要素。メモ欄は右下のつまみで大きさを変えられる
+export type MemoItem = { kind: "memo"; color: InkColor; px: number; py: number; x: number; y: number; w: number; h: number; text: string; target?: Target };
+export type InkItem = PenItem | BoxItem | LineItem | MemoItem;
+// 文字を書ける四角（囲み・メモ欄）
+export type TextItem = BoxItem | MemoItem;
+export const isTextItem = (it: InkItem): it is TextItem => it.kind === "box" || it.kind === "memo";
+
+// メモの引出線の長さ（縦・横それぞれ）と、メモ欄の最初の大きさ
+export const MEMO_LEADER = 28;
+export const MEMO_SIZE = { w: 220, h: 64 };
+
+// 点を打った位置から、メモ欄を斜め右上に置く（資料の文字に重ならないよう、点の行より上に出す）。
+// 右や上にはみ出すときは左・下へ折り返す
+export function placeMemo(p: Point, areaWidth: number, size = MEMO_SIZE): { x: number; y: number } {
+  const right = p.x + MEMO_LEADER + size.w <= areaWidth - 8;
+  const up = p.y - MEMO_LEADER - size.h >= 0;
+  return {
+    x: right ? p.x + MEMO_LEADER : p.x - MEMO_LEADER - size.w,
+    y: up ? p.y - MEMO_LEADER - size.h : p.y + MEMO_LEADER,
+  };
+}
+
+// 引出線をメモ欄のどこにつなぐか：点からいちばん近いメモ欄の縁
+export function memoAttach(m: MemoItem): Point {
+  return { x: Math.min(Math.max(m.px, m.x), m.x + m.w), y: Math.min(Math.max(m.py, m.y), m.y + m.h) };
+}
 
 export type AnnotationStatus = "open" | "close";
 
@@ -164,9 +190,10 @@ export function bounds(items: InkItem[]): { x: number; y: number; w: number; h: 
     y1 = Math.max(y1, y);
   };
   for (const it of items) {
-    if (it.kind === "box") {
+    if (isTextItem(it)) {
       add(it.x, it.y);
       add(it.x + it.w, it.y + it.h);
+      if (it.kind === "memo") add(it.px, it.py);
     } else for (const p of unflatten(it.points)) add(p.x, p.y);
   }
   return x0 === Infinity ? null : { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
@@ -182,47 +209,14 @@ export function normalizeTags(tags: string[]): string[] {
   return out;
 }
 
-// 一覧に出す本文：囲みに書いた文字、なければ補足
+// 一覧に出す本文：メモ（囲み）に書いた文字、なければ補足
 export function annotationText(a: Pick<Annotation, "items" | "comment">): string {
   const boxText = a.items
-    .filter((i): i is BoxItem => i.kind === "box")
+    .filter(isTextItem)
     .map((i) => i.text.trim())
     .filter(Boolean)
     .join(" / ");
   return [boxText, a.comment.trim()].filter(Boolean).join(" — ");
-}
-
-// ---- 引出線と囲みの紐付け ----
-const LINK_MARGIN = 24;
-
-export function boxAt(items: InkItem[], p: Point, margin = LINK_MARGIN): number {
-  let best = -1;
-  let bestDist = Infinity;
-  items.forEach((it, i) => {
-    if (it.kind !== "box") return;
-    // 囲みの外なら、囲みまでの距離
-    const dx = Math.max(it.x - p.x, 0, p.x - (it.x + it.w));
-    const dy = Math.max(it.y - p.y, 0, p.y - (it.y + it.h));
-    const d = Math.hypot(dx, dy);
-    if (d <= margin && d < bestDist) [best, bestDist] = [i, d];
-  });
-  return best;
-}
-
-// 囲みから引き出すように描いた線は、向きを逆にして囲みの反対側を矢じりにする（どちら向きに描いてもよい）
-export function orientLine(items: InkItem[], start: Point, end: Point): [Point, Point] {
-  return boxAt(items, start) >= 0 && boxAt(items, end) < 0 ? [end, start] : [start, end];
-}
-
-// 保存する直前に、引出線ごとに引き出した先の囲みを結び付ける
-export function linkLines(items: InkItem[]): InkItem[] {
-  return items.map((it) => {
-    if (it.kind !== "line") return it;
-    const [, end] = unflatten(it.points);
-    const box = boxAt(items, end);
-    const { box: _, ...rest } = it;
-    return box >= 0 ? { ...rest, box } : rest;
-  });
 }
 
 // ---- 書き込んだ箇所の要素（target） ----
@@ -244,10 +238,12 @@ function selectorOf(root: Element, el: Element): string {
   return parts.join(" > ");
 }
 
-function sectionOf(root: Element, el: Element): string {
+// 押した位置より上にある、いちばん近い見出し（余白を押しても、どの節の話か分かるように）
+function sectionAt(root: Element, clientY: number): string {
   let last = "";
   for (const h of root.querySelectorAll("h1, h2, h3, h4")) {
-    if (h === el || h.contains(el) || h.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) last = h.textContent ?? "";
+    if (h.closest("[data-annot-ui]")) continue;
+    if (h.getBoundingClientRect().top <= clientY) last = h.textContent ?? "";
     else break;
   }
   return clip(last, 40);
@@ -265,8 +261,9 @@ export function targetAt(root: HTMLElement, clientX: number, clientY: number): T
   const pct = (v: number, len: number) => (len > 0 ? Math.round(Math.min(100, Math.max(0, (v / len) * 100))) : 0);
   return {
     selector: selectorOf(root, el),
-    section: sectionOf(root, el),
-    text: clip((textEl as HTMLElement).innerText ?? "", 80),
+    section: sectionAt(root, clientY),
+    // 本文全体のような、段落や表をいくつも含む要素の文字は「どこ」の手がかりにならないので、余白として扱う
+    text: textEl.querySelectorAll("p, li, tr, h2, h3, h4").length > 2 ? "" : clip((textEl as HTMLElement).innerText ?? "", 80),
     rx: pct(clientX - r.left, r.width),
     ry: pct(clientY - r.top, r.height),
   };
@@ -276,7 +273,7 @@ export function targetAt(root: HTMLElement, clientX: number, clientY: number): T
 export type ExportContext = { projectName: string; pageTitles: Record<string, string>; pageUrl: (docType: string) => string };
 
 const describe = (t?: Target) =>
-  t ? `${t.section ? `見出し「${t.section}」の中、` : ""}「${t.text || "（文字のない箇所）"}」（要素内 ${t.rx}%, ${t.ry}% の位置、セレクタ \`${t.selector}\`）` : "（位置の情報なし）";
+  t ? `${t.section ? `見出し「${t.section}」の中、` : ""}${t.text ? `「${t.text}」` : "余白"}（要素内 ${t.rx}%, ${t.ry}% の位置、セレクタ \`${t.selector}\`）` : "（位置の情報なし）";
 
 // 付箋をまとめて、そのままプロンプトに貼れる Markdown にする
 export function formatForPrompt(list: Annotation[], ctx: ExportContext, now = new Date()): string {
@@ -285,7 +282,7 @@ export function formatForPrompt(list: Annotation[], ctx: ExportContext, now = ne
     `# 提案資料「${ctx.projectName}」への指摘（${list.length} 件）`,
     "",
     `以下は、提案資料サイトの閲覧者がページに書き込んだ指摘です（${fmt.format(now)} 時点）。`,
-    "「指している箇所」は、矢印・囲み・手書きが重なっていた資料の要素です（見出し、要素の文字、要素内の位置、CSS セレクタ）。",
+    "「指している箇所」は、メモの点（または囲み・矢印・手書き）が重なっていた資料の要素です（見出し、要素の文字、要素内の位置、CSS セレクタ）。",
     "",
   ];
   list.forEach((a, n) => {
@@ -294,15 +291,11 @@ export function formatForPrompt(list: Annotation[], ctx: ExportContext, now = ne
     out.push(`- 状態: ${a.status}${a.tags.length ? ` / タグ: ${a.tags.map((t) => `#${t}`).join(" ")}` : ""}`);
     out.push(`- 記入: ${a.authorName}${a.createdAt ? `（${fmt.format(a.createdAt.toDate())}）` : ""}`);
     out.push(`- ページ: ${ctx.pageUrl(a.docType)}`);
-    const lines = a.items.filter((i): i is LineItem => i.kind === "line");
-    a.items.forEach((it, i) => {
-      if (it.kind !== "box") return;
-      const arrows = lines.filter((l) => l.box === i);
-      out.push(`- 指示: ${it.text.trim() || "（文字なし）"}`);
-      if (arrows.length) arrows.forEach((l) => out.push(`  - 矢印が指している箇所: ${describe(l.target)}`));
-      else out.push(`  - 囲んだ箇所: ${describe(it.target)}`);
-    });
-    lines.filter((l) => l.box === undefined).forEach((l) => out.push(`- 矢印（指示なし）が指している箇所: ${describe(l.target)}`));
+    for (const it of a.items) {
+      if (it.kind === "memo") out.push(`- 指示: ${it.text.trim() || "（文字なし）"}`, `  - 指している箇所: ${describe(it.target)}`);
+      else if (it.kind === "box") out.push(`- 指示: ${it.text.trim() || "（文字なし）"}`, `  - 囲んだ箇所: ${describe(it.target)}`);
+      else if (it.kind === "line") out.push(`- 矢印が指している箇所: ${describe(it.target)}`);
+    }
     if (!a.items.some((it) => it.kind !== "pen") && a.items.length) out.push(`- 手書きした箇所: ${describe(a.items[0].target)}`);
     if (a.comment.trim()) out.push(`- 補足: ${a.comment.trim()}`);
     out.push("");

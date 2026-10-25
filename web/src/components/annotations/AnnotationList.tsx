@@ -76,7 +76,7 @@ export default function AnnotationList() {
         {error && <Alert color="red" title="付箋を読み込めませんでした">{error}</Alert>}
         {shown.length === 0 ? (
           <EmptyState icon={IconNote} title="付箋はありません">
-            右上の「付箋」で付箋モードにして、ペン・囲み・引出線で書き込んでから保存してください。
+            右上の「付箋」で付箋モードにして、ペンで書いたり、気になる箇所を押してメモを書いたりしてから保存してください。
           </EmptyState>
         ) : (
           shown.map((a) => (

@@ -189,3 +189,11 @@ def test_invalid_usecase_is_reported(tmp_path):
     personas.write_text(text.replace("to: UC-01, type: include", "to: UC-99, type: include"), encoding="utf-8")
     result = load_project(path)
     assert any("UC-99" in e for e in result.errors)
+
+    personas.write_text(text.replace("zone: store, inherits: staff", "zone: shop, inherits: staff"), encoding="utf-8")
+    result = load_project(path)
+    assert any("zone: shop" in e and "候補" in e for e in result.errors)
+
+    personas.write_text(text.replace("to: store, label", "to: customer, label"), encoding="utf-8")
+    result = load_project(path)
+    assert any("隣り合う区画" in e for e in result.errors)

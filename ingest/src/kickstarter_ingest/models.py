@@ -378,19 +378,30 @@ ThemeColor = Literal[
 ]
 
 
+class UsecaseZone(Strict):
+    id: str = Field(description="actors の zone と flows から参照する id")
+    name: str = Field(description="区画名（例: 現地、事務所、お客さま、店舗）")
+    note: str | None = Field(None, description="区画の補足（例: タブレット・スマホ／電波がなくても動作）")
+    color: ThemeColor | None = Field(None, description="区画の札の色（省略すると最初のアクターの色）")
+
+
 class UsecaseActor(Strict):
     id: str = Field(description="cases の actors から参照する id")
     name: str = Field(description="アクター名（例: 利用者、店舗スタッフ、決済サービス）")
-    note: str | None = Field(None, description="補足（例: 30代・会社員）")
-    side: Literal["left", "right"] = Field("left", description="図の左右どちらに置くか。主な利用者は left、管理者や外部システムは right")
-    color: ThemeColor | None = Field(None, description="線の色（省略すると自動）")
+    note: str | None = Field(None, description="補足（例: 30代・会社員、タブレット）")
+    zone: str | None = Field(None, description="置く区画の id（省略すると最初の区画）")
+    kind: Literal["person", "system"] = Field("person", description="person: 人 / system: 外部サービスなど人以外")
+    inherits: str | None = Field(None, description="このアクターが全操作を引き継ぐ別のアクターの id（例: 管理者 → 事務員）")
+    side: Literal["left", "right"] | None = Field(None, description="旧形式の項目。今は使わない")
+    color: ThemeColor | None = Field(None, description="カードの色帯とアイコンの色（省略すると自動）")
 
 
 class UsecaseCase(Strict):
     id: str = Field(description="relations から参照する id（例: UC-01）")
-    name: str = Field(description="ユースケース名。「〜する」の形で短く（例: 予約する）")
-    actors: list[str] = Field([], description="このユースケースを使うアクターの id")
-    note: str | None = Field(None, description="補足（クリックすると表示）")
+    name: str = Field(description="ユースケース名。「〜する」の形で全角16文字以内（例: 予約する）")
+    actors: list[str] = Field([], description="このユースケースを使うアクターの id。最初のアクターの段に並ぶ")
+    condition: str | None = Field(None, description="条件付きの操作の条件（例: 前回結果がある場合のみ）。点線のカードになる")
+    note: str | None = Field(None, description="カードに小さく出す補足")
 
 
 class UsecaseRelation(Strict):
@@ -401,22 +412,37 @@ class UsecaseRelation(Strict):
     )
 
 
-class UsecaseBlock(Strict):
-    """```usecase ブロック（ユースケース図）。"""
+class UsecaseFlow(Strict):
+    from_: str = Field(alias="from", description="受け渡し元の区画の id")
+    to: str = Field(description="受け渡し先の区画の id（from と隣り合う区画）")
+    label: str = Field(description="受け渡しの名前（例: 帰社後に同期）")
+    note: str | None = Field(None, description="補足（例: 現地の記録・写真が事務所側へ渡る）")
 
-    system: str | None = Field(None, description="システム境界の名前（例: 予約サービス）")
+
+class UsecaseBlock(Strict):
+    """```usecase ブロック（ユースケース図）。区画 → アクターの段 → ユースケースのカードの順に並ぶ。"""
+
+    system: str | None = Field(None, description="システムの名前（zones を省略したときの区画名）")
+    zones: list[UsecaseZone] = []
     actors: list[UsecaseActor] = Field(min_length=1)
     cases: list[UsecaseCase] = Field(min_length=1)
     relations: list[UsecaseRelation] = []
+    flows: list[UsecaseFlow] = []
 
     @model_validator(mode="after")
     def check_refs(self) -> "UsecaseBlock":
+        zones = [z.id for z in self.zones]
         actors = [a.id for a in self.actors]
         cases = [c.id for c in self.cases]
-        for kind, ids in (("アクター", actors), ("ユースケース", cases)):
+        for kind, ids in (("区画", zones), ("アクター", actors), ("ユースケース", cases)):
             dup = sorted({i for i in ids if ids.count(i) > 1})
             if dup:
                 raise ValueError(f"{kind}の id が重複しています: {dup}")
+        for a in self.actors:
+            if a.zone is not None and a.zone not in zones:
+                raise ValueError(f"アクター {a.id} の zone: {a.zone} がありません（候補: {', '.join(zones) or 'zones が未記入'}）")
+            if a.inherits is not None and a.inherits not in actors:
+                raise ValueError(f"アクター {a.id} の inherits: {a.inherits} がありません（候補: {', '.join(actors)}）")
         for c in self.cases:
             for a in c.actors:
                 if a not in actors:
@@ -425,6 +451,12 @@ class UsecaseBlock(Strict):
             for end in (r.from_, r.to):
                 if end not in cases:
                     raise ValueError(f"relations の {end} がユースケースにありません（候補: {', '.join(cases)}）")
+        for f in self.flows:
+            for end in (f.from_, f.to):
+                if end not in zones:
+                    raise ValueError(f"flows の {end} が区画にありません（候補: {', '.join(zones) or 'zones が未記入'}）")
+            if abs(zones.index(f.from_) - zones.index(f.to)) != 1:
+                raise ValueError(f"flows の {f.from_} → {f.to}: 隣り合う区画どうしにしてください")
         return self
 
 

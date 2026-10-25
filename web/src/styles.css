@@ -1751,7 +1751,15 @@ table {
   background: var(--ks-surface);
   border-radius: var(--mantine-radius-xl);
   box-shadow: 0 0 0 1px var(--mantine-color-default-border);
-  transform: translate(-50%, -50%);
+  /* 線の上の点 (left, top) から少し離して、線にかぶらない側に置く */
+  --fl-label-x: -50%;
+  transform: translate(var(--fl-label-x), calc(-100% - 6px));
+}
+.fl-edge-label[data-align="end"] {
+  --fl-label-x: -100%;
+}
+.fl-edge-label[data-side="below"] {
+  transform: translate(var(--fl-label-x), 6px);
 }
 .fl-edge-label[data-back] {
   color: var(--mantine-color-dimmed);

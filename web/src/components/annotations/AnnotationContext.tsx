@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { watchAnnotations, COVER, type Annotation } from "../../lib/annotations";
+import { watchAnnotations, COVER, type Annotation, type ExportContext } from "../../lib/annotations";
 import { useAuth } from "../../lib/auth";
 import { db } from "../../lib/firebase";
 
 // 案件の画面全体で共有する付箋の状態：付箋モードの on/off、一覧の開閉、案件の付箋、飛び先
 type State = {
   projectId: string;
+  projectName: string;
   docType: string; // いま見ているページ（表紙は COVER）
   pageTitles: Record<string, string>;
   annotations: Annotation[];
@@ -23,6 +24,16 @@ type State = {
 
 const AnnotationContext = createContext<State | null>(null);
 
+// 付箋をプロンプト用に書き出すときの、ページの URL と題名
+export function useExportContext(): ExportContext {
+  const { projectId, projectName, pageTitles } = useAnnotations();
+  return {
+    projectName,
+    pageTitles,
+    pageUrl: (docType) => `${window.location.origin}/projects/${projectId}${docType === COVER ? "" : `/${docType}`}`,
+  };
+}
+
 export function useAnnotations() {
   const s = useContext(AnnotationContext);
   if (!s) throw new Error("AnnotationProvider の外では使えません");
@@ -31,11 +42,13 @@ export function useAnnotations() {
 
 export function AnnotationProvider({
   projectId,
+  projectName,
   docType,
   pageTitles,
   children,
 }: {
   projectId: string;
+  projectName: string;
   docType?: string;
   pageTitles: Record<string, string>;
   children: ReactNode;
@@ -58,6 +71,7 @@ export function AnnotationProvider({
   const value = useMemo<State>(
     () => ({
       projectId,
+      projectName,
       docType: page,
       pageTitles,
       annotations,
@@ -74,7 +88,7 @@ export function AnnotationProvider({
         if (a.docType !== page) navigate(`/projects/${projectId}${a.docType === COVER ? "" : `/${a.docType}`}`);
       },
     }),
-    [projectId, page, pageTitles, annotations, error, active, listOpen, focusId, navigate],
+    [projectId, projectName, page, pageTitles, annotations, error, active, listOpen, focusId, navigate],
   );
   return <AnnotationContext.Provider value={value}>{children}</AnnotationContext.Provider>;
 }

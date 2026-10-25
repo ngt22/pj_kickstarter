@@ -111,7 +111,7 @@ export default function ProjectView() {
     );
 
   return (
-    <AnnotationProvider projectId={projectId} docType={docType} pageTitles={pageTitles}>
+    <AnnotationProvider projectId={projectId} projectName={project.name} docType={docType} pageTitles={pageTitles}>
       <Layout sidebar={sidebar} actions={<AnnotationButtons />}>
         <AnnotationLayer>{content}</AnnotationLayer>
         <AnnotationList />

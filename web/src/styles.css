@@ -2218,3 +2218,22 @@ table {
 .ar-legend-note {
   margin-left: auto;
 }
+/* 囲みの右下のつまみ：引っ張って大きさを変える */
+.ks-annot-resize {
+  position: absolute;
+  z-index: 3;
+  width: 14px;
+  height: 14px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid var(--mantine-color-brand-6);
+  border-radius: var(--mantine-radius-xs);
+  background: var(--ks-surface);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: nwse-resize;
+  opacity: 0.85;
+}
+.ks-annot-resize:hover {
+  opacity: 1;
+  background: var(--mantine-color-brand-1);
+}

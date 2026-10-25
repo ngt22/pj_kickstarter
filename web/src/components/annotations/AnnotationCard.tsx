@@ -6,6 +6,7 @@ import { useAuth } from "../../lib/auth";
 import { db } from "../../lib/firebase";
 import { ICON_STROKE } from "../icons";
 import { useAnnotations } from "./AnnotationContext";
+import CopyPromptButton from "./CopyPromptButton";
 
 const timeFmt = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
@@ -92,8 +93,10 @@ export default function AnnotationCard({ a, onJump, showPage }: { a: Annotation;
               <Badge key={t} size="sm" color="brand" variant="outline">#{t}</Badge>
             ))}
           </Group>
+          <Group gap={2} wrap="nowrap">
+            <CopyPromptButton list={[a]} compact />
           {canEdit && (
-            <Group gap={2} wrap="nowrap">
+            <>
               <Tooltip label={a.status === "open" ? "close にする" : "open に戻す"}>
                 <ActionIcon
                   variant="subtle"
@@ -115,8 +118,9 @@ export default function AnnotationCard({ a, onJump, showPage }: { a: Annotation;
                   <IconTrash size={18} stroke={ICON_STROKE} />
                 </ActionIcon>
               </Tooltip>
-            </Group>
+            </>
           )}
+          </Group>
         </Group>
       )}
       {confirming && (

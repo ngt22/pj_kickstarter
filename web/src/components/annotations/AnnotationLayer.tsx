@@ -6,11 +6,14 @@ import {
   bounds,
   createSmoother,
   flatten,
+  orientLine,
   PEN_WIDTH,
   placement,
   simplify,
   smoothPath,
+  targetAt,
   unflatten,
+  updateAnnotation,
   type Anchor,
   type Annotation,
   type InkColor,
@@ -18,6 +21,8 @@ import {
   type Point,
   type Smoother,
 } from "../../lib/annotations";
+import { useAuth } from "../../lib/auth";
+import { db } from "../../lib/firebase";
 import AnnotationCard from "./AnnotationCard";
 import { useAnnotations } from "./AnnotationContext";
 import AnnotationToolbar, { type Tool } from "./AnnotationToolbar";
@@ -25,6 +30,8 @@ import SaveAnnotationModal from "./SaveAnnotationModal";
 
 // これより短いドラッグは囲み・引出線にしない（クリックとみなす）
 const MIN_DRAG = 8;
+// 囲みを縮めるときの下限
+const MIN_BOX = { w: 40, h: 24 };
 
 export type Draft = { items: InkItem[]; anchor: Anchor | null };
 
@@ -82,9 +89,17 @@ function BoxTexts({ items }: { items: InkItem[] }) {
 
 type Placed = { a: Annotation; x: number; y: number; scale: number };
 
+// 囲みの右下のつまみを引っ張って大きさを変える。saved は保存済みの付箋（id）、なければ下書き
+type Resize = { id?: string; index: number; startX: number; startY: number; w: number; h: number; scale: number };
+
+function withSize(items: InkItem[], index: number, w: number, h: number): InkItem[] {
+  return items.map((it, i) => (i === index && it.kind === "box" ? { ...it, w, h } : it));
+}
+
 // 資料の上に重ねる付箋レイヤー。付箋モードの間だけ付箋を表示し、道具を選ぶと書き込める
 export default function AnnotationLayer({ children }: { children: ReactNode }) {
-  const { annotations, docType, active, focusId, clearFocus, listOpen } = useAnnotations();
+  const { annotations, docType, active, focusId, clearFocus, listOpen, projectId } = useAnnotations();
+  const { user, isAdmin } = useAuth();
   const ink = useInk();
   const rootRef = useRef<HTMLDivElement>(null);
   // 指で触る画面では、ペンのままだとスクロールできないので「閲覧」から始める
@@ -100,6 +115,9 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
   const [flash, setFlash] = useState<string | null>(null);
   const [openPin, setOpenPin] = useState<string | null>(null);
   const gesture = useRef<{ start: Point; smoother?: Smoother; client: Point } | null>(null);
+  const resize = useRef<Resize | null>(null);
+  // 保存済みの囲みを引っ張っている間の大きさ（離したら保存する）
+  const [resized, setResized] = useState<{ id: string; index: number; w: number; h: number } | null>(null);
 
   // ページが変わったら下書きは捨てる（座標がそのページのものなので）
   useEffect(() => {
@@ -212,13 +230,24 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
     if (!g) return;
     const p = local(e);
     let item: InkItem | null = null;
+    const root = rootRef.current!;
+    const rootRect = root.getBoundingClientRect();
+    // 書き込んだ箇所の要素を覚えておく（コピーしたとき「どこの話か」を伝えるため）
+    const withTarget = <T extends InkItem>(it: T, at: Point): T => {
+      const target = targetAt(root, rootRect.left + at.x, rootRect.top + at.y);
+      return target ? { ...it, target } : it;
+    };
     if (g.smoother) {
       g.smoother.finish(p);
-      item = { kind: "pen", color, width: PEN_WIDTH, points: flatten(simplify(g.smoother.points)) };
+      item = withTarget({ kind: "pen", color, width: PEN_WIDTH, points: flatten(simplify(g.smoother.points)) }, g.start);
     } else if (Math.hypot(p.x - g.start.x, p.y - g.start.y) >= MIN_DRAG) {
-      if (tool === "box")
-        item = { kind: "box", color, x: Math.min(g.start.x, p.x), y: Math.min(g.start.y, p.y), w: Math.abs(p.x - g.start.x), h: Math.abs(p.y - g.start.y), text: "" };
-      else item = { kind: "line", color, points: flatten([g.start, p]) };
+      if (tool === "box") {
+        const box = { kind: "box" as const, color, x: Math.min(g.start.x, p.x), y: Math.min(g.start.y, p.y), w: Math.abs(p.x - g.start.x), h: Math.abs(p.y - g.start.y), text: "" };
+        item = withTarget(box, { x: box.x + box.w / 2, y: box.y + box.h / 2 });
+      } else {
+        const [tip, end] = orientLine(draft.items, g.start, p);
+        item = withTarget({ kind: "line", color, points: flatten([tip, end]) }, tip);
+      }
     } else if (tool === "box") {
       // 囲みの中をクリックしたら、その囲みの文字を書き直す
       for (let i = draft.items.length - 1; i >= 0; i--) {
@@ -235,6 +264,36 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
     if (item.kind === "box") setEditing(index);
   };
 
+  const startResize = (e: React.PointerEvent<HTMLElement>, r: Omit<Resize, "startX" | "startY">) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setEditing(null);
+    resize.current = { ...r, startX: e.clientX, startY: e.clientY };
+  };
+  const moveResize = (e: React.PointerEvent<HTMLElement>) => {
+    const r = resize.current;
+    if (!r) return;
+    const w = Math.max(MIN_BOX.w, r.w + (e.clientX - r.startX) / r.scale);
+    const h = Math.max(MIN_BOX.h, r.h + (e.clientY - r.startY) / r.scale);
+    if (r.id) setResized({ id: r.id, index: r.index, w, h });
+    else setDraft((d) => ({ ...d, items: withSize(d.items, r.index, w, h) }));
+  };
+  const endResize = () => {
+    const r = resize.current;
+    resize.current = null;
+    if (!r?.id || !resized) return;
+    const a = annotations.find((x) => x.id === r.id);
+    if (a) updateAnnotation(db, projectId, a.id, { items: withSize(a.items, resized.index, resized.w, resized.h) }).finally(() => setResized(null));
+    else setResized(null);
+  };
+  const handleProps = (r: Omit<Resize, "startX" | "startY">) => ({
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => startResize(e, r),
+    onPointerMove: moveResize,
+    onPointerUp: endResize,
+    onPointerCancel: endResize,
+  });
+
   const setBoxText = (i: number, text: string) =>
     setDraft((d) => ({ ...d, items: d.items.map((it, j) => (j === i && it.kind === "box" ? { ...it, text } : it)) }));
 
@@ -247,16 +306,30 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
       {active && (
         <div className="ks-annot-overlay" data-annot-ui>
           {placed.map(({ a, x, y, scale }) => {
-            const b = bounds(a.items);
+            const items = resized?.id === a.id ? withSize(a.items, resized.index, resized.w, resized.h) : a.items;
+            const canResize = user?.uid === a.authorUid || isAdmin;
+            const b = bounds(items);
             return (
               <div key={a.id} className="ks-annot-item" data-status={a.status} data-flash={flash === a.id || undefined}>
                 <div className="ks-annot-scaled" style={{ transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
                   <svg className="ks-annot-svg">
                     {b && <rect x={b.x - 8} y={b.y - 8} width={b.w + 16} height={b.h + 16} rx={10} className="ks-annot-halo" />}
-                    <InkShapes items={a.items} />
+                    <InkShapes items={items} />
                   </svg>
-                  <BoxTexts items={a.items} />
+                  <BoxTexts items={items} />
                 </div>
+                {canResize &&
+                  items.map((it, i) =>
+                    it.kind === "box" ? (
+                      <span
+                        key={i}
+                        className="ks-annot-resize"
+                        style={{ left: x + (it.x + it.w) * scale, top: y + (it.y + it.h) * scale }}
+                        aria-label="囲みの大きさを変える"
+                        {...handleProps({ id: a.id, index: i, w: it.w, h: it.h, scale })}
+                      />
+                    ) : null,
+                  )}
                 {b && (
                   <Popover opened={openPin === a.id} onChange={(o) => setOpenPin(o ? a.id : null)} width={320} position="bottom-start" shadow="md" withinPortal>
                     <Popover.Target>
@@ -283,8 +356,20 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
             <svg className="ks-annot-svg">
               <InkShapes items={live ? [...draft.items, live] : draft.items} />
             </svg>
-            <BoxTexts items={draft.items.filter((_, i) => i !== editing)} />
+            <BoxTexts items={draft.items.map((it, i) => (i === editing && it.kind === "box" ? { ...it, text: "" } : it))} />
           </div>
+          {draft.items.map((it, i) =>
+            it.kind === "box" ? (
+              <span
+                key={i}
+                className="ks-annot-resize"
+                data-draft
+                style={{ left: it.x + it.w, top: it.y + it.h }}
+                aria-label="囲みの大きさを変える"
+                {...handleProps({ index: i, w: it.w, h: it.h, scale: 1 })}
+              />
+            ) : null,
+          )}
           {drawing && (
             <div
               className="ks-annot-surface"
@@ -305,7 +390,12 @@ export default function AnnotationLayer({ children }: { children: ReactNode }) {
               value={editingBox.text}
               placeholder="指示を入力"
               autoFocus
-              onChange={(e) => setBoxText(editing!, e.currentTarget.value)}
+              onChange={(e) => {
+                const el = e.currentTarget;
+                setBoxText(editing!, el.value);
+                // 文字が囲みからあふれたら、囲みを下に伸ばす（スクショで見切れないように）
+                if (el.scrollHeight > el.clientHeight) setDraft((d) => ({ ...d, items: withSize(d.items, editing!, editingBox.w, el.scrollHeight + 4) }));
+              }}
               onBlur={() => setEditing(null)}
             />
           )}

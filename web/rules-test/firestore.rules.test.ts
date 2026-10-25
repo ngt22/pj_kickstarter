@@ -267,11 +267,14 @@ describe("付箋（annotations）", () => {
     await assertSucceeds(deleteDoc(doc(notes(db), id)));
   });
 
-  it("書いた人・書いた内容・位置はあとから変えられない", async () => {
+  it("囲みの大きさは後から変えられるが、書いた人・目印の位置は変えられない", async () => {
     const db = user("member@example.com");
     const id = await addAnnotation(db, "sample", note("member@example.com"));
     const ref = doc(notes(db), id);
+    const resized = [{ ...note("member@example.com").items[0], w: 240, h: 120 }];
+    await assertSucceeds(updateAnnotation(db, "sample", id, { items: resized }));
     await assertFails(updateDoc(ref, { authorUid: "peer@example.com", updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { anchor: { path: [], left: 0, top: 0 }, updatedAt: serverTimestamp() }));
     await assertFails(updateDoc(ref, { items: [], updatedAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(notes(user("admin@example.com", { admin: true })), id), { authorName: "管理者", updatedAt: serverTimestamp() }));
   });

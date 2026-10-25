@@ -4,6 +4,7 @@ import { IconNote } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import EmptyState from "../EmptyState";
 import AnnotationCard from "./AnnotationCard";
+import CopyPromptButton from "./CopyPromptButton";
 import { useAnnotations } from "./AnnotationContext";
 
 export const LIST_WIDTH = 400;
@@ -71,6 +72,7 @@ export default function AnnotationList() {
             </Group>
           </Chip.Group>
         )}
+        <CopyPromptButton list={shown} />
         {error && <Alert color="red" title="付箋を読み込めませんでした">{error}</Alert>}
         {shown.length === 0 ? (
           <EmptyState icon={IconNote} title="付箋はありません">

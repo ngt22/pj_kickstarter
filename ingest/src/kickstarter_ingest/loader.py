@@ -23,6 +23,7 @@ class LoadedDoc:
 @dataclass
 class LoadResult:
     meta: ProjectMeta | None = None
+    meta_text: str | None = None  # project.yaml の原文（表現チェック用）
     docs: list[LoadedDoc] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
@@ -61,7 +62,8 @@ def load_project(path: Path) -> LoadResult:
 
     meta_file = path / "project.yaml"
     try:
-        result.meta = ProjectMeta.model_validate(yaml.safe_load(meta_file.read_text(encoding="utf-8")))
+        result.meta_text = meta_file.read_text(encoding="utf-8")
+        result.meta = ProjectMeta.model_validate(yaml.safe_load(result.meta_text))
     except FileNotFoundError:
         result.errors.append("project.yaml: ファイルがありません")
     except (ValidationError, yaml.YAMLError) as e:

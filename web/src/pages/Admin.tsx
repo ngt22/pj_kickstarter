@@ -1,4 +1,4 @@
-import { Alert, Anchor, Badge, Button, Card, Code, Group, Loader, Modal, Pill, Stack, Text, TextInput, Title } from "@mantine/core";
+import { Alert, Anchor, Badge, Button, Card, Code, Group, Loader, Modal, Pill, SimpleGrid, Stack, TagsInput, Text, TextInput, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { arrayRemove, arrayUnion, collection, doc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
@@ -9,6 +9,7 @@ import { createProject, loadTemplates, PROJECT_ID_RE, type NewProject } from "..
 import { deleteProject } from "../lib/deleteProject";
 import type { ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
+import { EMPTY_SITE, loadPrivateSettings, loadSiteSettings, saveSettings, type SiteSettings } from "../lib/settings";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -90,10 +91,12 @@ export default function Admin() {
         </Button>
       </Group>
       <Text c="dimmed" mb="lg">
-        案件ごとに閲覧できるクライアントのメールアドレスを指定します。管理者は指定しなくても全案件を閲覧できます。新しい案件の作成や、不要になった案件の削除もここで行います。
+        表紙に出す提案者と禁止語を設定し、案件ごとに閲覧できるクライアントのメールアドレスを指定します。管理者は指定しなくても全案件を閲覧できます。新しい案件の作成や、不要になった案件の削除もここで行います。
       </Text>
       {error && <Alert color="red" mb="md">{error}</Alert>}
       {notice && <Alert color="green" mb="md" withCloseButton onClose={() => setNotice(null)}>{notice}</Alert>}
+      <SettingsCard onError={setError} />
+      <Title order={2} size="h3" mt="xl" mb="md">案件と閲覧権限</Title>
       {projects === null && !error && <Loader />}
       {projects?.length === 0 && <Text c="dimmed">案件がありません。「新規案件」から作成するか、ingest CLI で投入してください。</Text>}
       <NewProjectModal
@@ -115,6 +118,79 @@ export default function Admin() {
         ))}
       </Stack>
     </Layout>
+  );
+}
+
+// 表紙に出す提案者と、push 時に原稿から探す禁止語（サイト共通）
+function SettingsCard({ onError }: { onError: (message: string) => void }) {
+  const [site, setSite] = useState<SiteSettings | null>(null);
+  const [terms, setTerms] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    Promise.all([loadSiteSettings(db), loadPrivateSettings(db)])
+      .then(([s, p]) => {
+        setSite(s);
+        setTerms(p.forbidden_terms);
+      })
+      .catch((e) => {
+        setSite(EMPTY_SITE);
+        onError(String(e));
+      });
+  }, [onError]);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!site) return;
+    setBusy(true);
+    setSaved(false);
+    try {
+      await saveSettings(db, site, { forbidden_terms: terms });
+      setSaved(true);
+    } catch (err) {
+      onError(String(err));
+    }
+    setBusy(false);
+  }
+
+  if (!site) return <Loader />;
+  return (
+    <Card>
+      <Text fw={700}>提案者と表現チェック</Text>
+      <Text size="sm" c="dimmed" mb="md">
+        提案者は全案件の表紙に表示されます。禁止語は ingest CLI の push 時に原稿から探し、見つかれば push を止めます（クライアントには表示されません）。
+      </Text>
+      <form onSubmit={submit}>
+        <Stack gap="sm">
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+            <TextInput
+              label="提案者（自社名）"
+              placeholder="<自社名>"
+              value={site.vendor_name}
+              onChange={(e) => setSite({ ...site, vendor_name: e.currentTarget.value })}
+            />
+            <TextInput
+              label="担当者"
+              placeholder="永田"
+              value={site.contact}
+              onChange={(e) => setSite({ ...site, contact: e.currentTarget.value })}
+            />
+          </SimpleGrid>
+          <TagsInput
+            label="禁止語"
+            description="社内のあだ名など、クライアント向けの資料に出してはいけない語。Enter で追加します"
+            value={terms}
+            onChange={setTerms}
+            clearable
+          />
+          <Group gap="sm">
+            <Button type="submit" loading={busy}>保存</Button>
+            {saved && <Text size="sm" c="teal">保存しました</Text>}
+          </Group>
+        </Stack>
+      </form>
+    </Card>
   );
 }
 

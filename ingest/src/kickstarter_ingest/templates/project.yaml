@@ -12,3 +12,6 @@ color: brand   # 表紙のキー色: brand | blue | indigo | violet | grape | pi
 # 以降の追加・削除はサイトの「案件の管理」画面（管理者のみ）で行います。
 members:
   - you@example.com
+# クライアントに見せてはいけない語（社内のあだ名など。省略可）。push 前に原稿から探し、見つかれば止めます。
+# サイトには送りません。全案件に共通の禁止語はサイトの「案件の管理」画面で設定します
+forbidden_terms: []

@@ -18,7 +18,7 @@ flowchart LR
 | --- | --- | --- |
 | フロントエンド | React + Vite | 学習コストが低く高速 |
 | 認証 | Firebase Auth | メール/Googleログインを標準提供 |
-| データ | Firestore | サーバーレスで無料枠あり |
+| データ | Firestore | サーバー管理が不要で、利用状況に応じて拡張できる |
 
 ## 決定事項
 

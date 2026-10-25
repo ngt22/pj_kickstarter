@@ -7,6 +7,7 @@ from firebase_admin import auth, credentials, firestore
 from google.auth.credentials import AnonymousCredentials
 
 from .loader import LoadResult
+from .models import ProjectMeta
 
 
 class _EmulatorCredential(credentials.Base):
@@ -34,7 +35,7 @@ def push(result: LoadResult, gcp_project: str | None) -> int:
     is_new = not project_ref.get().exists
     batch = db.batch()
     # 閲覧者は案件ドキュメントに載せない（クライアント同士でメールが見えないように access に分ける）
-    batch.set(project_ref, {**result.meta.model_dump(exclude={"members"}), "updatedAt": firestore.SERVER_TIMESTAMP})
+    batch.set(project_ref, {**result.meta.model_dump(exclude=ProjectMeta.PRIVATE_FIELDS), "updatedAt": firestore.SERVER_TIMESTAMP})
     # members は新規案件の初期値としてだけ使う。以降は管理画面で外した人を push で戻さないよう、触らない
     for email in result.meta.members if is_new else []:
         batch.set(
@@ -63,6 +64,13 @@ def push(result: LoadResult, gcp_project: str | None) -> int:
             batch.delete(snap.reference)
     batch.commit()
     return len(result.docs)
+
+
+def forbidden_terms(gcp_project: str | None) -> list[str]:
+    """管理画面で設定したサイト共通の禁止語（settings/private）。未設定なら空。"""
+    _init(gcp_project)
+    snap = firestore.client().collection("settings").document("private").get()
+    return list((snap.to_dict() or {}).get("forbidden_terms", [])) if snap.exists else []
 
 
 def set_admin(email: str, admin: bool, gcp_project: str | None) -> None:

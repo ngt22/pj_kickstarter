@@ -19,7 +19,8 @@ import os
 import sys
 from pathlib import Path
 
-from .loader import load_project
+from .loader import LoadResult, load_project
+from .wording import check_wording
 
 
 def report(path: Path):
@@ -29,6 +30,20 @@ def report(path: Path):
     for e in result.errors:
         print(f"[error] {e}", file=sys.stderr)
     return result
+
+
+def report_wording(result: LoadResult, forbidden_terms: list[str] = (), push: bool = False) -> bool:
+    """表現チェックの結果を表示し、push を止めるべきものがあれば False を返す。"""
+    wording = check_wording(result, forbidden_terms)
+    for f in wording.blocking:
+        # validate では止めない（対話モードで書きかけのまま検証するため）。push では止める
+        level, when = ("[error]", "") if push else ("[warn]", "。push する前に直してください")
+        print(f"{level} {f} はクライアント向けの資料に出せません（禁止語・雛形の仮の文字）{when}", file=sys.stderr)
+    for f in wording.warnings:
+        print(f"[warn] {f} がクライアント向けの表現か確認してください")
+    if wording.undecided:
+        print(f"[warn] 「未定」が {wording.undecided} 箇所あります。提出前に決めるか「別途ご相談」などに書き換えてください")
+    return not wording.blocking
 
 
 def add_target_args(p: argparse.ArgumentParser, emulator_help: str) -> None:
@@ -196,6 +211,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "push":
         return push(args, result)
+    # validate はオフラインで動くよう、サイト共通の禁止語は見ない（push 時に確認する）
+    report_wording(result)
     return 0
 
 
@@ -205,7 +222,12 @@ def push(args: argparse.Namespace, result) -> int:
             os.environ.setdefault("FIRESTORE_EMULATOR_HOST", "localhost:8080")
         from .firestore import push as admin_push
 
+        from .firestore import forbidden_terms
+
         gcp_project = args.gcp_project or ("demo-kickstarter" if args.emulator else None)
+        if not report_wording(result, forbidden_terms(gcp_project), push=True):
+            print("[error] 上の語を直してから push してください", file=sys.stderr)
+            return 1
         count = admin_push(result, gcp_project)
         print(f"[ok] {count} 件を Firestore に投入しました")
         return 0
@@ -221,6 +243,9 @@ def push(args: argparse.Namespace, result) -> int:
         )
         return 1
     try:
+        if not report_wording(result, remote.forbidden_terms(creds), push=True):
+            print("[error] 上の語を直してから push してください", file=sys.stderr)
+            return 1
         count = remote.push(result, creds)
     except remote.RemoteError as e:
         print(f"[error] {e}", file=sys.stderr)

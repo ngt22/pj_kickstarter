@@ -15,6 +15,7 @@ from typing import Any
 import requests
 
 from .loader import LoadResult
+from .models import ProjectMeta
 
 TIMEOUT = 30
 EMULATOR_AUTH = "localhost:9099"
@@ -194,7 +195,7 @@ def build_writes(result: LoadResult, database: str, is_new: bool, existing_docs:
     assert result.meta is not None
     root = f"{database}/documents"
     project = f"{root}/projects/{result.meta.id}"
-    writes = [_set(project, result.meta.model_dump(exclude={"members"}))]
+    writes = [_set(project, result.meta.model_dump(exclude=ProjectMeta.PRIVATE_FIELDS))]
     # members は新規案件の初期値としてだけ使う。以降は管理画面で外した人を push で戻さないよう、触らない
     for email in result.meta.members if is_new else []:
         writes.append(
@@ -219,6 +220,21 @@ def build_writes(result: LoadResult, database: str, is_new: bool, existing_docs:
     # 原稿から消したドキュメントは Firestore からも消す
     writes.extend({"delete": f"{project}/docs/{t}"} for t in sorted(existing_docs - keep))
     return writes
+
+
+def forbidden_terms(creds: Credentials) -> list[str]:
+    """管理画面で設定したサイト共通の禁止語（settings/private）。未設定なら空。"""
+    token = id_token(creds)
+    check_admin(token)
+    res = requests.get(
+        creds.firestore_url("/settings/private"), headers={"Authorization": f"Bearer {token}"}, timeout=TIMEOUT
+    )
+    if res.status_code == 404:
+        return []
+    if not res.ok:
+        raise RemoteError(_error_message(res))
+    values = res.json().get("fields", {}).get("forbidden_terms", {}).get("arrayValue", {}).get("values", [])
+    return [v["stringValue"] for v in values if "stringValue" in v]
 
 
 def push(result: LoadResult, creds: Credentials) -> int:

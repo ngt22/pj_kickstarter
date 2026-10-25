@@ -26,6 +26,8 @@ pj_kickstarter/
 | `projects/{id}` | `project.yaml` の内容（name, summary, status）と updatedAt |
 | `projects/{id}/docs/{type}` | type, title, order, format（markdown / yaml）, body（原文）, updatedAt |
 | `access/{email}` | 閲覧権限。projects（閲覧できる案件IDの配列）, updatedAt。ドキュメントIDは小文字のメールアドレス |
+| `settings/site` | 表紙に出す提案者。vendor_name（自社名）, contact（担当者）, updatedAt。ログインした人なら読める |
+| `settings/private` | push 時の禁止語。forbidden_terms, updatedAt。管理者だけが読み書きできる |
 
 閲覧者リストを案件ドキュメントとは別の `access` に持つので、クライアントは自分の権限しか読めず、同じ案件の他の閲覧者のメールアドレスは見えません。
 
@@ -51,6 +53,8 @@ uv run kickstarter-ingest admin grant boss@example.com --emulator
 クライアントの閲覧権限は、管理者がサイト右上の「案件の管理」から案件ごとにメールアドレスで追加・削除します。サインアップ前のメールアドレスも指定でき、そのアドレスでログインした時点で閲覧できるようになります。`project.yaml` の `members` は新規案件を初めて push したときの初期値としてだけ使い、以降の push では閲覧権限を変更しません。
 
 新しい案件は「案件の管理」の「新規案件」から、案件ID・案件名などを入力して作成できます。14種のドキュメントには `kickstarter-ingest init` と同じ雛形（記入例）が入るので、Claude との対話や ingest CLI の push で中身を書き換えてください。雛形はサイトで公開している `/templates` から読むため、ingest 側で雛形を直してデプロイすれば反映されます。
+
+「案件の管理」の「提案者と表現チェック」では、全案件の表紙に出す提案者（自社名・担当者）と、クライアント向けの資料に出してはいけない禁止語（社内のあだ名など）を設定します。ingest CLI は push の前に、禁止語と雛形の仮の文字（〇〇）が原稿に残っていないかを調べ、見つかれば push を止めます。原価・粗利・無料枠・TODO などの注意語と「未定」は警告だけ出します。
 
 不要になった案件（試しに push したものなど）は、「案件の管理」で案件の「削除」を押し、確認のため案件IDを入力すると削除できます。原稿（docs）と、その案件の閲覧権限もまとめて消えます。元の原稿ファイルは残るので、もう一度 push すれば復元できます。
 

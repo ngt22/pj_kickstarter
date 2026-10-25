@@ -131,6 +131,37 @@ describe("閲覧権限（access）", () => {
   });
 });
 
+describe("サイト設定（settings）", () => {
+  const site = { vendor_name: "<自社名>", contact: "永田", updatedAt: serverTimestamp() };
+  const priv = { forbidden_terms: ["あだ名"], updatedAt: serverTimestamp() };
+
+  it("管理者は提案者と禁止語を書ける", async () => {
+    const db = user("admin@example.com", { admin: true });
+    await assertSucceeds(setDoc(doc(db, "settings/site"), site));
+    await assertSucceeds(setDoc(doc(db, "settings/private"), priv));
+    await assertSucceeds(getDoc(doc(db, "settings/private")));
+  });
+
+  it("クライアントは提案者を読めるが、禁止語は読めず、どちらも書けない", async () => {
+    const db = user("member@example.com");
+    await assertSucceeds(getDoc(doc(db, "settings/site")));
+    await assertFails(getDoc(doc(db, "settings/private")));
+    await assertFails(setDoc(doc(db, "settings/site"), site));
+    await assertFails(setDoc(doc(db, "settings/private"), priv));
+  });
+
+  it("未ログインは提案者も読めない", async () => {
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), "settings/site")));
+  });
+
+  it("管理者でも不正な形の設定は書けない", async () => {
+    const db = user("admin@example.com", { admin: true });
+    await assertFails(setDoc(doc(db, "settings/site"), { ...site, extra: 1 }));
+    await assertFails(setDoc(doc(db, "settings/private"), { forbidden_terms: "あだ名" }));
+    await assertFails(setDoc(doc(db, "settings/other"), { x: 1 }));
+  });
+});
+
 describe("案件の削除", () => {
   beforeAll(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {

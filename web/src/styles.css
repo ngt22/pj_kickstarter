@@ -1073,119 +1073,211 @@ table {
   border-left: 4px solid var(--mantine-primary-color-filled);
 }
 
-/* ユースケース図: 無地のキャンバスに、薄い面のシステム境界とフラットなチップ。色はアクターと線だけに使う */
+/* ユースケース図（components/UsecaseDiagram.tsx）: 線を使わず、区画の面 → アクターの段 → 左に色帯のあるカードで組む。
+   枠線は条件付きのカード（点線）だけに使い、ほかは面の濃淡とごく薄い影で分ける */
 .uc {
-  position: relative;
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-lg);
-  background: var(--ks-surface);
-  overflow: hidden;
-}
-.uc .react-flow {
-  --xy-background-color: transparent;
-}
-.uc-system {
-  width: 100%;
-  height: 100%;
-  border-radius: var(--mantine-radius-lg);
-  background: var(--ks-subtle);
-}
-/* システム名は境界の上辺にかぶせたタグにする */
-.uc-system-name {
-  display: inline-block;
-  transform: translate(16px, -50%);
-  padding: 2px 10px;
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: 999px;
-  background: var(--mantine-color-body);
-  color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-.uc-case {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 1px;
-  padding: 6px var(--mantine-spacing-md);
-  border: 1px solid var(--mantine-color-default-border);
-  border-left-width: 3px;
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-body);
-  cursor: pointer;
-  transition: border-color 120ms, background-color 120ms, box-shadow 120ms;
-}
-.uc-case:hover {
-  border-top-color: var(--mantine-color-gray-5);
-  border-right-color: var(--mantine-color-gray-5);
-  border-bottom-color: var(--mantine-color-gray-5);
-}
-.uc-case-id {
-  font-family: var(--mantine-font-family-monospace);
+  margin: var(--mantine-spacing-lg) 0;
+  font-family: var(--mantine-font-family);
+  line-height: 1.5;
   letter-spacing: 0.02em;
 }
+.uc-zone {
+  padding: var(--mantine-spacing-lg) var(--mantine-spacing-xl) var(--mantine-spacing-xl);
+  background: var(--ks-subtle);
+  border-radius: var(--mantine-radius-lg);
+}
+.uc-zone-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  margin-bottom: var(--mantine-spacing-md);
+}
+.uc-zone-tag {
+  padding: 2px 14px;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 700;
+  color: var(--mantine-color-white);
+  border-radius: var(--mantine-radius-xl);
+}
+.uc-zone-note {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-dimmed);
+}
+.uc-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--mantine-spacing-lg);
+  align-items: center;
+  padding: var(--mantine-spacing-md) 0;
+}
+.uc-row + .uc-row {
+  border-top: 1px dashed var(--mantine-color-default-border);
+}
 .uc-actor {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  cursor: pointer;
+  gap: 2px;
+  text-align: center;
+}
+/* アクターからカードの並びへの短い引き出し線 */
+.uc-row:has(.uc-avatar) .uc-row-body::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(var(--mantine-spacing-lg) * -1 - 4px);
+  width: calc(var(--mantine-spacing-lg) - 4px);
+  border-top: 1px solid var(--mantine-color-gray-5);
 }
 .uc-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border: 1.5px solid;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 6px;
+  background: var(--ks-surface);
   border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
 }
-.uc-handle {
-  opacity: 0;
-  pointer-events: none;
-}
-.uc .uc-use .react-flow__edge-path {
-  stroke-width: 1.25;
-}
-.uc .uc-rel .react-flow__edge-path {
-  stroke: var(--mantine-color-gray-5);
-  stroke-width: 1.5;
-  stroke-dasharray: 1 5;
-  stroke-linecap: round;
-}
-.uc .uc-rel .react-flow__edge-text {
-  font-size: 11px;
-  font-weight: 500;
-  fill: var(--mantine-color-dimmed);
-}
-.uc .uc-rel .react-flow__edge-textbg {
-  fill: var(--mantine-color-body);
-  stroke: var(--mantine-color-default-border);
-}
-.uc-selected .uc-case {
-  border-top-color: var(--mantine-color-brand-filled);
-  border-right-color: var(--mantine-color-brand-filled);
-  border-bottom-color: var(--mantine-color-brand-filled);
-  box-shadow: 0 0 0 3px var(--mantine-color-brand-light);
-}
-.uc-selected .uc-avatar {
-  box-shadow: 0 0 0 3px var(--mantine-color-brand-light);
-}
-.uc .uc-dim {
-  opacity: 0.35;
-}
-.uc-detail {
-  max-width: 280px;
-  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
-  border: 1px solid var(--mantine-color-default-border);
+.uc-avatar[data-kind="system"] {
   border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-body);
-  box-shadow: var(--mantine-shadow-sm);
 }
-/* スマホでは図が小さいので操作ボタンは出さない（「全画面で見る」で操作する） */
+.uc-actor-name {
+  font-size: var(--mantine-font-size-md);
+  font-weight: 700;
+  color: var(--mantine-color-text);
+}
+.uc-actor-note {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+.uc-row-body {
+  position: relative;
+  min-width: 0;
+}
+.uc-inherits {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--mantine-spacing-xs);
+}
+.uc-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--mantine-spacing-sm);
+}
+.uc-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 76px;
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md) var(--mantine-spacing-sm) calc(var(--mantine-spacing-md) + 3px);
+  background: var(--ks-surface);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), inset 3px 0 0 var(--uc-color);
+}
+.uc-card[data-condition] {
+  background: transparent;
+  box-shadow: inset 3px 0 0 var(--uc-color);
+  outline: 1px dashed var(--mantine-color-gray-5);
+  outline-offset: -1px;
+}
+.uc-card-id {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--mantine-color-dimmed);
+}
+.uc-card-name {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--mantine-color-text);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.uc-card-sub {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+/* 区画の間の受け渡し（同期など） */
+.uc-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mantine-spacing-xs);
+  padding: var(--mantine-spacing-md) 0;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-dimmed);
+}
+.uc-flow b {
+  color: var(--mantine-color-text);
+}
+.uc-flow::before,
+.uc-flow::after {
+  content: "";
+  flex: 1;
+  border-top: 2px dashed var(--mantine-color-default-border);
+}
+.uc-flow::before {
+  margin-right: var(--mantine-spacing-sm);
+}
+.uc-flow::after {
+  margin-left: var(--mantine-spacing-sm);
+}
+.uc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-xs) var(--mantine-spacing-lg);
+  margin-top: var(--mantine-spacing-sm);
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+.uc-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.uc-legend-card {
+  width: 18px;
+  height: 12px;
+  background: var(--ks-surface);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--mantine-color-default-border);
+}
+.uc-legend-card[data-condition] {
+  background: transparent;
+  box-shadow: none;
+  outline: 1px dashed var(--mantine-color-gray-5);
+}
+.uc-legend-flow {
+  width: 18px;
+  border-top: 2px dashed var(--mantine-color-gray-5);
+}
 @media (max-width: 48em) {
-  .uc .react-flow__controls {
+  .uc-zone {
+    padding: var(--mantine-spacing-md);
+  }
+  .uc-row {
+    grid-template-columns: 1fr;
+    gap: var(--mantine-spacing-sm);
+  }
+  .uc-actor {
+    flex-direction: row;
+    gap: var(--mantine-spacing-xs);
+  }
+  .uc-avatar {
+    width: 36px;
+    height: 36px;
+    margin: 0;
+  }
+  .uc-row:has(.uc-avatar) .uc-row-body::before {
     display: none;
   }
 }

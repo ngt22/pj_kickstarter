@@ -1,5 +1,5 @@
-import { ActionIcon, Box, Button, Code, Group, Modal, SegmentedControl, Text, Title, Tooltip, useMantineTheme } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { Box, Button, Code, Group, Modal, SegmentedControl, Text, Tooltip } from "@mantine/core";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseYaml } from "../lib/docs";
 import {
@@ -15,9 +15,10 @@ import {
   type Scale,
 } from "../lib/gantt";
 
-const LABEL_W = 260;
-const ROW_H = 34;
-const HEADER_H = 52;
+// 紙の工程表（Editorial）: 色を使わず、罫線と墨の線で組み、今日とマイルストーンだけ朱で示す。
+// ユースケース図・ページ遷移図・ER図とは別の見た目にして、日程の資料だと一目で分かるようにする
+const ROW_H = 36;
+const HEADER_H = 72;
 
 type Tick = { day: number; label: string };
 
@@ -74,7 +75,7 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
   const [closed, setClosed] = useState<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const today = todayDay();
-  const chartColors: string[] = useMantineTheme().other.chartColors;
+  const LABEL_W = useMediaQuery("(max-width: 48em)") ? 150 : 260;
 
   // 前後に余白を取り、目盛りの切れ目にそろえる
   const pad = scale === "day" ? 3 : scale === "week" ? 14 : 45;
@@ -112,13 +113,13 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
     });
 
   const bodyH = rows.length * ROW_H;
-  const color = (si: number) => chartColors[si % chartColors.length];
 
   return (
     <>
       <Group justify="space-between" mb="xs" gap="xs">
         <SegmentedControl
           size="xs"
+          className="gantt-scale"
           value={scale}
           onChange={(v) => setScale(v as Scale)}
           data={[
@@ -128,9 +129,9 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
           ]}
         />
         <Group gap="xs">
-          <Button size="xs" variant="default" onClick={() => scrollToDay(today)}>今日</Button>
-          <Button size="xs" variant="default" onClick={() => setClosed(new Set())}>すべて開く</Button>
-          <Button size="xs" variant="default" onClick={() => setClosed(new Set(sectionNames.map((_, i) => i)))}>
+          <Button size="compact-xs" variant="subtle" color="gray" onClick={() => scrollToDay(today)}>今日</Button>
+          <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setClosed(new Set())}>すべて開く</Button>
+          <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setClosed(new Set(sectionNames.map((_, i) => i)))}>
             すべて閉じる
           </Button>
         </Group>
@@ -138,7 +139,7 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
       <div className="gantt" ref={scrollRef} style={{ maxHeight }}>
         <div style={{ width: LABEL_W + width, position: "relative" }}>
           <div className="gantt-header" style={{ height: HEADER_H }}>
-            <div className="gantt-label gantt-corner" style={{ width: LABEL_W }}>タスク</div>
+            <div className="gantt-label gantt-corner" style={{ width: LABEL_W }}>工程</div>
             <div style={{ position: "relative", width, height: HEADER_H }}>
               {top.map((t) => (
                 <div key={`t${t.day}`} className="gantt-tick gantt-tick-top" style={{ left: x(t.day) }}>{t.label}</div>
@@ -152,6 +153,9 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
                   {t.label}
                 </div>
               ))}
+              {today >= from && today <= to && (
+                <div className="gantt-today-tag" style={{ left: x(today) + dw / 2 }}>今日</div>
+              )}
             </div>
           </div>
 
@@ -173,56 +177,51 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
                 const e = Math.max(...ts.map((t) => t.end));
                 return (
                   <div key={`s${r.section}`} className="gantt-row gantt-section" style={{ height: ROW_H }}>
-                    <div className="gantt-label" style={{ width: LABEL_W }} onClick={() => toggle(r.section)}>
-                      <ActionIcon size="xs" variant="subtle" color="gray" aria-label="開閉">
-                        {closed.has(r.section) ? "▸" : "▾"}
-                      </ActionIcon>
-                      <Text fw={700} size="sm" truncate>{sectionNames[r.section]}</Text>
-                      <Text size="xs" c="dimmed" ml="auto">{ts.length}</Text>
+                    <div
+                      className="gantt-label"
+                      style={{ width: LABEL_W }}
+                      role="button"
+                      aria-expanded={!closed.has(r.section)}
+                      onClick={() => toggle(r.section)}
+                    >
+                      <span className="gantt-sec-mark">§</span>
+                      <span className="gantt-sec-name">{sectionNames[r.section]}</span>
+                      <span className="gantt-sec-count">
+                        {ts.length}件 {closed.has(r.section) ? "＋" : "−"}
+                      </span>
                     </div>
                     {ts.length > 0 && (
-                      <div
-                        className="gantt-summary"
-                        style={{ left: LABEL_W + x(s), width: Math.max((e - s) * dw, 2), background: `var(--mantine-color-${color(r.section)}-filled)` }}
-                      />
+                      <div className="gantt-summary" style={{ left: LABEL_W + x(s), width: Math.max((e - s) * dw, 2) }}>
+                        <span className="gantt-summary-dates">
+                          {formatDay(s)} – {formatDay(e - 1)}
+                        </span>
+                      </div>
                     )}
                   </div>
                 );
               }
               const t = r.task;
-              const c = color(t.section);
               const barW = Math.max((t.end - t.start) * dw, 3);
               const inside = !t.milestone && barW > t.name.length * 13 + 16;
               return (
                 <div key={t.key} className="gantt-row" style={{ height: ROW_H }}>
-                  <div className="gantt-label" style={{ width: LABEL_W, paddingLeft: 32 }}>
+                  <div className="gantt-label gantt-task-label" style={{ width: LABEL_W }}>
                     <Text size="sm" truncate title={t.name}>{t.name}</Text>
-                    {t.owner && <Text size="xs" c="dimmed" ml="auto" style={{ whiteSpace: "nowrap" }}>{t.owner}</Text>}
+                    {t.owner && <span className="gantt-owner">{t.owner}</span>}
                   </div>
                   <Tooltip label={<TaskTooltip task={t} />} withArrow openDelay={150}>
                     {t.milestone ? (
-                      <div
-                        className="gantt-milestone"
-                        style={{ left: LABEL_W + x(t.start) - 7, background: `var(--mantine-color-${c}-filled)` }}
-                      />
+                      <div className="gantt-milestone" style={{ left: LABEL_W + x(t.start) - 6 }} />
                     ) : (
                       <div
                         className="gantt-bar"
-                        style={{
-                          left: LABEL_W + x(t.start),
-                          width: barW,
-                          background: `var(--mantine-color-${c}-light)`,
-                          borderColor: `var(--mantine-color-${c}-filled)`,
-                          color: `var(--mantine-color-${c}-light-color)`,
-                        }}
+                        data-done={t.progress === 100 || undefined}
+                        style={{ left: LABEL_W + x(t.start), width: barW }}
                       >
-                        {inside && t.name}
                         {t.progress != null && (
-                          <div
-                            className="gantt-progress"
-                            style={{ width: `${Math.min(100, Math.max(0, t.progress))}%`, background: `var(--mantine-color-${c}-filled)` }}
-                          />
+                          <div className="gantt-progress" style={{ width: `${Math.min(100, Math.max(0, t.progress))}%` }} />
                         )}
+                        {inside && <span className="gantt-bar-text">{t.name}</span>}
                       </div>
                     )}
                   </Tooltip>
@@ -239,7 +238,7 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
             <svg className="gantt-deps" style={{ left: LABEL_W }} width={width} height={bodyH}>
               <defs>
                 <marker id="gantt-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-                  <path d="M0,0 L8,4 L0,8 z" fill="var(--mantine-color-gray-6)" />
+                  <path d="M0,0 L8,4 L0,8 z" fill="var(--ed-muted)" />
                 </marker>
               </defs>
               {rows.map((r, i) => {
@@ -250,7 +249,7 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
                   if (j == null || !dep) return null;
                   const x1 = x(dep.end);
                   const y1 = j * ROW_H + ROW_H / 2;
-                  const x2 = x(r.task.start) - (r.task.milestone ? 7 : 0);
+                  const x2 = x(r.task.start) - (r.task.milestone ? 9 : 0);
                   const y2 = i * ROW_H + ROW_H / 2;
                   const mid = Math.max(x1 + 6, Math.min(x2 - 6, x1 + 12));
                   return (
@@ -258,8 +257,8 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
                       key={`${d}-${r.task.key}`}
                       d={`M${x1},${y1} H${mid} V${y2} H${x2}`}
                       fill="none"
-                      stroke="var(--mantine-color-gray-6)"
-                      strokeWidth={1.2}
+                      stroke="var(--ed-muted)"
+                      strokeWidth={1}
                       markerEnd="url(#gantt-arrow)"
                     />
                   );
@@ -291,12 +290,15 @@ export default function Gantt({ source }: { source: string }) {
 
   return (
     <Box className="gantt-wrap" my="md">
-      <Group justify="space-between" mb="xs">
-        <Title order={4}>{spec.title ?? "スケジュール"}</Title>
-        <Button size="xs" variant="light" onClick={open}>全画面で見る</Button>
-      </Group>
+      <header className="gantt-head">
+        <div>
+          <div className="gantt-kicker">Schedule</div>
+          <div className="gantt-title">{spec.title ?? "スケジュール"}</div>
+        </div>
+        <Button size="compact-xs" variant="subtle" color="gray" onClick={open}>全画面で見る</Button>
+      </header>
       <Chart tasks={tasks} sectionNames={sectionNames} maxHeight="70vh" />
-      <Modal opened={full} onClose={close} fullScreen title={spec.title ?? "スケジュール"}>
+      <Modal opened={full} onClose={close} fullScreen title={spec.title ?? "スケジュール"} classNames={{ body: "gantt-wrap" }}>
         <Chart tasks={tasks} sectionNames={sectionNames} maxHeight="calc(100vh - 140px)" />
       </Modal>
     </Box>

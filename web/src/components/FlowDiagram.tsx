@@ -92,7 +92,14 @@ function Lane({ lane, color, width, marker }: { lane: FlowLane; color: string; w
         </svg>
         {lane.edges.map((e) =>
           e.label ? (
-            <span key={e.id} className="fl-edge-label" data-back={e.back || undefined} style={{ left: e.lx, top: e.ly }}>
+            <span
+              key={e.id}
+              className="fl-edge-label"
+              data-back={e.back || undefined}
+              data-side={e.side}
+              data-align={e.align}
+              style={{ left: e.lx, top: e.ly }}
+            >
               {e.label}
             </span>
           ) : null,

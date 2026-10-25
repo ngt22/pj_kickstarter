@@ -26,7 +26,9 @@ export const NOTE_W = 260;
 const COLORS = ["teal", "indigo", "grape", "orange", "cyan", "pink"];
 
 export type FlowNode = { id: string; kind: "screen" | "terminal"; label: string; x: number; y: number; w: number; h: number; role?: "start" | "end" };
-export type FlowEdge = { id: string; path: string; label?: string; lx: number; ly: number; back: boolean };
+// ラベルは線にかぶせず、線の横の空いている側に置く: (lx, ly) は線の上の点、side はその点から見てラベルを置く側、
+// align はラベルのどこを lx に合わせるか（end: 右端。行き先のカードの手前に寄せる）
+export type FlowEdge = { id: string; path: string; label?: string; lx: number; ly: number; side: "above" | "below"; align: "center" | "end"; back: boolean };
 export type FlowLane = { id: string; name?: string; note?: string; noteX: number; width: number; height: number; nodes: FlowNode[]; edges: FlowEdge[] };
 export type FlowZone = { id: string; name: string; note?: string; footnote?: string; color: string; lanes: FlowLane[]; flowAfter?: { label: string; note?: string; up: boolean } };
 export type FlowLayout = { zones: FlowZone[]; width: number; hasBack: boolean; hasFlow: boolean; notes: string[] };
@@ -34,13 +36,20 @@ export type FlowLayout = { zones: FlowZone[]; width: number; hasBack: boolean; h
 type Elk = InstanceType<typeof ELK>;
 let elk: Elk | undefined;
 
+// ラベルの幅の見積もり（12px の文字 + 左右の余白）
+const labelWidth = (label?: string) => (label ? [...label].reduce((w, ch) => w + (ch.charCodeAt(0) < 0x100 ? 7 : 12), 0) + 22 : 0);
+
 const center = (n: FlowNode) => ({ x: n.x + n.w / 2, y: n.y + n.h / 2 });
 
 function forwardEdge(s: FlowNode, t: FlowNode): Omit<FlowEdge, "id" | "label" | "back"> {
   const a = { x: s.x + s.w, y: center(s).y };
   const b = { x: t.x, y: center(t).y };
   const dx = Math.max(24, (b.x - a.x) / 2);
-  return { path: `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`, lx: (a.x + b.x) / 2, ly: (a.y + b.y) / 2 };
+  const path = `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
+  // まっすぐな線はラベルを真ん中の上に。曲がる線は、行き先の手前の水平な部分の、曲線が来ない側に置く
+  // （下っていく線は手前の左上を曲線が通るので下側、上っていく線は上側）
+  if (Math.abs(b.y - a.y) < 4) return { path, lx: (a.x + b.x) / 2, ly: (a.y + b.y) / 2, side: "above", align: "center" };
+  return { path, lx: b.x - 10, ly: b.y, side: b.y > a.y ? "below" : "above", align: "end" };
 }
 
 // 戻る線: 両方のカードの下をくぐって、戻り先のカードの下辺に入る
@@ -48,7 +57,8 @@ function backEdge(s: FlowNode, t: FlowNode, bottom: number): Omit<FlowEdge, "id"
   const a = { x: center(s).x, y: s.y + s.h };
   const b = { x: center(t).x, y: t.y + t.h };
   const low = bottom + BACK_DIP;
-  return { path: `M${a.x},${a.y} C${a.x},${low} ${b.x},${low} ${b.x},${b.y}`, lx: (a.x + b.x) / 2, ly: 0.125 * a.y + 0.75 * low + 0.125 * b.y };
+  // ラベルは線のいちばん低いところのさらに下に置く
+  return { path: `M${a.x},${a.y} C${a.x},${low} ${b.x},${low} ${b.x},${b.y}`, lx: (a.x + b.x) / 2, ly: 0.125 * a.y + 0.75 * low + 0.125 * b.y, side: "below", align: "center" };
 }
 
 export async function layoutFlow(spec: FlowSpec): Promise<FlowLayout> {
@@ -80,7 +90,10 @@ export async function layoutFlow(spec: FlowSpec): Promise<FlowLayout> {
           "elk.algorithm": "layered",
           "elk.direction": "RIGHT",
           "elk.spacing.nodeNode": String(NODE_GAP),
-          "elk.layered.spacing.nodeNodeBetweenLayers": String(LAYER_GAP),
+          // 列の間はラベルが収まる幅にする（ラベルがカードの下に潜らないように）
+          "elk.layered.spacing.nodeNodeBetweenLayers": String(
+            Math.max(LAYER_GAP, ...laneEdges.filter((e) => e.type !== "back").map((e) => labelWidth(e.label) + 32)),
+          ),
           "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
           "elk.padding": `[top=${LANE_PAD},left=0,bottom=${LANE_PAD},right=0]`,
         },
@@ -120,7 +133,7 @@ export async function layoutFlow(spec: FlowSpec): Promise<FlowLayout> {
         note: lane.note,
         noteX: right + NOTE_GAP,
         width: right + (lane.note ? NOTE_GAP + NOTE_W : 0),
-        height: bottom + (hasBack ? BACK_DIP + 12 : 0) + LANE_PAD,
+        height: bottom + (hasBack ? BACK_DIP + 34 : 0) + LANE_PAD, // 戻る線と、その下のラベルの分
         nodes,
         edges: flowEdges,
       });

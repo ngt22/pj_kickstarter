@@ -561,10 +561,68 @@ class FlowBlock(Strict):
         return self
 
 
+ArchKind = Literal["user", "device", "web", "app", "server", "function", "db", "storage", "auth", "queue", "mail", "external", "batch"]
+
+
+class ArchZone(Strict):
+    id: str = Field(description="nodes の zone から参照する id")
+    name: str = Field(description="区画名（例: 利用者の端末、クラウド、外部サービス、社内システム）")
+    note: str | None = Field(None, description="区画の補足（例: Firebase（東京リージョン））")
+    color: ThemeColor | None = Field(None, description="区画の色（省略すると自動）")
+    external: bool = Field(False, description="true にすると点線の枠で描く（外部サービス・既存システムなど）")
+
+
+class ArchNode(Strict):
+    id: str = Field(description="links から参照する id")
+    name: str = Field(description="役割の名前（例: 予約サイト、予約データ）。全角10文字以内が目安")
+    kind: ArchKind = Field(
+        "server",
+        description="種類（アイコン）: user 利用者 / device 端末 / web 画面 / app アプリ / server / function / db / storage / auth / queue / mail / external 外部API / batch 定期処理",
+    )
+    tech: str | None = Field(None, description="技術名（例: Firestore、Cloud Functions）。カードの上に小さく出る")
+    note: str | None = Field(None, description="カードの下に小さく出す補足")
+    zone: str | None = Field(None, description="置く区画の id（省略すると最初の区画）")
+
+
+class ArchLink(Strict):
+    from_: str = Field(alias="from", description="線の元の id")
+    to: str = Field(description="線の先の id")
+    label: str | None = Field(None, description="線に添える文字（例: 予約の読み書き）")
+    type: Literal["sync", "async"] = Field("sync", description="sync: 通信・呼び出し / async: 通知・定期処理など（点線）")
+    both: bool = Field(False, description="true にすると両方向の矢印")
+
+
+class ArchBlock(Strict):
+    """```arch ブロック（システム構成図）。区画を上から下へ重ね、区画の中にカードを左から右へ並べる。"""
+
+    zones: list[ArchZone] = Field(min_length=1)
+    nodes: list[ArchNode] = Field(min_length=1)
+    links: list[ArchLink] = []
+    notes: list[str] = []
+
+    @model_validator(mode="after")
+    def check_refs(self) -> "ArchBlock":
+        zones = [z.id for z in self.zones]
+        nodes = [n.id for n in self.nodes]
+        for kind, ids in (("区画", zones), ("カード", nodes)):
+            dup = sorted({i for i in ids if ids.count(i) > 1})
+            if dup:
+                raise ValueError(f"{kind}の id が重複しています: {dup}")
+        for n in self.nodes:
+            if n.zone is not None and n.zone not in zones:
+                raise ValueError(f"{n.id} の zone: {n.zone} がありません（候補: {', '.join(zones)}）")
+        for l in self.links:
+            for end in (l.from_, l.to):
+                if end not in nodes:
+                    raise ValueError(f"links の {end} がカードにありません（候補: {', '.join(nodes)}）")
+        return self
+
+
 BLOCK_MODELS: dict[str, type[BaseModel]] = {
     "gantt": GanttBlock,
     "mock": MockBlock,
     "er": ErBlock,
     "usecase": UsecaseBlock,
     "flow": FlowBlock,
+    "arch": ArchBlock,
 }

@@ -236,3 +236,14 @@ def test_screen_ids_are_cross_checked(tmp_path):
     warnings = load_project(path).warnings
     assert any("SC-20" in w and "ページ遷移図" in w for w in warnings)
     assert any("SC-99" in w for w in warnings)
+
+
+def test_invalid_arch_is_reported(tmp_path):
+    path = copy_sample(tmp_path)
+    spec = path / "tech-spec.md"
+    text = spec.read_text(encoding="utf-8")
+    spec.write_text(text.replace("{ from: web, to: db,", "{ from: web, to: database,", 1), encoding="utf-8")
+    assert any(e.startswith("tech-spec.md: arch") and "database" in e for e in load_project(path).errors)
+
+    spec.write_text(text.replace("kind: function", "kind: lambda", 1), encoding="utf-8")
+    assert any(e.startswith("tech-spec.md: arch") for e in load_project(path).errors)

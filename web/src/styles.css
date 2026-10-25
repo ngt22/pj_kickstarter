@@ -2024,3 +2024,171 @@ table {
 .ks-annot-jump:hover {
   background: var(--ks-subtle);
 }
+
+/* システム構成図（components/ArchDiagram.tsx）
+   淡いグレーの区画に白いカード（左に区画の色の帯）を置き、角の丸い直角の細線で結ぶ */
+.ar {
+  margin: var(--mantine-spacing-lg) 0;
+  font-family: var(--mantine-font-family);
+  line-height: 1.4;
+}
+.ar-defs {
+  position: absolute;
+}
+.ar-canvas {
+  position: relative;
+}
+.ar-zone {
+  position: absolute;
+  background: var(--ks-subtle);
+  border-radius: 16px;
+}
+.ar-zone[data-external] {
+  background: transparent;
+  border: 1.5px dashed var(--mantine-color-default-border);
+}
+.ar-zone header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px 0;
+  white-space: nowrap;
+}
+.ar-zone-tag {
+  padding: 2px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mantine-color-white);
+  background: var(--ar-color);
+  border-radius: var(--mantine-radius-xl);
+}
+.ar-zone[data-external] .ar-zone-tag {
+  color: var(--mantine-color-dimmed);
+  background: transparent;
+  border: 1px solid var(--mantine-color-default-border);
+}
+.ar-zone-note {
+  font-size: 12px;
+  color: var(--mantine-color-dimmed);
+}
+.ar-links {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.ar-link {
+  fill: none;
+  stroke: var(--mantine-color-gray-5);
+  stroke-width: 1.25;
+}
+.ar-link[data-async] {
+  stroke-dasharray: 5 4;
+}
+.ar-arrow {
+  fill: none;
+  stroke: var(--mantine-color-gray-5);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ar-link-label {
+  position: absolute;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--mantine-color-dimmed);
+  background: var(--ks-surface);
+  border-radius: 4px;
+  transform: translate(-50%, -50%);
+}
+.ar-link-label[data-anchor="start"] {
+  transform: translate(0, -50%);
+}
+.ar-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 12px 8px 16px;
+  background: var(--ks-surface);
+  border-radius: 8px;
+  box-shadow: inset 4px 0 0 var(--ar-color), 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 1px rgb(0 0 0 / 0.04);
+}
+.ar-card[data-external] {
+  box-shadow: inset 4px 0 0 var(--mantine-color-gray-5), 0 1px 2px rgb(0 0 0 / 0.06);
+}
+.ar-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  color: var(--mantine-color-dimmed);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-meta svg {
+  flex-shrink: 0;
+  color: var(--ar-color);
+}
+.ar-name {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-note {
+  font-size: 11px;
+  color: var(--mantine-color-dimmed);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-user {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 0 6px;
+  font-size: 14px;
+  white-space: nowrap;
+  background: var(--ks-surface);
+  border: 1.5px solid var(--ar-color);
+  border-radius: 999px;
+}
+.ar-user-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--mantine-color-white);
+  background: var(--ar-color);
+  border-radius: 50%;
+}
+.ar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px var(--mantine-spacing-lg);
+  margin-top: var(--mantine-spacing-sm);
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+.ar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ar-legend-line {
+  width: 28px;
+  border-top: 1.5px solid var(--mantine-color-gray-5);
+}
+.ar-legend-line[data-async] {
+  border-top-style: dashed;
+}
+.ar-legend-note {
+  margin-left: auto;
+}

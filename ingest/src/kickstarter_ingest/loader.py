@@ -1,5 +1,7 @@
 """案件ディレクトリを読み込み、検証済みのドキュメント一覧を返す。"""
 
+import hashlib
+import mimetypes
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,7 +10,10 @@ import yaml
 from pydantic import ValidationError
 
 from .doctypes import DOC_TYPES
-from .models import BLOCK_MODELS, YAML_MODELS, DocHeader, ProjectMeta
+from .models import BLOCK_MODELS, MAX_FILE_BYTES, YAML_MODELS, DocHeader, ProjectMeta
+
+# Firestore の 1 ドキュメントは 1MiB まで。ファイルはこの大きさに分けて blobs に保存する
+CHUNK_BYTES = 900 * 1024
 
 
 @dataclass
@@ -21,10 +26,41 @@ class LoadedDoc:
 
 
 @dataclass
+class LoadedFile:
+    """補足資料のファイル。id は中身のハッシュなので、変えていないファイルは push で送り直さない。"""
+
+    id: str
+    title: str
+    note: str
+    name: str
+    content_type: str
+    data: bytes
+
+    def chunks(self) -> list[bytes]:
+        return [self.data[i : i + CHUNK_BYTES] for i in range(0, len(self.data), CHUNK_BYTES)] or [b""]
+
+    def blob_ids(self) -> list[str]:
+        return [f"{self.id}-{i}" for i in range(len(self.chunks()))]
+
+    def record(self) -> dict:
+        """案件ドキュメントの files に載せる情報（中身は blobs に分けて置く）。"""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "note": self.note,
+            "name": self.name,
+            "content_type": self.content_type,
+            "size": len(self.data),
+            "chunks": len(self.chunks()),
+        }
+
+
+@dataclass
 class LoadResult:
     meta: ProjectMeta | None = None
     meta_text: str | None = None  # project.yaml の原文（表現チェック用）
     docs: list[LoadedDoc] = field(default_factory=list)
+    files: list[LoadedFile] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)  # push は止めないが確認してほしいこと
     missing: list[str] = field(default_factory=list)
@@ -73,6 +109,10 @@ def load_project(path: Path) -> LoadResult:
     if result.meta and result.meta.id != path.name:
         result.errors.append(f"project.yaml: id '{result.meta.id}' がディレクトリ名 '{path.name}' と一致しません")
 
+    if result.meta:
+        result.files, file_errors = load_files(path, result.meta)
+        result.errors.extend(file_errors)
+
     for dt in DOC_TYPES:
         file = path / dt.filename
         if not file.exists():
@@ -96,6 +136,34 @@ def load_project(path: Path) -> LoadResult:
 
     result.warnings.extend(check_screen_ids(result.docs))
     return result
+
+
+def load_files(path: Path, meta: ProjectMeta) -> tuple[list[LoadedFile], list[str]]:
+    """project.yaml の files に書いたファイルを読む。案件ディレクトリの外は読まない。"""
+    files: list[LoadedFile] = []
+    errors: list[str] = []
+    root = path.resolve()
+    for item in meta.files:
+        file = (path / item.path).resolve()
+        label = f"project.yaml: files の {item.path}"
+        if not file.is_relative_to(root):
+            errors.append(f"{label}: 案件ディレクトリの中に置いてください")
+            continue
+        if not file.is_file():
+            errors.append(f"{label}: ファイルがありません")
+            continue
+        size = file.stat().st_size
+        if size > MAX_FILE_BYTES:
+            errors.append(f"{label}: {size / 1024 / 1024:.1f}MB あります。1 ファイル {MAX_FILE_BYTES // 1024 // 1024}MB までにしてください")
+            continue
+        data = file.read_bytes()
+        file_id = hashlib.sha256(data).hexdigest()[:24]
+        if any(f.id == file_id for f in files):
+            errors.append(f"{label}: 同じ中身のファイルがすでに files にあります")
+            continue
+        content_type = mimetypes.guess_type(file.name)[0] or "application/octet-stream"
+        files.append(LoadedFile(file_id, item.title or file.stem, item.note, file.name, content_type, data))
+    return files, errors
 
 
 SCREEN_HEADING_RE = re.compile(r"^##\s+(SC-[\w-]+)", re.M)

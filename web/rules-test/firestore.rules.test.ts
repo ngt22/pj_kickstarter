@@ -1,6 +1,6 @@
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { readFileSync } from "node:fs";
-import { arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
+import { arrayUnion, Bytes, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { addAnnotation, updateAnnotation, type NewAnnotation } from "../src/lib/annotations";
 import { createProject, type TemplateDoc } from "../src/lib/createProject";
@@ -17,7 +17,9 @@ beforeAll(async () => {
     const db = ctx.firestore();
     await setDoc(doc(db, "projects/sample"), { id: "sample" });
     await setDoc(doc(db, "projects/sample/docs/requirements"), { title: "要件定義書" });
+    await setDoc(doc(db, "projects/sample/blobs/abc-0"), { file: "abc", index: 0, data: Bytes.fromUint8Array(new Uint8Array([1, 2])) });
     await setDoc(doc(db, "projects/secret"), { id: "secret" });
+    await setDoc(doc(db, "projects/secret/blobs/def-0"), { file: "def", index: 0, data: Bytes.fromUint8Array(new Uint8Array([3])) });
     await setDoc(doc(db, "access/member@example.com"), { projects: ["sample"] });
     await setDoc(doc(db, "access/peer@example.com"), { projects: ["sample"] });
   });
@@ -70,6 +72,14 @@ describe("案件の閲覧", () => {
     await assertFails(getDoc(doc(user("admin@example.com", { verified: false, admin: true }), "projects/sample")));
   });
 
+  it("補足資料のファイルは、案件を見られる人だけが読める", async () => {
+    const db = user("member@example.com");
+    await assertSucceeds(getDoc(doc(db, "projects/sample/blobs/abc-0")));
+    await assertFails(getDoc(doc(db, "projects/secret/blobs/def-0")));
+    await assertFails(getDoc(doc(user("other@example.com"), "projects/sample/blobs/abc-0")));
+    await assertSucceeds(getDoc(doc(user("admin@example.com", { admin: true }), "projects/secret/blobs/def-0")));
+  });
+
 });
 
 describe("原稿の書き込み", () => {
@@ -90,6 +100,20 @@ describe("原稿の書き込み", () => {
     await assertFails(deleteDoc(doc(user("member@example.com"), "projects/sample/docs/requirements")));
     await assertFails(setDoc(doc(user("admin@example.com", { verified: false, admin: true }), "projects/new"), project));
     await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), "projects/new"), project));
+  });
+
+  it("管理者は補足資料（リンクとファイル）を書けるが、クライアントは書けない", async () => {
+    const db = user("admin@example.com", { admin: true });
+    const files = [{ id: "abc", title: "会社案内", note: "", name: "a.pdf", content_type: "application/pdf", size: 2, chunks: 1 }];
+    const links = [{ title: "画面モック", url: "https://example.com/", note: "" }];
+    await assertSucceeds(setDoc(doc(db, "projects/new"), { ...project, links, files }));
+    const blob = { file: "abc", index: 0, data: Bytes.fromUint8Array(new Uint8Array([1, 2])) };
+    await assertSucceeds(setDoc(doc(db, "projects/new/blobs/abc-0"), blob));
+    await assertSucceeds(deleteDoc(doc(db, "projects/new/blobs/abc-0")));
+    await assertFails(setDoc(doc(db, "projects/new/blobs/abc-0"), { ...blob, data: "AQI=" })); // 中身は bytes
+    await assertFails(setDoc(doc(db, "projects/new/blobs/abc-0"), { ...blob, extra: 1 }));
+    await assertFails(setDoc(doc(user("member@example.com"), "projects/sample/blobs/x-0"), blob));
+    await assertFails(deleteDoc(doc(user("member@example.com"), "projects/sample/blobs/abc-0")));
   });
 
   it("管理者でも不正な形の原稿は書けない", async () => {
@@ -171,6 +195,7 @@ describe("案件の削除", () => {
       await setDoc(doc(db, "projects/trial/docs/requirements"), { title: "要件定義書" });
       await setDoc(doc(db, "projects/trial/docs/roadmap"), { title: "開発計画" });
       await setDoc(doc(db, "projects/trial/annotations/n1"), { authorUid: "a@example.com" });
+      await setDoc(doc(db, "projects/trial/blobs/abc-0"), { file: "abc", index: 0 });
       await setDoc(doc(db, "access/a@example.com"), { projects: ["trial", "sample"] });
       await setDoc(doc(db, "access/b@example.com"), { projects: ["trial"] });
     });
@@ -189,6 +214,7 @@ describe("案件の削除", () => {
     expect((await getDoc(doc(db, "projects/trial"))).exists()).toBe(false);
     expect((await getDocs(collection(db, "projects/trial/docs"))).size).toBe(0);
     expect((await getDocs(collection(db, "projects/trial/annotations"))).size).toBe(0);
+    expect((await getDocs(collection(db, "projects/trial/blobs"))).size).toBe(0);
     expect((await getDoc(doc(db, "access/a@example.com"))).data()?.projects).toEqual(["sample"]);
     expect((await getDoc(doc(db, "access/b@example.com"))).data()?.projects).toEqual([]);
   });

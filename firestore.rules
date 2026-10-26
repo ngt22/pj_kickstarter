@@ -26,7 +26,7 @@ service cloud.firestore {
     // ingest の ProjectMeta（members を除く）と同じ項目だけを許す
     function validProject(projectId) {
       let data = request.resource.data;
-      return data.keys().hasOnly(["id", "name", "summary", "status", "client", "proposed_at", "version", "color", "updatedAt"])
+      return data.keys().hasOnly(["id", "name", "summary", "status", "client", "proposed_at", "version", "color", "links", "files", "updatedAt"])
         && data.id == projectId
         && projectId.matches('^[a-z0-9][a-z0-9-]*$')
         && data.name is string
@@ -66,6 +66,18 @@ service cloud.firestore {
       match /docs/{docType} {
         allow read: if canView(projectId);
         allow create, update: if isAdmin() && validDoc(docType);
+        allow delete: if isAdmin();
+      }
+
+      // 補足資料のファイルの中身。1 ドキュメント 1MiB までなので、ingest が 900KiB ずつに分けて置く。
+      // ID は「中身のハッシュ-連番」で、案件ドキュメントの files が参照する。閲覧権限は案件と同じ
+      match /blobs/{blobId} {
+        allow read: if canView(projectId);
+        allow create, update: if isAdmin()
+          && request.resource.data.keys().hasOnly(["file", "index", "data"])
+          && request.resource.data.file is string
+          && request.resource.data.index is int
+          && request.resource.data.data is bytes;
         allow delete: if isAdmin();
       }
 

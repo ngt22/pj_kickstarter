@@ -11,6 +11,19 @@ export type DocRecord = {
   updatedAt?: { toDate(): Date }; // Firestore の Timestamp
 };
 
+export type MaterialLink = { title: string; url: string; note?: string };
+
+// ingest の LoadedFile.record() と同じ形
+export type MaterialFile = {
+  id: string; // 中身のハッシュ
+  title: string;
+  note?: string;
+  name: string; // 元のファイル名（保存するときの名前）
+  content_type: string;
+  size: number;
+  chunks: number;
+};
+
 export type ProjectRecord = {
   id: string;
   name: string;
@@ -20,6 +33,8 @@ export type ProjectRecord = {
   proposed_at?: string; // YYYY-MM-DD
   version?: string;
   color?: string; // 表紙のキー色（テーマの色の名前）
+  links?: MaterialLink[]; // 補足資料のリンク（画面モックなど）
+  files?: MaterialFile[]; // 補足資料のファイル。中身は blobs に分けて置く（lib/materials.ts）
   updatedAt?: { toDate(): Date };
 };
 

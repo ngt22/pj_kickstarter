@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { STATUS, type DocRecord, type ProjectRecord } from "../lib/docs";
 import { fromDay, todayDay } from "../lib/gantt";
 import { buildOverview } from "../lib/overview";
+import { usePrint } from "../lib/print";
 import type { SiteSettings } from "../lib/settings";
 import { DocIcon, ICON_STROKE } from "./icons";
 
@@ -54,6 +55,8 @@ export default function ProjectCover({ project, docs, site }: { project: Project
   const next = ov.milestones.find((m) => m.day >= today);
   const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: ov.estimate?.currency ?? "JPY" });
   const base = `/projects/${project.id}`;
+  // PDF では目次から同じ PDF の中の資料へ飛ぶ
+  const print = usePrint();
 
   return (
     <Stack gap="lg">
@@ -82,7 +85,7 @@ export default function ProjectCover({ project, docs, site }: { project: Project
       </Box>
 
       {/* サマリー */}
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} spacing="md">
+      <SimpleGrid cols={print ? 2 : { base: 1, xs: 2, md: 4 }} spacing="md">
         <Stat
           icon={IconCalendarEvent}
           label="開発期間"
@@ -138,9 +141,9 @@ export default function ProjectCover({ project, docs, site }: { project: Project
       {/* 資料の目次 */}
       <div>
         <Title order={3} mb="md">提案資料</Title>
-        <SimpleGrid cols={{ base: 1, xs: 2, md: 3 }} spacing="sm">
+        <SimpleGrid cols={print ? 2 : { base: 1, xs: 2, md: 3 }} spacing="sm">
           {docs.map((d, i) => (
-            <UnstyledButton key={d.type} component={Link} to={`${base}/${d.type}`} className="ks-doc-card">
+            <UnstyledButton key={d.type} component={Link} to={print ? `#doc-${d.type}` : `${base}/${d.type}`} className="ks-doc-card">
               <ThemeIcon variant="light" size={36} radius="md">
                 <DocIcon type={d.type} />
               </ThemeIcon>

@@ -88,6 +88,7 @@ import {
 import { ProjectColorContext } from "../lib/projectColor";
 import MockDrawing from "./MockDrawing";
 import Scaled from "./Scaled";
+import { usePrint } from "../lib/print";
 import { cssVariablesResolver, theme } from "../theme";
 import { ICON_STROKE } from "./icons";
 
@@ -782,7 +783,8 @@ const pick = <T extends string>(all: Record<T, unknown>, keys: T[]) =>
 
 export default function ScreenMock({ source }: { source: string }) {
   const color = useContext(ProjectColorContext);
-  const narrow = useMediaQuery("(max-width: 48em)");
+  const print = usePrint();
+  const narrow = useMediaQuery("(max-width: 48em)") && !print;
   // 原稿の device・display は最初に見せる端末と表示。帯の切り替えで、同じ画面を別の端末・表示でも見られる
   const [view, setView] = useState<DeviceKind>();
   const [shown, setShown] = useState<DisplayKind>();

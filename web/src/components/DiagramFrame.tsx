@@ -4,17 +4,27 @@ import "@xyflow/react/dist/style.css";
 import { ReactFlowProvider } from "@xyflow/react";
 import { Box, Button, Group, Modal, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { usePrint } from "../lib/print";
 
 type Props = {
   title: string;
   summary?: React.ReactNode;
-  height: string; // 本文中での高さ
+  height: string; // 本文中での高さ（PDF では printHeight）
+  printHeight?: string;
   // 本文中と全画面で、それぞれの高さで図を描く
   children: (height: string) => React.ReactNode;
 };
 
-export default function DiagramFrame({ title, summary, height, children }: Props) {
+export default function DiagramFrame({ title, summary, height, printHeight = height, children }: Props) {
+  const print = usePrint();
   const [full, { open, close }] = useDisclosure(false);
+  if (print)
+    return (
+      <Box className="ks-diagram" my="md">
+        <Text size="sm" c="dimmed" mb="xs">{summary}</Text>
+        <ReactFlowProvider>{children(printHeight)}</ReactFlowProvider>
+      </Box>
+    );
   return (
     <Box className="ks-diagram" my="md">
       <Group justify="space-between" mb="xs" wrap="nowrap">

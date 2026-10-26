@@ -31,6 +31,7 @@ import { parseYaml } from "../lib/docs";
 import { layoutFlow, NOTE_W, type FlowLane, type FlowLayout, type FlowNode, type FlowSpec } from "../lib/flow";
 import { ICON_STROKE } from "./icons";
 import Scaled from "./Scaled";
+import { usePrint } from "../lib/print";
 
 const PAD_X = 28; // 区画の左右の余白（styles.css の .fl-zone と合わせる）
 
@@ -130,6 +131,7 @@ export default function FlowDiagram({ source }: { source: string }) {
   }, [source]);
   const [layout, setLayout] = useState<FlowLayout | string>();
   const [opened, { open, close }] = useDisclosure(false);
+  const print = usePrint();
 
   useEffect(() => {
     if (!parsed.spec) return;
@@ -194,11 +196,13 @@ export default function FlowDiagram({ source }: { source: string }) {
   );
   return (
     <figure className="fl">
+      {!print && (
       <Group justify="flex-end" mb={4}>
         <Button size="compact-xs" variant="subtle" color="gray" leftSection={<IconArrowsMaximize size={14} stroke={ICON_STROKE} />} onClick={open}>
           拡大して見る
         </Button>
       </Group>
+      )}
       <Scaled width={width}>{content}</Scaled>
       <Modal opened={opened} onClose={close} fullScreen title="ページ遷移図">
         <div className="fl-full" style={{ width }}>{content}</div>

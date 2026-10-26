@@ -1,6 +1,7 @@
 import { Group, Paper, SimpleGrid, Text, Title, Typography, UnstyledButton } from "@mantine/core";
 import { Link } from "react-router-dom";
 import { parseYaml, stripFrontMatter, type DocRecord } from "../lib/docs";
+import { usePrint } from "../lib/print";
 import Markdown from "./Markdown";
 import { ApiView, EstimateView, GlossaryView, RisksView } from "./YamlViews";
 
@@ -34,6 +35,7 @@ function Pager({ label, doc, basePath, align }: { label: string; doc?: DocRecord
 }
 
 export default function DocView({ doc, index, total, prev, next, basePath }: Props) {
+  const print = usePrint();
   const updated = doc.updatedAt?.toDate();
   const body =
     doc.format === "markdown" ? (
@@ -59,10 +61,12 @@ export default function DocView({ doc, index, total, prev, next, basePath }: Pro
         </header>
         {body}
       </Paper>
+      {!print && (
       <SimpleGrid cols={{ base: 1, xs: 2 }} mt="lg" spacing="md">
         <Pager label="← 前のドキュメント" doc={prev} basePath={basePath} align="left" />
         <Pager label="次のドキュメント →" doc={next} basePath={basePath} align="right" />
       </SimpleGrid>
+      )}
     </>
   );
 }

@@ -1,6 +1,5 @@
-import { Alert, Box, Button, NavLink, Paper, Skeleton, Stack, Text } from "@mantine/core";
-import { IconFileOff, IconHome } from "@tabler/icons-react";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { ActionIcon, Alert, Box, Button, NavLink, Paper, Skeleton, Stack, Text, Tooltip } from "@mantine/core";
+import { IconFileOff, IconFileTypePdf, IconHome } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import AnnotationButtons from "../components/annotations/AnnotationButtons";
@@ -15,6 +14,7 @@ import ProjectCover from "../components/ProjectCover";
 import { COVER } from "../lib/annotations";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
+import { loadProject } from "../lib/loadProject";
 import { ProjectColorContext } from "../lib/projectColor";
 import { EMPTY_SITE, loadSiteSettings, type SiteSettings } from "../lib/settings";
 
@@ -47,11 +47,10 @@ export default function ProjectView() {
 
   useEffect(() => {
     setError("");
-    const ref = doc(db, "projects", projectId);
-    Promise.all([getDoc(ref), getDocs(collection(ref, "docs"))])
-      .then(([p, d]) => {
-        setProject({ ...(p.data() as ProjectRecord), id: projectId });
-        setDocs(d.docs.map((x) => x.data() as DocRecord).sort((a, b) => a.order - b.order));
+    loadProject(projectId)
+      .then((r) => {
+        setProject(r.project);
+        setDocs(r.docs);
       })
       .catch((e) => setError(String(e)));
     // 提案者は表紙の補足なので、読めなくても資料は表示する
@@ -110,9 +109,21 @@ export default function ProjectView() {
       </EmptyState>
     );
 
+  // PDF は別のタブで、付箋を出さずに全資料を並べて開く
+  const actions = (
+    <>
+      <Tooltip label="全資料を 1 つの PDF で保存">
+        <ActionIcon component={Link} to={`${base}/print`} target="_blank" variant="default" size="md" aria-label="全資料を PDF で保存">
+          <IconFileTypePdf size={18} stroke={ICON_STROKE} />
+        </ActionIcon>
+      </Tooltip>
+      <AnnotationButtons />
+    </>
+  );
+
   return (
     <AnnotationProvider projectId={projectId} projectName={project.name} docType={docType} pageTitles={pageTitles}>
-      <Layout sidebar={sidebar} actions={<AnnotationButtons />}>
+      <Layout sidebar={sidebar} actions={actions}>
         <AnnotationLayer>{content}</AnnotationLayer>
         <AnnotationList />
       </Layout>

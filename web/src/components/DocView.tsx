@@ -1,5 +1,6 @@
 import { Group, Paper, SimpleGrid, Text, Title, Typography, UnstyledButton } from "@mantine/core";
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { parseYaml, stripFrontMatter, type DocRecord } from "../lib/docs";
 import { partTitle } from "../lib/doctypes";
 import { usePrint } from "../lib/print";
@@ -39,6 +40,14 @@ export default function DocView({ doc, index, total, prev, next, basePath }: Pro
   const print = usePrint();
   const updated = doc.updatedAt?.toDate();
   const part = partTitle(doc.type);
+  // 「…/screens#SC-02」のように開いたら、その見出しまで送る
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash || print) return;
+    const id = decodeURIComponent(hash.slice(1));
+    const t = setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    return () => clearTimeout(t);
+  }, [hash, doc, print]);
   const body =
     doc.format === "markdown" ? (
       <Typography className="doc-body">

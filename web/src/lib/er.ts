@@ -15,6 +15,8 @@ export type ErTableSpec = {
   label?: string;
   domain?: string;
   note?: string;
+  // true: タブレットなどの端末の中にも持つ表（オフラインで使うデータ）
+  local?: boolean;
   columns: ErColumnSpec[];
 };
 

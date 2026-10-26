@@ -1025,3 +1025,30 @@ export default function ScreenMock({ source, screen }: { source: string; screen?
     </figure>
   );
 }
+
+// ページ遷移図などに載せる画面の縮小（最初の device・向きで、画面の上の部分を幅に合わせて切り取る）
+export function MockThumb({ source, width, height }: { source: string; width: number; height: number }) {
+  const color = useContext(ProjectColorContext);
+  const spec = useMemo(() => {
+    try {
+      const s = parseYaml<MockSpec>(source);
+      return Array.isArray(s?.body) ? s : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [source]);
+  if (!spec) return null;
+  const kind = spec.device ?? "desktop";
+  const orientation: Orientation = kind !== "desktop" && spec.orientation === "landscape" ? "landscape" : "portrait";
+  const w = kind === "desktop" ? DEVICE_WIDTH.desktopNarrow : orientation === "landscape" ? LANDSCAPE_WIDTH[kind] : DEVICE_WIDTH[kind];
+  const scale = width / w;
+  return (
+    <div className="mock-thumbnail" style={{ width, height }} aria-hidden>
+      <div style={{ width: w, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+        <AppTheme color={color} field={spec.theme === "field"}>
+          <Device spec={spec} kind={kind} orientation={orientation} />
+        </AppTheme>
+      </div>
+    </div>
+  );
+}

@@ -192,4 +192,15 @@ def check_screen_ids(docs: list[LoadedDoc]) -> list[str]:
     for to in dict.fromkeys(targets):
         if known and to not in known:
             warnings.append(f"screens.md: 画面モックの遷移先 {to} が、画面仕様の見出しにもページ遷移図にもありません")
+    # ユースケース図の screen: も同じ画面IDにそろえる
+    for d in docs:
+        for m in FENCE_RE.finditer(d.body if d.format == "markdown" else ""):
+            if m.group(1) != "usecase":
+                continue
+            spec = yaml.safe_load(m.group(2)) or {}
+            for c in spec.get("cases", []):
+                ids = c.get("screen") or []
+                for sc in [ids] if isinstance(ids, str) else ids:
+                    if known and sc not in known:
+                        warnings.append(f"{d.type}.md: ユースケース {c.get('id')} の画面 {sc} が、画面仕様の見出しにもページ遷移図にもありません")
     return warnings

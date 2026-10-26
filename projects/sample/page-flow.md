@@ -9,7 +9,8 @@ title: ページ遷移図
     （例: 日常業務 / 設定）。lane の note はカードの右に、footnote は区画の下に小さく出ます
   screens: [{ id: 画面ID（画面仕様の ## SC-xx と同じ）, name, zone, lane }]（アイコンは画面名から自動で付きます）
   terminals: [{ id, label, zone, lane }]（開始・提出などの丸）
-  edges: [{ from, to, label, type: go|back }]（同じレーンの中だけ。back は確定・キャンセルで戻る線）
+  edges: [{ from, to, label, type: go|back|sync }]（同じレーンの中だけ。back は確定・キャンセルで戻る線、sync はデータの同期の太い点線）
+  thumbnails: false（画面のカードに、画面仕様の ```mock の縮小を出さない。既定では ## SC-xx の画面イメージが自動で載り、クリックで画面仕様へ移動）
   flows: [{ from: 区画の id, to: 区画の id, label, note }]（隣り合う区画の間の受け渡し。例: 帰社後に同期）
   notes: [文字...]（図の下に出す注記。例: 各画面のヘッダーから一覧に戻れるため戻り線は省略）
 -->

@@ -3,6 +3,7 @@ import { IconAlertTriangle, IconCalendarEvent, IconCoinYen, IconFlag } from "@ta
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { STATUS, type DocRecord, type ProjectRecord } from "../lib/docs";
+import { groupByPart } from "../lib/doctypes";
 import { fromDay, todayDay } from "../lib/gantt";
 import { buildOverview } from "../lib/overview";
 import { usePrint } from "../lib/print";
@@ -141,19 +142,26 @@ export default function ProjectCover({ project, docs, site }: { project: Project
       {/* 資料の目次 */}
       <div>
         <Title order={3} mb="md">提案資料</Title>
-        <SimpleGrid cols={print ? 2 : { base: 1, xs: 2, md: 3 }} spacing="sm">
-          {docs.map((d, i) => (
-            <UnstyledButton key={d.type} component={Link} to={print ? `#doc-${d.type}` : `${base}/${d.type}`} className="ks-doc-card">
-              <ThemeIcon variant="light" size={36} radius="md">
-                <DocIcon type={d.type} />
-              </ThemeIcon>
-              <div style={{ minWidth: 0 }}>
-                <Text size="xs" c="dimmed" className="ks-nav-num">{pad2(i + 1)}</Text>
-                <Text size="sm" fw={700} truncate>{d.title}</Text>
-              </div>
-            </UnstyledButton>
+        <Stack gap="md">
+          {groupByPart(docs).map((g) => (
+            <div key={g.key}>
+              <Text className="ks-nav-part" mb={6}>{g.title}</Text>
+              <SimpleGrid cols={print ? 2 : { base: 1, xs: 2, md: 3 }} spacing="sm">
+                {g.docs.map(({ doc: d, index: i }) => (
+                  <UnstyledButton key={d.type} component={Link} to={print ? `#doc-${d.type}` : `${base}/${d.type}`} className="ks-doc-card">
+                    <ThemeIcon variant="light" size={36} radius="md">
+                      <DocIcon type={d.type} />
+                    </ThemeIcon>
+                    <div style={{ minWidth: 0 }}>
+                      <Text size="xs" c="dimmed" className="ks-nav-num">{pad2(i + 1)}</Text>
+                      <Text size="sm" fw={700} truncate>{d.title}</Text>
+                    </div>
+                  </UnstyledButton>
+                ))}
+              </SimpleGrid>
+            </div>
           ))}
-        </SimpleGrid>
+        </Stack>
       </div>
     </Stack>
   );

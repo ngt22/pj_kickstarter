@@ -32,7 +32,7 @@ def test_build_writes_for_new_project():
     assert access["updateMask"] == {"fieldPaths": []}
     assert access["updateTransforms"][0]["appendMissingElements"]["values"] == [{"stringValue": "sample"}]
     req = next(w for w in writes if w.get("update", {}).get("name", "").endswith("/docs/requirements"))
-    assert req["update"]["fields"]["order"] == {"integerValue": "3"}
+    assert req["update"]["fields"]["order"] == {"integerValue": "2"}
     assert req["updateTransforms"] == [{"fieldPath": "updatedAt", "setToServerValue": "REQUEST_TIME"}]
     # 原稿にないドキュメントだけ消す
     assert [w["delete"] for w in writes if "delete" in w] == [f"{root}/projects/sample/docs/old-doc"]

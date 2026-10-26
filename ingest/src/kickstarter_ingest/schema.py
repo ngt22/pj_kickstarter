@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from .doctypes import DOC_TYPES
+from .doctypes import DOC_TYPES, PARTS
 from .models import BLOCK_MODELS, YAML_MODELS, DocHeader, ProjectMeta
 
 TEMPLATES = Path(str(files("kickstarter_ingest") / "templates"))
@@ -38,12 +38,14 @@ def json_schema(name: str) -> dict[str, Any]:
 
 
 def schema_index() -> dict[str, Any]:
-    """ドキュメントの一覧と、それぞれの形式・質問。対話モードはこの順に進める。"""
+    """ドキュメントの一覧（資料の並び順）と、それぞれの部・形式・質問。"""
     return {
         "project": {"file": "project.yaml", "schema": "project.json"},
+        "parts": [{"key": key, "title": title} for key, title in PARTS],
         "docs": [
             {
                 "type": dt.key,
+                "part": dt.part,
                 "file": dt.filename,
                 "format": dt.format,
                 "title": dt.title,
@@ -82,8 +84,9 @@ def scaffold(project_id: str, dest: Path) -> None:
 
 def llms_txt(cli_source: str = CLI_SOURCE) -> str:
     cli = f"uvx --from {cli_source} kickstarter-ingest"
+    part_titles = dict(PARTS)
     rows = "\n".join(
-        f"| {dt.key} | {dt.filename} | {dt.title} | "
+        f"| {part_titles[dt.part]} | {dt.key} | {dt.filename} | {dt.title} | "
         + (f"schema/{dt.key}.json" if dt.format == "yaml" else "schema/front-matter.json")
         + "".join(f", schema/block-{b}.json" for b in dt.blocks)
         + " |"
@@ -99,7 +102,7 @@ def llms_txt(cli_source: str = CLI_SOURCE) -> str:
 LLMS_TXT = """\
 # Kickstarter
 
-> 新規案件の提案資料（要件定義書、技術仕様、ロードマップ、画面仕様、ER図、用語集など14種）を Markdown / YAML で書き、
+> 新規案件の提案資料（要件定義書、技術仕様、ロードマップ、画面仕様、ER図、体制・進め方、運用・保守、用語集など16種）を Markdown / YAML で書き、
 > このサイトで閲覧するための仕組みです。このファイルは、Claude などのエージェントが案件を追加・更新する手順をまとめたものです。
 
 このファイルにあるパスは、このファイルと同じサイトからの相対パスです（例: このファイルが https://example.web.app/llms.txt なら
@@ -144,7 +147,7 @@ Python のツール uv があれば、どのディレクトリからでも実行
 ## 原稿の形式
 
 - 案件ディレクトリ名と project.yaml の id は同じにする（英小文字・数字・ハイフン）
-- Markdown の原稿は先頭に front matter（title, order）が必要。order は雛形の値のままでよい
+- Markdown の原稿は先頭に front matter（title）が必要。資料の並び順は種類で決まる（下の表の順。古い原稿の order は無視される）
 - 不要なドキュメントはファイルごと削除すれば省略される（project.yaml は必須）
 - 雛形には記入例（予約管理サービス）が入っている。すべて案件の内容に置き換え、記入例を残さない
 - 本文の図は Markdown のコードブロックに YAML で書く: ```gantt（スケジュール）、```mock（画面モック）、
@@ -166,13 +169,19 @@ Python のツール uv があれば、どのディレクトリからでも実行
   画面の id は画面仕様の見出し（## SC-xx）と同じにし、画面仕様の ```mock の to: もその id にそろえる（validate で照合する）。
   線は同じレーンの中だけ。確定・キャンセルで戻る線は type: back、区画の間の受け渡しは flows、欠番や省略した戻り線は
   footnote / notes で説明する
+- 体制・進め方（team.md）は発注側（貴社）と受注側（当社）の役割と責任、会議と報告、納品物と検収の条件、
+  貴社にお願いすることを表で書く。スケジュールはロードマップ、受入テストの中身はテスト計画に書き、ここでは重ねない
+- 運用・保守（operations.md）は保守の範囲（月額に含む／含まない）、問い合わせと障害対応、バックアップと監視、
+  月額費用に含まれるものを書く。月額の内容は見積もりの monthly（includes・limits）とそろえ、金額は見積もりだけに書く
 - 見積もり（estimate.yaml）は初期費用（initial: 人月 × 単価）と月額費用（monthly: 公開後の継続利用料）に分ける。
   資料はクライアントが読むので、サーバー・クラウド利用料・API 料金などの原価は金額も内訳も書かない。月額はサービス
   （例: 運用保守サービス）にまとめ、含まれるものを includes に金額なしで書き、上限があれば limits に書く
 
-| type | ファイル | 内容 | 形式 |
-| --- | --- | --- | --- |
-| - | project.yaml | 案件の基本情報（表紙） | schema/project.json |
+資料は次の順に、部（第1部 提案の概要 〜 付録）ごとにまとめて表示されます。
+
+| 部 | type | ファイル | 内容 | 形式 |
+| --- | --- | --- | --- | --- |
+| - | - | project.yaml | 案件の基本情報（表紙） | schema/project.json |
 {rows}
 
 - [schema/index.json](schema/index.json): ドキュメントの一覧、形式、対話モードの質問
@@ -194,7 +203,8 @@ Python のツール uv があれば、どのディレクトリからでも実行
 7. すべてそろったら `validate` を通し、利用者の了承を得てから `push` する（未ログインならログインを頼む）
 
 質問の順番は、基本情報 → 要件定義 → ペルソナ → 画面仕様 → ページ遷移 → ER図 → 技術仕様 → API → ロードマップ →
-見積もり → リスク → テスト計画 → 用語集 → ADR → エグゼクティブサマリー（最後にまとめる）を目安にします。
+体制・進め方 → テスト計画 → 運用・保守 → リスク → 見積もり → 用語集 → ADR → エグゼクティブサマリー（最後にまとめる）を目安にします。
+運用・保守は見積もりの月額と、体制・進め方はロードマップの担当と矛盾しないようにします。
 
 {questions}
 

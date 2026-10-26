@@ -13,6 +13,7 @@ import Layout from "../components/Layout";
 import ProjectCover from "../components/ProjectCover";
 import { COVER } from "../lib/annotations";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
+import { groupByPart } from "../lib/doctypes";
 import { db } from "../lib/firebase";
 import { loadProject } from "../lib/loadProject";
 import { ProjectColorContext } from "../lib/projectColor";
@@ -77,15 +78,20 @@ export default function ProjectView() {
         active={!docType}
         mb={4}
       />
-      {docs.map((d) => (
-        <NavLink
-          key={d.type}
-          component={Link}
-          to={`${base}/${d.type}`}
-          leftSection={<DocIcon type={d.type} />}
-          label={d.title}
-          active={d.type === docType}
-        />
+      {groupByPart(docs).map((g) => (
+        <Box key={g.key} mt="sm">
+          <Text className="ks-nav-part" px="sm" mb={2}>{g.title}</Text>
+          {g.docs.map(({ doc: d }) => (
+            <NavLink
+              key={d.type}
+              component={Link}
+              to={`${base}/${d.type}`}
+              leftSection={<DocIcon type={d.type} />}
+              label={d.title}
+              active={d.type === docType}
+            />
+          ))}
+        </Box>
       ))}
     </>
   );

@@ -8,12 +8,14 @@ import {
   IconDatabase,
   IconFileText,
   IconHistory,
+  IconHeadset,
   IconLayoutDashboard,
   IconPresentation,
   IconRoute,
   IconTestPipe,
   IconTimeline,
   IconUsers,
+  IconUsersGroup,
   type IconProps,
 } from "@tabler/icons-react";
 
@@ -28,6 +30,8 @@ const DOC_ICONS: Record<string, React.ComponentType<IconProps>> = {
   "er-diagram": IconDatabase,
   api: IconApi,
   roadmap: IconTimeline,
+  team: IconUsersGroup,
+  operations: IconHeadset,
   estimate: IconCalculator,
   risks: IconAlertTriangle,
   "test-plan": IconTestPipe,

@@ -325,7 +325,7 @@ function DeleteProjectModal({ project, viewers, opened, onClose, onDelete }: {
 
 const EMPTY: NewProject = { id: "", name: "", summary: "", client: "", proposed_at: "" };
 
-// 14種の雛形（記入例）を入れた案件を作る。CLI の init と同じ雛形
+// 16種の雛形（記入例）を入れた案件を作る。CLI の init と同じ雛形
 function NewProjectModal({ opened, onClose, onCreate, usedIds }: {
   opened: boolean;
   onClose: () => void;
@@ -372,7 +372,7 @@ function NewProjectModal({ opened, onClose, onCreate, usedIds }: {
       <form onSubmit={submit}>
         <Stack>
           <Text size="sm" c="dimmed">
-            14種のドキュメントの雛形（記入例）を入れて作成します。中身は Claude との対話や ingest CLI の push で書き換えてください。
+            16種のドキュメントの雛形（記入例）を入れて作成します。中身は Claude との対話や ingest CLI の push で書き換えてください。
           </Text>
           {error && <Alert color="red">{error}</Alert>}
           <TextInput

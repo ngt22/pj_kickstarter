@@ -28,7 +28,7 @@ export default function CopyPromptButton({ list, compact }: { list: Annotation[]
             leftSection={copied ? <IconCheck size={16} stroke={ICON_STROKE} /> : <IconCopy size={16} stroke={ICON_STROKE} />}
             onClick={copy}
           >
-            {copied ? "コピーしました" : `表示中の ${list.length} 件をまとめてコピー（LLM 向け）`}
+            {copied ? "コピーしました" : `すべてコピー（${list.length}件）`}
           </Button>
         )
       }

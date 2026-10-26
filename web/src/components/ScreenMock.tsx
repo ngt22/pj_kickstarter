@@ -371,12 +371,21 @@ const ELEMENTS: Record<string, (value: any, mobile: boolean) => React.ReactNode>
       </Group>
     );
   },
+  // 横に並べる。widths（例: [1, 2, 1.3]）で列の幅の比を指定できる。スマホでは縦に積む
   row: (v, mobile) => {
-    const items: Element[] = normalize("row", v).items ?? [];
+    const p = normalize("row", v);
+    const items: Element[] = p.items ?? [];
+    const widths: number[] | undefined = Array.isArray(p.widths) && p.widths.length === items.length ? p.widths : undefined;
+    if (mobile || !widths)
+      return (
+        <SimpleGrid cols={mobile ? 1 : items.length} spacing="md">
+          <Items items={items} />
+        </SimpleGrid>
+      );
     return (
-      <SimpleGrid cols={mobile ? 1 : items.length} spacing="md">
+      <div className="mock-row" style={{ gridTemplateColumns: widths.map((w) => `minmax(0, ${w}fr)`).join(" ") }}>
         <Items items={items} />
-      </SimpleGrid>
+      </div>
     );
   },
   card: (v) => {

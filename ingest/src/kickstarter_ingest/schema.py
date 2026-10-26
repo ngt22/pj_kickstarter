@@ -165,7 +165,9 @@ Python のツール uv があれば、どのディレクトリからでも実行
   nav（パソコンの横メニュー）、tabbar（スマホの下のタブ）で画面の骨組みを作り、中身は stats・list・table・card などで
   実際に表示する内容（それらしい名前・日時・件数）を書く。ボタンなどの to: には遷移先の画面ID（SC-xx）を書き、
   note: 番号は直後の項目表の No と合わせる。図面の上で位置を指す画面（点検の指摘位置、座席、設備の配置など）は
-  drawing（rooms に部屋名、pins に {{x, y: 図面に対する %, label, status: new|prev|done, text}}）で描く
+  drawing（rooms に部屋名、pins に {{x, y: 図面に対する %, label, status: new|prev|done, text}}）で描く。指摘の区分で塗り分けるときは
+  groups: [{{id: bldg, label: 建築物, color: red}}] を書き、ピンに group: bldg を付ける（凡例に区分が出る）。
+  row は列を等分に並べる。幅の比を変えるときは row: {{items: [...], widths: [1, 2, 1.3]}}（スマホでは縦に積む）
 - ユースケース図（```usecase）は線を使わず、区画（zones: 使う場所・端末。例: 現地 / 事務所）→ アクターの段 → カードの順に並ぶ。
   区画の間の受け渡し（例: 帰社後に同期）は flows、条件付きの操作は condition、上位の役割（例: 管理者は事務員の全操作＋α）は
   inherits で書く。外部サービスは kind: system。ユースケース名は「〜する」の形で全角16文字以内

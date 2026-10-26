@@ -1031,6 +1031,10 @@ table {
   stroke: none;
 }
 /* ピン: 先端が位置を指す雫形。選んだピンは大きくし、吹き出しで内容を出す */
+.mock-row {
+  display: grid;
+  gap: var(--mantine-spacing-md);
+}
 .mock-pin {
   position: absolute;
   z-index: 1;
@@ -2316,6 +2320,8 @@ table {
   border-radius: 999px;
 }
 .ar-user-icon {
+  /* 名前が長くても丸のまま（横に潰さない） */
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   width: 34px;

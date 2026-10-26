@@ -53,6 +53,133 @@
   border-top: 1px dashed var(--mantine-color-gray-4);
 }
 
+/* ---- 表紙（components/PrintFront.tsx）：白地に平組み。宛名・表題・提出日などを、紙の提案書の標準的な大きさで置く ---- */
+.pc {
+  display: flex;
+  flex-direction: column;
+  height: 255mm;
+}
+.pc p {
+  margin: 0;
+}
+.pc-to {
+  font-size: 12pt;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.pc-main {
+  margin-top: 62mm;
+  padding: 7mm 0 7mm 5mm;
+  border-left: 3pt solid var(--paper-accent);
+}
+.pc-kicker {
+  font-size: 10pt;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--paper-accent);
+}
+.pc-title {
+  margin: 2mm 0 0;
+  font-size: 22pt !important;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--paper-ink);
+}
+.pc-summary {
+  margin-top: 3mm !important;
+  font-size: 10.5pt;
+  line-height: 1.6;
+  color: var(--paper-gray);
+}
+.pc-meta {
+  margin: auto 0 0;
+  margin-left: auto;
+  min-width: 70mm;
+  font-size: 10pt;
+  line-height: 1.6;
+}
+.pc-meta > div {
+  display: flex;
+  gap: 6mm;
+  padding: 1.5mm 0;
+  border-bottom: 0.25pt solid var(--paper-hair);
+}
+.pc-meta dt {
+  width: 16mm;
+  color: var(--paper-gray);
+}
+.pc-meta dd {
+  margin: 0;
+}
+.pc-note {
+  margin-top: 8mm !important;
+  padding-top: 2.5mm;
+  border-top: 0.75pt solid var(--paper-rule);
+  font-size: 8pt;
+  line-height: 1.6;
+  color: var(--paper-gray);
+}
+
+/* ---- 2 ページ目：目次・提案概要・文書情報 ---- */
+.pf-h {
+  margin: 0 0 4pt !important;
+  padding-left: 2.5mm;
+  font-size: 13pt !important;
+  font-weight: 700;
+  line-height: 1.45;
+  border-left: 3pt solid var(--paper-accent);
+}
+.pf-h ~ .pf-h {
+  margin-top: 14pt !important;
+}
+.pf-toc {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 0.75pt solid var(--paper-rule);
+  border-bottom: 0.75pt solid var(--paper-rule);
+}
+.pf-toc li + li {
+  border-top: 0.25pt solid var(--paper-hair);
+}
+.pf-toc a {
+  display: block;
+  padding: 2.5pt 6pt;
+  color: inherit;
+  text-decoration: none;
+}
+.pf-toc-num {
+  display: inline-block;
+  width: 8mm;
+  color: var(--paper-accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pf-kv {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 0.75pt solid var(--paper-rule);
+  border-bottom: 0.75pt solid var(--paper-rule);
+  font-size: 9.5pt;
+  line-height: 1.6;
+}
+.pf-kv :is(th, td) {
+  padding: 3pt 6pt;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 0.25pt solid var(--paper-hair);
+}
+.pf-kv th {
+  width: 36mm;
+  font-weight: 700;
+  background: var(--paper-tint);
+}
+
+/* 下書きの透かし。印刷では各ページに出る（position: fixed はページごとに繰り返される） */
+.ks-draft-mark {
+  display: none;
+}
+
 /* ---- 資料の見出し ---- */
 .ks-paper-head {
   margin-bottom: 8mm;
@@ -216,6 +343,20 @@
 @media print {
   .ks-print-toolbar {
     display: none;
+  }
+  .ks-draft-mark {
+    display: block;
+    position: fixed;
+    top: 45%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 72pt;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: rgb(28 33 43 / 0.06);
+    transform: rotate(-30deg);
+    pointer-events: none;
   }
   /* body 直下のポップアップ置き場などは、ページの名前が切り替わって空のページが 1 枚増えるので出さない */
   body:has(.ks-print-sheet) > :not(#root) {

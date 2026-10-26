@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import DocView from "../components/DocView";
 import { ICON_STROKE } from "../components/icons";
-import ProjectCover from "../components/ProjectCover";
+import { PrintContents, PrintCover } from "../components/PrintFront";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
 import { loadProject } from "../lib/loadProject";
@@ -31,7 +31,7 @@ function pageCss(project: ProjectRecord, docs: DocRecord[], site: SiteSettings) 
     `@page {
   size: A4 portrait;
   margin: 20mm 18mm 18mm;
-  @top-left { content: ${cssString(`${project.name}　ご提案資料`)}; ${box} vertical-align: bottom; padding-bottom: 4mm; }
+  @top-left { content: ${cssString(`${project.name}　ご提案書`)}; ${box} vertical-align: bottom; padding-bottom: 4mm; }
   @bottom-left { content: ${cssString(vendor)}; ${box} vertical-align: top; padding-top: 4mm; }
   @bottom-center { content: ${cssString(edition)}; ${box} vertical-align: top; padding-top: 4mm; }
   @bottom-right { content: counter(page); ${box} vertical-align: top; padding-top: 4mm; }
@@ -130,8 +130,13 @@ export default function ProjectPrint() {
         <PrintContext.Provider value={true}>
           <ProjectColorContext.Provider value={data.project.color || "brand"}>
             <Box ref={sheet} className="ks-print-sheet ks-paper">
+              {/* 下書きの案件は、全ページに DRAFT の透かしを入れる */}
+              {data.project.status === "draft" && <div className="ks-draft-mark" aria-hidden>DRAFT</div>}
               <section className="ks-print-page" style={{ page: "cover" }}>
-                <ProjectCover project={data.project} docs={data.docs} site={site} />
+                <PrintCover project={data.project} site={site} />
+              </section>
+              <section className="ks-print-page">
+                <PrintContents project={data.project} docs={data.docs} site={site} />
               </section>
               {data.docs.map((d, i) => (
                 <section key={d.type} id={`doc-${d.type}`} className="ks-print-page" style={{ page: `doc-${i}` }}>

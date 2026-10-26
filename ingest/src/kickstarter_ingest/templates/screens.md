@@ -5,7 +5,10 @@ order: 5
 
 <!--
 ```mock ブロックに YAML で部品を上から並べると、案件カラーの「画面イメージ」として描画されます。
-  device: desktop | mobile（最初に見せる端末。画面の上の切り替えで、もう一方の端末でも見られる）   title: アドレスバーに出すパス
+  device: desktop | tablet | mobile（最初に見せる端末。画面の上の切り替えで、ほかの端末でも見られる）   title: アドレスバーに出すパス
+  devices: [desktop, tablet, mobile]（切り替えに出す端末。省略時はパソコンとスマホ。タブレットは書いたときだけ出る）
+  pwa: true（ブラウザ表示とアプリ（PWA）表示を切り替えられる。PWA ではアドレスバーが消え、パソコンはアプリ名の窓になる）
+  display: browser | pwa（最初に見せる表示）   app: PWA の窓に出すアプリ名（省略時は header の title）
   パソコンで見ると tabbar は横のメニューに、スマホで見ると nav は上のチップに、row は縦並びになります
 画面の骨組み:
   header {title, links, actions, back, action}（先頭に置くと上のバー。スマホは back: true で戻る矢印）

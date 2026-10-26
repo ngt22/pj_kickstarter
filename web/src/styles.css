@@ -521,9 +521,14 @@ table {
 .mock-band-note {
   color: var(--mock-on-stage-dim);
 }
+.mock-switches {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-xs);
+  margin-left: auto;
+}
 .mock-switch {
   display: inline-flex;
-  margin-left: auto;
   padding: 2px;
   border: 1px solid var(--mock-stage-line);
   border-radius: var(--mantine-radius-xl);
@@ -696,6 +701,80 @@ table {
   background: var(--mantine-color-white);
   border-radius: var(--mantine-radius-md);
   transform: translateX(-50%);
+}
+/* パソコンで PWA として開いた窓: アドレスバーの代わりにアプリ名のタイトルバー */
+.mock-toolbar[data-pwa] {
+  justify-content: space-between;
+  height: 34px;
+  background: var(--mantine-primary-color-filled);
+  border-bottom: 0;
+}
+.mock-app-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mantine-color-white);
+}
+.mock-app-title .mantine-ThemeIcon-root {
+  background: rgb(255 255 255 / 0.22);
+}
+.mock-window-controls {
+  display: flex;
+  gap: 18px;
+}
+.mock-window-controls i {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid rgb(255 255 255 / 0.8);
+}
+.mock-window-controls i:first-child {
+  height: 0;
+  border-width: 1.5px 0 0;
+  align-self: center;
+}
+/* スマホ・タブレットのブラウザのアドレスバー */
+.mock-mobile-url {
+  padding: 4px 12px 8px;
+  background: var(--mantine-color-white);
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+}
+.mock-mobile-url span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 30px;
+  font-size: 12px;
+  color: var(--mantine-color-gray-7);
+  background: var(--mantine-color-gray-1);
+  border-radius: var(--mantine-radius-md);
+}
+.mock-tablet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 900px;
+  overflow: hidden;
+  border: 16px solid #1d1f23;
+  border-radius: 34px;
+  background: var(--mantine-color-gray-0);
+  box-shadow: 0 0 0 1.5px #8b9099, 0 20px 40px -14px rgb(0 0 0 / 0.4);
+}
+.mock-tablet .mock-statusbar {
+  height: 28px;
+  padding: 0 20px;
+  font-size: 12px;
+}
+.mock-tablet .mock-app {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.mock-tablet .mock-screen {
+  flex: 1;
+  min-height: 0;
 }
 .mock-phone {
   position: relative;
@@ -1075,6 +1154,7 @@ table {
     background: var(--mantine-color-gray-8);
   }
   .mock-browser,
+  .mock-tablet,
   .mock-phone {
     box-shadow: none;
   }

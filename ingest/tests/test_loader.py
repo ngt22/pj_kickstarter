@@ -103,6 +103,18 @@ def test_drawing_pins_are_checked(tmp_path):
     assert any("status は" in e for e in load_project(path).errors)
 
 
+def test_mock_devices_are_checked(tmp_path):
+    path = copy_sample(tmp_path)
+    screens = path / "screens.md"
+    text = screens.read_text(encoding="utf-8")
+    assert "device: desktop\n" in text
+    screens.write_text(text.replace("device: desktop\n", "device: tablet\ndevices: [desktop, tablet]\npwa: true\ndisplay: pwa\n", 1), encoding="utf-8")
+    assert load_project(path).errors == []
+
+    screens.write_text(text.replace("device: desktop\n", "device: tablet\ndevices: [desktop, mobile]\n", 1), encoding="utf-8")
+    assert any("devices にありません" in e for e in load_project(path).errors)
+
+
 def test_mock_elements_match_web():
     import re
 

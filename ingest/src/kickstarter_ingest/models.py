@@ -320,12 +320,27 @@ def _mock_body_schema(schema: dict[str, Any]) -> None:
     }
 
 
+Device = Literal["desktop", "tablet", "mobile"]
+
+
 class MockBlock(Strict):
     """```mock ブロック（画面モック）。部品を上から並べる。"""
 
-    device: Literal["desktop", "mobile"] = Field("desktop", description="枠の形")
+    device: Device = Field("desktop", description="最初に見せる端末")
+    devices: list[Device] | None = Field(
+        None, min_length=1, description="切り替えで見せる端末（省略時は desktop と mobile。tablet は書いたときだけ出る）"
+    )
+    pwa: bool = Field(False, description="true でブラウザ表示とアプリ（PWA）表示を切り替えられる")
+    display: Literal["browser", "pwa"] | None = Field(None, description="最初に見せる表示（pwa を書くと切り替えも出る）")
+    app: str | None = Field(None, description="PWA 表示のタイトルバーに出すアプリ名（省略時は header の title）")
     title: str | None = Field(None, description="アドレスバーに出す文字（例: /reservations）")
     body: list[Any] = Field(min_length=1, json_schema_extra=_mock_body_schema)
+
+    @model_validator(mode="after")
+    def check_devices(self) -> "MockBlock":
+        if self.devices is not None and self.device not in self.devices:
+            raise ValueError(f"device: {self.device} が devices にありません")
+        return self
 
     @field_validator("body")
     @classmethod

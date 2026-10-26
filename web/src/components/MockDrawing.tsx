@@ -94,7 +94,21 @@ export default function MockDrawing({ p, narrow = false }: { p: Props; narrow?: 
   const rooms = layoutRooms((p.rooms as string[] | undefined) ?? ["室1", "室2", "室3", "室4", "室5", "室6"], size);
   const pins: Props[] = ((p.pins as Props[] | undefined) ?? []).map((pin, i) => ({ ...pin, label: String(pin.label ?? i + 1) }));
   const selected = p.selected != null ? String(p.selected) : undefined;
-  const used = [...new Set(pins.map((pin) => pin.status ?? "new"))].filter((s) => STATUS[s]);
+  // 区分（groups）を書くと、ピンを区分の色で塗る（例: 建築物＝赤、建築設備＝青）。color はピンごとの色の直接指定
+  const groups = new Map(((p.groups as Props[] | undefined) ?? []).map((g) => [String(g.id), g]));
+  const colorOf = (pin: Props) => {
+    const c = pin.color ?? groups.get(String(pin.group))?.color;
+    return c ? `var(--mantine-color-${c}-6)` : (STATUS[pin.status ?? "new"] ?? STATUS.new).color;
+  };
+  const usedGroups = [...groups.values()].filter((g) => pins.some((pin) => String(pin.group) === String(g.id)));
+  // 状態の凡例は、状態の色で塗ったピンだけで数える
+  const used = [...new Set(pins.filter((pin) => !pin.color && !groups.has(String(pin.group))).map((pin) => pin.status ?? "new"))].filter(
+    (s) => STATUS[s],
+  );
+  const legend = [
+    ...usedGroups.map((g) => ({ key: `g-${g.id}`, label: String(g.label ?? g.id), color: `var(--mantine-color-${g.color}-6)` })),
+    ...used.map((s) => ({ key: s, ...STATUS[s] })),
+  ];
   const floors = (p.floors as string[] | undefined) ?? [];
 
   return (
@@ -108,14 +122,13 @@ export default function MockDrawing({ p, narrow = false }: { p: Props; narrow?: 
       <div className="mock-drawing-sheet">
         <Plan rooms={rooms} size={size} />
         {pins.map((pin) => {
-          const st = STATUS[pin.status ?? "new"] ?? STATUS.new;
           const on = pin.label === selected;
           return (
             <div
               key={pin.label}
               className="mock-pin"
               data-selected={on || undefined}
-              style={{ left: `${pin.x ?? 50}%`, top: `${pin.y ?? 50}%`, "--pin": st.color } as React.CSSProperties}
+              style={{ left: `${pin.x ?? 50}%`, top: `${pin.y ?? 50}%`, "--pin": colorOf(pin) } as React.CSSProperties}
             >
               <span className="mock-pin-head">
                 <span>{pin.label}</span>
@@ -135,11 +148,11 @@ export default function MockDrawing({ p, narrow = false }: { p: Props; narrow?: 
           <ActionIcon variant="default" size="md" aria-label="全体"><IconZoomReset size={16} stroke={ICON_STROKE} /></ActionIcon>
         </div>
       </div>
-      {used.length > 1 && (
+      {(legend.length > 1 || usedGroups.length > 0) && (
         <Group gap="md" mt={8}>
-          {used.map((s) => (
-            <Text key={s} size="xs" c="dimmed" className="mock-pin-legend" style={{ "--pin": STATUS[s].color } as React.CSSProperties}>
-              {STATUS[s].label}
+          {legend.map((l) => (
+            <Text key={l.key} size="xs" c="dimmed" className="mock-pin-legend" style={{ "--pin": l.color } as React.CSSProperties}>
+              {l.label}
             </Text>
           ))}
         </Group>

@@ -2,7 +2,7 @@
 
 import re
 from datetime import date
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -274,7 +274,7 @@ MOCK_ELEMENTS: dict[str, set[str] | None] = {
     "radio": {"label", "options", "value", "note"},
     "button": {"label", "variant", "to", "disabled", "full", "note"},
     "buttons": {"items", "align"},
-    "row": {"items"},
+    "row": {"items", "widths"},
     "card": {"title", "items", "note"},
     "stats": {"items", "note"},
     "table": {"columns", "rows", "note"},
@@ -289,14 +289,15 @@ MOCK_ELEMENTS: dict[str, set[str] | None] = {
     "toast": {"title", "text", "tone", "note"},
     "empty": {"title", "hint", "action", "note"},
     "image": {"label", "height", "note"},
-    "drawing": {"title", "floors", "floor", "rooms", "pins", "selected", "note"},
+    "drawing": {"title", "floors", "floor", "rooms", "pins", "groups", "selected", "note"},
     "divider": None,
     "space": None,
 }
 # list の行（{title, sub, ...} で書いたとき）と、stats の数値カードに書ける項目
 LIST_ITEM_KEYS = {"title", "sub", "meta", "badge", "thumb", "avatar", "to"}
 STAT_KEYS = {"label", "value", "delta"}
-PIN_KEYS = {"x", "y", "label", "status", "text"}
+PIN_KEYS = {"x", "y", "label", "status", "group", "color", "text"}
+PIN_GROUP_KEYS = {"id", "label", "color"}
 PIN_STATUSES = {"new", "prev", "done"}
 LIST_KINDS = {"buttons", "row", "list", "tabs", "nav", "tabbar", "breadcrumb", "stats", "stepper"}
 BUTTON_KEYS = MOCK_ELEMENTS["button"]
@@ -333,13 +334,32 @@ def check_mock_elements(items: Any, where: str = "body") -> None:
             if kind == "drawing":
                 for pin in value.get("pins", []):
                     if not isinstance(pin, dict) or set(pin) - PIN_KEYS:
-                        raise ValueError(f"{path}: ピンは {{x, y, label, status, text}} で書いてください")
+                        raise ValueError(f"{path}: ピンは {{x, y, label, status, group, color, text}} で書いてください")
                     for axis in ("x", "y"):
                         v = pin.get(axis)
                         if not isinstance(v, (int, float)) or not 0 <= v <= 100:
                             raise ValueError(f"{path}: ピンの {axis} は図面に対する % （0〜100）で書いてください")
                     if pin.get("status", "new") not in PIN_STATUSES:
                         raise ValueError(f"{path}: ピンの status は {', '.join(sorted(PIN_STATUSES))} のどれかです")
+                    if "color" in pin and pin["color"] not in get_args(ThemeColor):
+                        raise ValueError(f"{path}: ピンの color は {', '.join(get_args(ThemeColor))} のどれかです")
+                groups = value.get("groups", [])
+                if not isinstance(groups, list) or any(
+                    not isinstance(g, dict) or set(g) - PIN_GROUP_KEYS or not {"id", "color"} <= set(g) for g in groups
+                ):
+                    raise ValueError(f"{path}: groups は {{id, label, color}} のリストで書いてください")
+                for g in groups:
+                    if g["color"] not in get_args(ThemeColor):
+                        raise ValueError(f"{path}: groups の color は {', '.join(get_args(ThemeColor))} のどれかです")
+                group_ids = {str(g["id"]) for g in groups}
+                for pin in value.get("pins", []):
+                    if "group" in pin and str(pin["group"]) not in group_ids:
+                        raise ValueError(f"{path}: ピンの group {pin['group']} が groups にありません")
+            if kind == "row" and "widths" in value:
+                w = value["widths"]
+                n = len(value.get("items", []))
+                if not isinstance(w, list) or len(w) != n or any(not isinstance(x, (int, float)) or x <= 0 for x in w):
+                    raise ValueError(f"{path}: row の widths は items と同じ数の正の数で書いてください（例: [1, 2, 1.3]）")
             item_keys = {"list": LIST_ITEM_KEYS, "stats": STAT_KEYS}.get(kind)
             for it in value.get("items", []) if item_keys else []:
                 if isinstance(it, dict) and set(it) - item_keys:

@@ -18,12 +18,13 @@ title: 画面仕様 / ワイヤーフレーム
   input {label, type: text|email|date|number|password|textarea, placeholder, value, required, help, error}
   search {placeholder}  select {label, options}  checkbox {label, checked}  radio {label, options}
   button {label, variant: primary|default|danger|link, to: 遷移先の画面ID, full}  buttons [ボタン...]
-  row [部品...]（横並び）  card {title, items: [部品...]}  tabs [名前...]
+  row [部品...] または {items: [部品...], widths: [1, 2, 1.3]}（横並び。widths は列の幅の比）  card {title, items: [部品...]}  tabs [名前...]
   stats [{label, value, delta}]（数値カード）  list [文字...] または [{title, sub, meta, badge, thumb, avatar, to}]
   table {columns, rows}（セルの "[予約]" はボタン、"(満席)" はバッジ）  pagination {total}  empty {title, hint, action}
   avatar {name, role}  badge {text, color}  image {label, height}  divider  space
-  drawing {title, floors, floor, rooms: [部屋名...], pins: [{x, y, label, status: new|prev|done, text}], selected}
-    （図面と指摘位置などのピン。図面は部屋名から自動で描き、ピンの x・y は図面に対する %。selected のピンは吹き出しに text を出す）
+  drawing {title, floors, floor, rooms: [部屋名...], groups: [{id, label, color}], pins: [{x, y, label, status: new|prev|done, group, color, text}], selected}
+    （図面と指摘位置などのピン。図面は部屋名から自動で描き、ピンの x・y は図面に対する %。selected のピンは吹き出しに text を出す。
+     ピンは status の色で塗る。group を付けると groups の区分の色（例: 建築物＝red、建築設備＝blue）、color で直接指定もできる）
 どの部品にも note: 番号 を付けると画面の外に注釈が並び、下の項目表と対応させられます。
 to: に書いた遷移先は画面の下に「画面遷移」として一覧になります。
 -->

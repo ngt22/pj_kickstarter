@@ -37,11 +37,11 @@ export type ArchLayout = { zones: ArchZone[]; nodes: ArchNode[]; links: ArchLink
 type Elk = InstanceType<typeof ELK>;
 let elk: Elk | undefined;
 
-// 日本語は1文字おおよそ 12px、英数字は 7px で見積もる
-export function textWidth(s: string): number {
+// 日本語は1文字おおよそ 12px、英数字は 7px で見積もる（文字の大きさが 12px のとき。fontSize で変えられる）
+export function textWidth(s: string, fontSize = 12): number {
   let w = 0;
   for (const ch of s) w += ch.charCodeAt(0) < 0x100 ? 7 : 12;
-  return w;
+  return (w * fontSize) / 12;
 }
 
 // ある辺に複数の線がつくとき、相手の位置の順に辺の上で等間隔に分ける
@@ -66,9 +66,10 @@ export async function layoutArch(spec: ArchSpec, narrow = false): Promise<ArchLa
   const from = (c: Indexed) => zi.get(c.l.from)!;
   const to = (c: Indexed) => zi.get(c.l.to)!;
 
+  // 利用者の幅 = 名前（14px）+ 左の余白 6・アイコン 34・間 8・右の余白 16・枠（.ar-user）
   const size = (n: SpecNode) =>
     n.kind === "user"
-      ? { width: Math.max(USER_W, textWidth(n.name) + 64), height: USER_H }
+      ? { width: Math.max(USER_W, textWidth(n.name, 14) + 72), height: USER_H }
       : { width: NODE_W, height: NODE_H + (n.note ? NOTE_H : 0) };
 
   // 1. 帯ごとに中を配置する（つながりのないカードは横に並べる）

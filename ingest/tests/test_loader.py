@@ -125,6 +125,35 @@ def test_drawing_pins_are_checked(tmp_path):
     assert any("status は" in e for e in load_project(path).errors)
 
 
+def test_drawing_pin_groups_are_checked(tmp_path):
+    path = copy_sample(tmp_path)
+    screens = path / "screens.md"
+    text = screens.read_text(encoding="utf-8")
+    drawing = (
+        "  - drawing: { rooms: [教室1], groups: [{ id: bldg, label: 建築物, color: red }],"
+        " pins: [{ x: 20, y: 30, group: bldg }, { x: 40, y: 30, color: blue }] }\n"
+    )
+    screens.write_text(text.replace("  - heading:", drawing + "  - heading:", 1), encoding="utf-8")
+    assert load_project(path).errors == []
+
+    screens.write_text(text.replace("  - heading:", drawing.replace("group: bldg", "group: equip") + "  - heading:", 1), encoding="utf-8")
+    assert any("group equip が groups にありません" in e for e in load_project(path).errors)
+    screens.write_text(text.replace("  - heading:", drawing.replace("color: blue", "color: navy") + "  - heading:", 1), encoding="utf-8")
+    assert any("ピンの color は" in e for e in load_project(path).errors)
+
+
+def test_row_widths_are_checked(tmp_path):
+    path = copy_sample(tmp_path)
+    screens = path / "screens.md"
+    text = screens.read_text(encoding="utf-8")
+    row = "  - row: { items: [{ text: 一覧 }, { text: 図面 }, { text: 詳細 }], widths: [1, 2, 1.3] }\n"
+    screens.write_text(text.replace("  - heading:", row + "  - heading:", 1), encoding="utf-8")
+    assert load_project(path).errors == []
+
+    screens.write_text(text.replace("  - heading:", row.replace("[1, 2, 1.3]", "[1, 2]") + "  - heading:", 1), encoding="utf-8")
+    assert any("widths は items と同じ数" in e for e in load_project(path).errors)
+
+
 def test_mock_devices_are_checked(tmp_path):
     path = copy_sample(tmp_path)
     screens = path / "screens.md"

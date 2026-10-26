@@ -2393,10 +2393,6 @@ table {
 .ks-print-sheet .mantine-Paper-root {
   box-shadow: none;
 }
-/* 縮小した図の元の幅が紙からはみ出していると、ブラウザがページ全体を縮めて刷ってしまうので切り落とす（見た目は縮小後の幅に収まっている） */
-.ks-print-sheet .ks-scaled {
-  overflow: clip;
-}
 /* スクロールで見せていたものは、すべて紙に出す。横に広い表も、紙の幅で折り返す */
 .ks-print-sheet .gantt {
   overflow: visible;

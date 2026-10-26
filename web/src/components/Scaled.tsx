@@ -27,9 +27,19 @@ export default function Scaled({ width, children }: { width: number; children: R
     return () => ro.disconnect();
   }, [width, print]);
 
+  // PDF では transform ではなく zoom で縮める。transform では元の幅が紙からはみ出したままになり、
+  // ブラウザがページ全体を縮めて刷ってしまうため（zoom は縮めた大きさで組まれる。offsetHeight は縮める前の値のまま）
+  if (print)
+    return (
+      <div ref={outer} className="ks-scaled">
+        <div ref={inner} style={{ width, zoom: size.scale, marginLeft: size.left && size.left / size.scale }}>
+          {children}
+        </div>
+      </div>
+    );
   return (
     <div ref={outer} className="ks-scaled" style={{ height: size.height }}>
-      <div ref={inner} style={{ width, transform: `scale(${size.scale})`, marginLeft: print ? size.left : undefined }}>
+      <div ref={inner} style={{ width, transform: `scale(${size.scale})` }}>
         {children}
       </div>
     </div>

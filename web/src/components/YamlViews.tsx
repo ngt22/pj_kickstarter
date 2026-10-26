@@ -1,5 +1,6 @@
 import { Badge, Code, List, Paper, SimpleGrid, Stack, Table, Text, Title } from "@mantine/core";
 import { estimateTotals, normalizeEstimate, taxLabel } from "../lib/estimate";
+import { usePrint } from "../lib/print";
 
 type Glossary = { terms: { term: string; reading?: string; definition: string }[] };
 type Risks = {
@@ -8,6 +9,9 @@ type Risks = {
 type Api = { spec: { info?: { title?: string; version?: string }; paths: Record<string, Record<string, { summary?: string }>> } };
 
 const LEVEL_COLOR: Record<string, string> = { 高: "red", 中: "yellow", 低: "gray" };
+// PDF は白黒で刷られても読めるよう、色ではなく記号と文字で示す
+const LEVEL_MARK: Record<string, string> = { 高: "●", 中: "◐", 低: "○" };
+const STATUS_LABEL: Record<string, string> = { open: "対応中", closed: "完了" };
 const METHOD_COLOR: Record<string, string> = { GET: "brand", POST: "teal", PUT: "orange", PATCH: "orange", DELETE: "red" };
 
 // right: 右寄せにする列（数値）の見出し
@@ -52,7 +56,9 @@ export function GlossaryView({ data }: { data: Glossary }) {
 }
 
 export function RisksView({ data }: { data: Risks }) {
-  const level = (v: string) => <Badge color={LEVEL_COLOR[v] ?? "gray"} variant="light">{v}</Badge>;
+  const print = usePrint();
+  const level = (v: string) =>
+    print ? `${LEVEL_MARK[v] ?? ""} ${v}` : <Badge color={LEVEL_COLOR[v] ?? "gray"} variant="light">{v}</Badge>;
   return (
     <DataTable head={["ID", "リスク", "発生確率", "影響度", "対策", "担当", "状態"]} minWidth={900}>
       <Table.Tbody>
@@ -64,8 +70,8 @@ export function RisksView({ data }: { data: Risks }) {
             <Table.Td>{level(r.impact)}</Table.Td>
             <Table.Td>{r.mitigation}</Table.Td>
             <Table.Td style={{ whiteSpace: "nowrap" }}>{r.owner}</Table.Td>
-            <Table.Td>
-              <Badge color={r.status === "open" ? "blue" : "gray"} variant="outline">{r.status}</Badge>
+            <Table.Td style={{ whiteSpace: "nowrap" }}>
+              {print ? (STATUS_LABEL[r.status] ?? r.status) : <Badge color={r.status === "open" ? "blue" : "gray"} variant="outline">{r.status}</Badge>}
             </Table.Td>
           </Table.Tr>
         ))}

@@ -20,7 +20,29 @@ def copy_sample(tmp_path: Path) -> Path:
 def test_sample_project_is_valid():
     result = load_project(ROOT / "projects" / "sample")
     assert result.errors == []
-    assert len(result.docs) == 14
+    assert [d.type for d in result.docs] == [dt.key for dt in DOC_TYPES]
+    assert [d.order for d in result.docs] == list(range(1, 18))
+
+
+def test_old_order_in_front_matter_is_ignored(tmp_path):
+    path = copy_sample(tmp_path)
+    file = path / "personas.md"
+    file.write_text(file.read_text(encoding="utf-8").replace("---\n", "---\norder: 2\n", 1), encoding="utf-8")
+    result = load_project(path)
+    assert result.errors == []
+    assert next(d for d in result.docs if d.type == "personas").order == 3
+
+
+def test_doc_order_and_parts_match_web():
+    import re
+
+    from kickstarter_ingest.doctypes import PARTS
+
+    src = (ROOT / "web" / "src" / "lib" / "doctypes.ts").read_text(encoding="utf-8")
+    parts = re.findall(r'\{ key: "(\w+)", title: "([^"]+)" \}', src.split("export const PARTS", 1)[1].split("] as const", 1)[0])
+    assert parts == list(PARTS)
+    body = src.split("export const DOC_PARTS", 1)[1].split("\n};", 1)[0]
+    assert re.findall(r'^  "?([\w-]+)"?: "(\w+)",', body, re.MULTILINE) == [(dt.key, dt.part) for dt in DOC_TYPES]
 
 
 def test_templates_cover_all_doc_types():

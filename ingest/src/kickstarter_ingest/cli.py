@@ -45,7 +45,7 @@ def report_wording(result: LoadResult, forbidden_terms: list[str] = (), push: bo
     for f in wording.warnings:
         print(f"[warn] {f} がクライアント向けの表現か確認してください")
     if wording.undecided:
-        print(f"[warn] 「未定」が {wording.undecided} 箇所あります。提出前に決めるか「別途ご相談」などに書き換えてください")
+        print(f"[warn] 「未定」が {wording.undecided} 箇所あります。提出前に決めるか、前提条件・確認事項の確認事項に移してください")
     return not wording.blocking
 
 

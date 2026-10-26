@@ -1,6 +1,7 @@
 import { Group, Paper, SimpleGrid, Text, Title, Typography, UnstyledButton } from "@mantine/core";
 import { Link } from "react-router-dom";
 import { parseYaml, stripFrontMatter, type DocRecord } from "../lib/docs";
+import { partTitle } from "../lib/doctypes";
 import { usePrint } from "../lib/print";
 import Markdown from "./Markdown";
 import { ApiView, EstimateView, GlossaryView, RisksView } from "./YamlViews";
@@ -37,6 +38,7 @@ function Pager({ label, doc, basePath, align }: { label: string; doc?: DocRecord
 export default function DocView({ doc, index, total, prev, next, basePath }: Props) {
   const print = usePrint();
   const updated = doc.updatedAt?.toDate();
+  const part = partTitle(doc.type);
   const body =
     doc.format === "markdown" ? (
       <Typography className="doc-body">
@@ -49,24 +51,39 @@ export default function DocView({ doc, index, total, prev, next, basePath }: Pro
       })()
     );
 
+  // PDF では画面用の紙（枠と影）・「DOCUMENT 01 / 14」・最終更新を出さず、資料番号と資料名だけを見出しにする
+  if (print)
+    return (
+      <article className="ks-paper-doc">
+        <header className="ks-paper-head">
+          {part && <p className="ks-paper-part">{part}</p>}
+          <h1>
+            <span className="ks-paper-num">{index + 1}</span>
+            {doc.title}
+          </h1>
+        </header>
+        {body}
+      </article>
+    );
+
   return (
     <>
       <Paper component="article" withBorder shadow="xs" p={{ base: "lg", sm: "xl" }}>
         <header className="ks-doc-header">
           <Group justify="space-between" align="baseline" gap="xs">
-            <Text className="ks-eyebrow">DOCUMENT {pad2(index + 1)} / {pad2(total)}</Text>
+            <Text className="ks-eyebrow">
+              {part && <>{part}　·　</>}DOCUMENT {pad2(index + 1)} / {pad2(total)}
+            </Text>
             {updated && <Text size="xs" c="dimmed">最終更新 {dateFmt.format(updated)}</Text>}
           </Group>
           <Title order={1} mt={4}>{doc.title}</Title>
         </header>
         {body}
       </Paper>
-      {!print && (
       <SimpleGrid cols={{ base: 1, xs: 2 }} mt="lg" spacing="md">
         <Pager label="← 前のドキュメント" doc={prev} basePath={basePath} align="left" />
         <Pager label="次のドキュメント →" doc={next} basePath={basePath} align="right" />
       </SimpleGrid>
-      )}
     </>
   );
 }

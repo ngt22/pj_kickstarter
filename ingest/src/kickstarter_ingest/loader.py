@@ -20,7 +20,7 @@ CHUNK_BYTES = 900 * 1024
 class LoadedDoc:
     type: str
     title: str
-    order: int
+    order: int  # DOC_TYPES の順（原稿の order は使わない）
     format: str
     body: str  # 原文。YAML もパースせず原文のまま保存し、ブラウザ側で解釈する
 
@@ -113,7 +113,7 @@ def load_project(path: Path) -> LoadResult:
         result.files, file_errors = load_files(path, result.meta)
         result.errors.extend(file_errors)
 
-    for dt in DOC_TYPES:
+    for order, dt in enumerate(DOC_TYPES, start=1):
         file = path / dt.filename
         if not file.exists():
             result.missing.append(dt.filename)
@@ -132,7 +132,7 @@ def load_project(path: Path) -> LoadResult:
         except (ValidationError, ValueError, yaml.YAMLError) as e:
             result.errors.append(f"{dt.filename}: {e}")
             continue
-        result.docs.append(LoadedDoc(dt.key, parsed.title, parsed.order, dt.format, text))
+        result.docs.append(LoadedDoc(dt.key, parsed.title, order, dt.format, text))
 
     result.warnings.extend(check_screen_ids(result.docs))
     return result

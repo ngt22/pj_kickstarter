@@ -1,8 +1,9 @@
 import { Box, Button, Code, Group, Modal, SegmentedControl, Text, Tooltip } from "@mantine/core";
-import { useDisclosure, useElementSize, useMediaQuery } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseYaml } from "../lib/docs";
-import { PENDING, usePrint } from "../lib/print";
+import { usePrint } from "../lib/print";
+import PrintGantt from "./PrintGantt";
 import {
   DAY_WIDTH,
   defaultScale,
@@ -69,20 +70,15 @@ function TaskTooltip({ task }: { task: GanttTask }) {
   );
 }
 
-const SCALES: Scale[] = ["day", "week", "month"];
-
 function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; sectionNames: string[]; maxHeight: string }) {
   const first = Math.min(...tasks.map((t) => t.start));
   const last = Math.max(...tasks.map((t) => t.end));
-  const [chosen, setScale] = useState<Scale>(() => defaultScale(last - first));
+  const [scale, setScale] = useState<Scale>(() => defaultScale(last - first));
   const [closed, setClosed] = useState<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const today = todayDay();
-  const print = usePrint();
-  const { ref: fitRef, width: avail } = useElementSize();
   const narrow = useMediaQuery("(max-width: 48em)");
-  // PDF（A4 縦）では期間に幅を回すため、工程名の列を少し細くする
-  const LABEL_W = print ? 200 : narrow ? 150 : 260;
+  const LABEL_W = narrow ? 150 : 260;
 
   // 前後に余白を取り、目盛りの切れ目にそろえる
   const span = (s: Scale) => {
@@ -90,17 +86,8 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
     const from = s === "month" ? monthStart(first - pad) : first - pad - ((fromDay(first - pad).getUTCDay() + 6) % 7);
     return { from, to: last + pad };
   };
-  // PDF ではスクロールできないので、期間を紙の幅いっぱいに伸び縮みさせる。
-  // 縮めすぎると目盛りの文字が重なるので、そのときは一段粗い目盛りにする
-  const fitWidth = (s: Scale) => {
-    const r = span(s);
-    return (avail - LABEL_W) / (r.to - r.from);
-  };
-  const scale = print
-    ? (SCALES.slice(SCALES.indexOf(defaultScale(last - first))).find((s) => fitWidth(s) >= DAY_WIDTH[s] * 0.6) ?? "month")
-    : chosen;
   const { from, to } = span(scale);
-  const dw = print ? fitWidth(scale) : DAY_WIDTH[scale];
+  const dw = DAY_WIDTH[scale];
   const width = (to - from) * dw;
   const x = (day: number) => (day - from) * dw;
   const { top, bottom } = useMemo(() => ticks(from, to, scale), [from, to, scale]);
@@ -133,10 +120,8 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
 
   const bodyH = rows.length * ROW_H;
 
-  if (print && !avail) return <div ref={fitRef} {...PENDING} />;
   return (
-    <div ref={fitRef}>
-      {!print && (
+    <div>
       <Group justify="space-between" mb="xs" gap="xs">
         <SegmentedControl
           size="xs"
@@ -157,8 +142,7 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
           </Button>
         </Group>
       </Group>
-      )}
-      <div className="gantt" ref={scrollRef} style={{ maxHeight: print ? undefined : maxHeight }}>
+      <div className="gantt" ref={scrollRef} style={{ maxHeight }}>
         <div style={{ width: LABEL_W + width, position: "relative" }}>
           <div className="gantt-header" style={{ height: HEADER_H }}>
             <div className="gantt-label gantt-corner" style={{ width: LABEL_W }}>工程</div>
@@ -309,6 +293,7 @@ export default function Gantt({ source }: { source: string }) {
   if ("error" in parsed) return <Code block c="red">ガントチャートを読めません: {parsed.error}</Code>;
   const { spec, tasks } = parsed;
   if (!tasks.length) return null;
+  if (print) return <PrintGantt spec={spec} tasks={tasks} />;
   const sectionNames = spec.sections.map((s) => s.name);
 
   return (
@@ -318,7 +303,7 @@ export default function Gantt({ source }: { source: string }) {
           <div className="gantt-kicker">Schedule</div>
           <div className="gantt-title">{spec.title ?? "スケジュール"}</div>
         </div>
-        {!print && <Button size="compact-xs" variant="subtle" color="gray" onClick={open}>全画面で見る</Button>}
+        <Button size="compact-xs" variant="subtle" color="gray" onClick={open}>全画面で見る</Button>
       </header>
       <Chart tasks={tasks} sectionNames={sectionNames} maxHeight="70vh" />
       <Modal opened={full} onClose={close} fullScreen title={spec.title ?? "スケジュール"} classNames={{ body: "gantt-wrap" }}>

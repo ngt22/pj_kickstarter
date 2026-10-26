@@ -11,8 +11,8 @@ export type TemplateDoc = { type: string; title: string; order: number; format: 
 
 type SchemaIndex = { docs: { type: string; format: DocFormat; template: string }[] };
 
-// 雛形の原文から title と order を読む（ingest の loader と同じく、本文は原文のまま保存する）
-export function parseTemplate(type: string, format: DocFormat, body: string): TemplateDoc {
+// 雛形の原文から title を読む（ingest の loader と同じく、本文は原文のまま保存する）。order は schema/index.json の並び順
+export function parseTemplate(type: string, format: DocFormat, body: string, order: number): TemplateDoc {
   let header: unknown;
   if (format === "markdown") {
     const end = body.indexOf("\n---", 3);
@@ -21,9 +21,9 @@ export function parseTemplate(type: string, format: DocFormat, body: string): Te
   } else {
     header = load(body);
   }
-  const { title, order } = (header ?? {}) as { title?: unknown; order?: unknown };
-  if (typeof title !== "string" || !Number.isInteger(order)) throw new Error(`${type}: title と order がありません`);
-  return { type, title, order: order as number, format, body };
+  const { title } = (header ?? {}) as { title?: unknown };
+  if (typeof title !== "string") throw new Error(`${type}: title がありません`);
+  return { type, title, order, format, body };
 }
 
 // サイトで公開している雛形（ingest の site-assets が書き出す schema/index.json と templates/）を読む。
@@ -36,7 +36,7 @@ export async function loadTemplates(base = "/"): Promise<TemplateDoc[]> {
   };
   const index = (await (await get("schema/index.json")).json()) as SchemaIndex;
   return Promise.all(
-    index.docs.map(async (d) => parseTemplate(d.type, d.format, await (await get(d.template)).text())),
+    index.docs.map(async (d, i) => parseTemplate(d.type, d.format, await (await get(d.template)).text(), i + 1)),
   );
 }
 

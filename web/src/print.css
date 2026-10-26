@@ -1,0 +1,807 @@
+/* 全資料を 1 つの PDF に（pages/ProjectPrint.tsx だけが読み込む）
+   画面の見た目（カード・影・バッジ）は使わず、提案書として紙に刷る文字組みにする。
+   - 用紙は A4 縦。用紙・余白・柱（ページ上下の案件名・資料名・ページ番号）の @page は ProjectPrint が入れる
+   - 画面でも紙の本文幅（210mm − 左右 18mm × 2 = 174mm）で並べ、印刷のときに図を組み直さずに済むようにする
+   - 紙の幅は 48em より狭いが、スマホ向けの組み替えは画面だけに効かせてあり（@media screen）、印刷も下見と同じ組み方になる
+   - 文字は pt で決める。本文 10pt / 表 9pt / 注 8.5pt / 資料名 18pt / 節 13pt / 項 11pt
+   - 色は墨・グレー 2 段・アクセントの藍 1 色。白黒で刷っても読めるよう、色だけで意味を持たせない */
+
+.ks-paper {
+  --paper-ink: #1c212b;
+  --paper-gray: #5b616e;
+  --paper-gray-light: #8a909b;
+  --paper-rule: #1c212b;
+  --paper-hair: #d9dce1;
+  --paper-tint: #f2f3f5;
+  --paper-accent: var(--mantine-color-brand-7);
+  font-size: 10pt;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  color: var(--paper-ink);
+}
+
+/* ---- 下見の画面（印刷では消える） ---- */
+.ks-print-screen {
+  min-height: 100vh;
+  background: var(--mantine-color-gray-2);
+  padding-bottom: var(--mantine-spacing-xl);
+}
+.ks-print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  background: var(--mantine-color-white);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.ks-print-hint {
+  flex: 1;
+  text-align: center;
+}
+.ks-print-sheet {
+  width: 174mm;
+  margin: var(--mantine-spacing-lg) auto 0;
+  padding: 20mm 18mm 18mm;
+  box-sizing: content-box;
+  background: #fff;
+  box-shadow: var(--mantine-shadow-md);
+}
+/* 画面では改ページの位置を破線で示す */
+.ks-print-page + .ks-print-page {
+  margin-top: 18mm;
+  padding-top: 20mm;
+  border-top: 1px dashed var(--mantine-color-gray-4);
+}
+
+/* ---- 表紙（components/PrintFront.tsx）：白地に平組み。宛名・表題・提出日などを、紙の提案書の標準的な大きさで置く ---- */
+.pc {
+  display: flex;
+  flex-direction: column;
+  height: 255mm;
+}
+.pc p {
+  margin: 0;
+}
+.pc-to {
+  font-size: 12pt;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.pc-main {
+  margin-top: 62mm;
+  padding: 7mm 0 7mm 5mm;
+  border-left: 3pt solid var(--paper-accent);
+}
+.pc-kicker {
+  font-size: 10pt;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--paper-accent);
+}
+.pc-title {
+  margin: 2mm 0 0;
+  font-size: 22pt !important;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--paper-ink);
+}
+.pc-summary {
+  margin-top: 3mm !important;
+  font-size: 10.5pt;
+  line-height: 1.6;
+  color: var(--paper-gray);
+}
+.pc-meta {
+  margin: auto 0 0;
+  margin-left: auto;
+  min-width: 70mm;
+  font-size: 10pt;
+  line-height: 1.6;
+}
+.pc-meta > div {
+  display: flex;
+  gap: 6mm;
+  padding: 1.5mm 0;
+  border-bottom: 0.25pt solid var(--paper-hair);
+}
+.pc-meta dt {
+  width: 16mm;
+  color: var(--paper-gray);
+}
+.pc-meta dd {
+  margin: 0;
+}
+.pc-note {
+  margin-top: 8mm !important;
+  padding-top: 2.5mm;
+  border-top: 0.75pt solid var(--paper-rule);
+  font-size: 8pt;
+  line-height: 1.6;
+  color: var(--paper-gray);
+}
+
+/* ---- 目次のページと、提案概要・文書情報のページ ---- */
+.pf-h {
+  margin: 0 0 4pt !important;
+  padding-left: 2.5mm;
+  font-size: 13pt !important;
+  font-weight: 700;
+  line-height: 1.45;
+  border-left: 3pt solid var(--paper-accent);
+}
+.pf-h ~ .pf-h {
+  margin-top: 14pt !important;
+}
+.pf-toc {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 0.75pt solid var(--paper-rule);
+  border-bottom: 0.75pt solid var(--paper-rule);
+}
+.pf-toc li + li {
+  border-top: 0.25pt solid var(--paper-hair);
+}
+.pf-toc a {
+  display: block;
+  padding: 2.5pt 6pt;
+  color: inherit;
+  text-decoration: none;
+}
+.pf-toc-num {
+  display: inline-block;
+  width: 8mm;
+  color: var(--paper-accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pf-kv {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 0.75pt solid var(--paper-rule);
+  border-bottom: 0.75pt solid var(--paper-rule);
+  font-size: 9.5pt;
+  line-height: 1.6;
+}
+.pf-kv :is(th, td) {
+  padding: 3pt 6pt;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 0.25pt solid var(--paper-hair);
+}
+.pf-kv th {
+  width: 36mm;
+  font-weight: 700;
+  background: var(--paper-tint);
+}
+
+/* 下書きの透かし。印刷では各ページに出る（position: fixed はページごとに繰り返される） */
+.ks-draft-mark {
+  display: none;
+}
+
+/* ---- 資料の見出し ---- */
+.ks-paper-head {
+  margin-bottom: 8mm;
+  padding-bottom: 3mm;
+  border-bottom: 0.75pt solid var(--paper-rule);
+}
+.ks-paper-head h1 {
+  margin: 0;
+  font-size: 18pt !important;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--paper-ink);
+}
+.ks-paper-num {
+  margin-right: 0.6em;
+  color: var(--paper-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 本文 ---- */
+.ks-paper .doc-body {
+  --ks-measure: none;
+  font-size: 10pt;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  color: var(--paper-ink);
+}
+.ks-paper .doc-body > p,
+.ks-paper .doc-body :is(ul, ol):where(:not(.mock-stage *)) {
+  margin: 0 0 6pt;
+}
+.ks-paper .doc-body :is(ul, ol):where(:not(.mock-stage *)) {
+  padding-left: 1.4em;
+}
+.ks-paper .doc-body li:where(:not(.mock-stage *)) + li {
+  margin-top: 2pt;
+}
+.ks-paper .doc-body li:where(:not(.mock-stage *))::marker {
+  color: var(--paper-gray);
+}
+.ks-paper :is(h2, h3, h4):where(:not(.mock-stage *)) {
+  color: var(--paper-ink);
+  line-height: 1.45;
+}
+.ks-paper h2:where(:not(.mock-stage *)) {
+  margin: 14pt 0 6pt !important;
+  padding-left: 2.5mm;
+  font-size: 13pt !important;
+  font-weight: 700;
+  border-left: 3pt solid var(--paper-accent);
+}
+.ks-paper h3:where(:not(.mock-stage *)) {
+  margin: 10pt 0 4pt !important;
+  font-size: 11pt !important;
+  font-weight: 700;
+}
+.ks-paper h4:where(:not(.mock-stage *)) {
+  margin: 8pt 0 3pt !important;
+  font-size: 10pt !important;
+  font-weight: 700;
+}
+.ks-paper .doc-body > :is(h2, h3, h4) + :is(table, div) {
+  margin-top: 4pt;
+}
+.ks-paper .doc-body > :is(table, .mermaid, div) {
+  margin-bottom: 8pt;
+}
+.ks-paper .doc-body blockquote {
+  margin: 0 0 6pt;
+  padding: 0 0 0 3mm;
+  border-left: 1.5pt solid var(--paper-hair);
+  border-radius: 0;
+  background: none;
+  color: var(--paper-gray);
+}
+.ks-paper .doc-body :not(pre) > code {
+  padding: 0;
+  font-size: 0.9em;
+  border: 0;
+  background: none;
+}
+
+/* ---- 表：角丸・影・塗りの枠をやめ、上下の罫線と行の細い罫で組む ---- */
+.ks-paper :is(.doc-body > table, .ks-table-frame table) {
+  width: 100%;
+  border: 0;
+  border-top: 0.75pt solid var(--paper-rule);
+  border-bottom: 0.75pt solid var(--paper-rule);
+  border-radius: 0;
+  border-collapse: collapse;
+  overflow: visible;
+  font-size: 9pt;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+.ks-paper .ks-table-frame {
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+.ks-paper .ks-table-frame > div {
+  min-width: 0 !important;
+}
+/* Mantine の Typography が td に 14px を当てるので、表の文字の大きさ（9pt）を継がせる */
+.ks-paper :is(.doc-body > table, .ks-table-frame table) :is(th, td) {
+  font-size: inherit;
+  padding: 4pt 6pt !important;
+  vertical-align: top;
+  border-bottom: 0.25pt solid var(--paper-hair);
+}
+.ks-paper :is(.doc-body > table, .ks-table-frame table) thead th {
+  font-size: 9pt !important;
+  font-weight: 700;
+  color: var(--paper-ink);
+  background: var(--paper-tint);
+  border-bottom: 0.5pt solid var(--paper-rule);
+  white-space: nowrap;
+}
+.ks-paper :is(.doc-body > table, .ks-table-frame table) tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ks-paper .ks-table-frame .mantine-Table-tfoot .mantine-Table-th {
+  background: none;
+  border-top: 0.5pt solid var(--paper-rule);
+}
+
+/* ---- バッジは文字だけにする（色の面で区別しない） ---- */
+.ks-paper .mantine-Badge-root:where(:not(.mock-stage *)) {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--paper-ink);
+  font-size: 9pt;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ---- カード（見積の合計など）は枠と影をやめ、上の罫線で区切る ---- */
+.ks-paper .mantine-Paper-root:where(:not(.mock-stage *)) {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.ks-paper-doc .mantine-Stack-root {
+  --stack-gap: 10pt !important;
+}
+.ks-paper .ks-estimate-total {
+  padding: 4pt 0 6pt !important;
+  background: none;
+  border-top: 0.75pt solid var(--paper-rule);
+}
+.ks-paper .ks-estimate-total .ks-stat-value {
+  font-size: 16pt !important;
+}
+
+/* ---- ユースケース図（components/UsecaseDiagram の PDF 版）：灰色の面と影をやめ、細い罫で詰めて組む ---- */
+.ks-paper .uc {
+  margin: 6pt 0 8pt;
+}
+.ks-paper .uc-zone {
+  padding: 6pt 10pt 8pt;
+  background: none;
+  border: 0.5pt solid var(--paper-gray-light);
+  border-radius: 0;
+}
+.ks-paper .uc-zone-head {
+  margin-bottom: 2pt;
+}
+.ks-paper .uc-zone-tag {
+  padding: 0;
+  font-size: 9.5pt;
+  color: var(--paper-ink);
+  background: none !important;
+  border-radius: 0;
+}
+.ks-paper :is(.uc-zone-note, .uc-actor-note, .uc-card-sub, .uc-legend, .uc-flow, .uc-inherits) {
+  font-size: 7.5pt;
+  color: var(--paper-gray);
+}
+.ks-paper .uc-row {
+  grid-template-columns: 22mm 1fr;
+  gap: 6mm;
+  padding: 5pt 0;
+}
+.ks-paper .uc-row + .uc-row {
+  border-top: 0.5pt dashed var(--paper-hair);
+}
+.ks-paper .uc-row:has(.uc-avatar) .uc-row-body::before {
+  left: -5.5mm;
+  width: 4.5mm;
+  border-top: 0.5pt solid var(--paper-gray);
+}
+.ks-paper .uc-avatar {
+  width: 22pt;
+  height: 22pt;
+  margin-bottom: 2pt;
+  border: 0.5pt solid var(--paper-gray-light);
+  box-shadow: none;
+}
+.ks-paper .uc-avatar svg {
+  width: 13pt;
+  height: 13pt;
+}
+.ks-paper .uc-actor-name {
+  font-size: 9pt;
+}
+.ks-paper .uc-cards {
+  grid-template-columns: repeat(auto-fill, minmax(42mm, 1fr));
+  gap: 4pt;
+}
+.ks-paper .uc-card {
+  min-height: 0;
+  padding: 3pt 6pt 3pt 8pt;
+  background: #fff;
+  border: 0.5pt solid var(--paper-gray-light);
+  border-radius: 0;
+  box-shadow: inset 2pt 0 0 var(--uc-color);
+}
+.ks-paper .uc-card[data-condition] {
+  border-style: dashed;
+  outline: 0;
+}
+.ks-paper .uc-card-id {
+  font-size: 7pt;
+  color: var(--paper-gray);
+}
+.ks-paper .uc-card-name {
+  font-size: 9pt;
+  line-height: 1.4;
+  color: var(--paper-ink);
+}
+.ks-paper .uc-flow {
+  padding: 5pt 0;
+}
+.ks-paper .uc-flow b {
+  color: var(--paper-ink);
+}
+.ks-paper .uc-flow::before,
+.ks-paper .uc-flow::after {
+  border-top: 1pt dashed var(--paper-gray-light);
+}
+
+/* ---- システム構成図（components/ArchDiagram の PDF 版）：色の面と影をやめ、細い罫と墨の線で描く（縮める前の px） ---- */
+.ks-paper .ar-zone {
+  background: none;
+  border: 1px solid var(--paper-gray-light);
+  border-radius: 0;
+}
+.ks-paper .ar-zone[data-external] {
+  border: 1px dashed var(--paper-gray-light);
+}
+.ks-paper .ar-zone-tag {
+  padding: 0;
+  color: var(--paper-ink);
+  background: none;
+  border-radius: 0;
+}
+.ks-paper :is(.ar-zone-note, .ar-meta, .ar-note, .ar-legend) {
+  color: var(--paper-gray);
+}
+.ks-paper :is(.ar-link, .ar-arrow) {
+  stroke: var(--paper-gray);
+}
+.ks-paper .ar-link-label {
+  color: var(--paper-ink);
+  background: #fff;
+}
+.ks-paper .ar-card {
+  border: 1px solid var(--paper-gray-light);
+  border-radius: 2px;
+  box-shadow: inset 3px 0 0 var(--ar-color);
+}
+.ks-paper .ar-card[data-external] {
+  box-shadow: inset 3px 0 0 var(--paper-gray-light);
+}
+.ks-paper .ar-name {
+  color: var(--paper-ink);
+}
+.ks-paper .ar-user {
+  border: 1px solid var(--paper-gray);
+}
+.ks-paper .ar-user-icon {
+  color: var(--paper-ink);
+  background: none;
+  border: 1px solid var(--paper-gray);
+}
+
+/* ---- 画面イメージ（components/ScreenMock の PDF 版）：方眼の台と丸い札をやめ、細い罫の枠と小さな注記にする ---- */
+.ks-paper .mock-stage {
+  --mock-on-stage: var(--paper-ink);
+  --mock-on-stage-dim: var(--paper-gray);
+  --mock-stage-line: var(--paper-hair);
+  margin: 6pt 0 8pt;
+  padding: 6pt 10pt 8pt;
+  background: var(--paper-tint);
+  border: 0.5pt solid var(--paper-hair);
+  border-radius: 0;
+}
+.ks-paper .mock-band {
+  margin-bottom: 6pt;
+  font-size: 8pt;
+  color: var(--paper-gray);
+}
+.ks-paper .mock-stage .mock-notes {
+  font-size: 9pt;
+}
+.ks-paper .mock-transitions {
+  margin-top: 6pt;
+  padding-top: 4pt;
+  font-size: 8pt;
+}
+.ks-paper .mock-transition {
+  padding: 0 4pt 0 0;
+  background: none;
+}
+
+/* ---- ER 図（components/ErDiagram の PDF 版）：方眼と青図の色をやめ、図の下にテーブル定義の表を付ける ---- */
+.ks-paper .er-bp {
+  --bp-bg: #fff;
+  --bp-line: var(--paper-gray);
+  --bp-rule: var(--paper-hair);
+  --bp-card: #fff;
+  --bp-ink: var(--paper-ink);
+  --bp-accent: var(--paper-accent);
+  --bp-dim: var(--paper-gray);
+}
+/* 図の上の「7 テーブル / 6 リレーション」 */
+.ks-paper .ks-diagram > .mantine-Text-root {
+  margin-bottom: 3pt !important;
+  font-size: 9pt !important;
+}
+.ks-paper .er {
+  border: 0.5pt solid var(--paper-hair);
+  border-radius: 0;
+}
+.ks-paper .er-defs h3 {
+  margin-top: 12pt !important;
+}
+.ks-paper .er-def {
+  margin-bottom: 8pt;
+  break-inside: avoid;
+}
+.ks-paper .er-def-note {
+  margin-left: 8pt;
+  font-weight: 400;
+  color: var(--paper-gray);
+}
+.ks-paper .er-def-name {
+  font-family: var(--mantine-font-family-monospace);
+}
+
+/* ---- 工程表（components/PrintGantt）：表の右に週の目盛りと棒 ---- */
+.pg {
+  margin: 6pt 0 10pt;
+}
+/* 図と表の題（工程表・遷移の一覧など） */
+.ks-paper .ks-print-caption {
+  margin: 0 0 3pt;
+  font-size: 9pt;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.pg table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 8.5pt;
+  line-height: 1.35;
+  border-top: 0.75pt solid var(--paper-rule);
+  border-bottom: 0.75pt solid var(--paper-rule);
+}
+.pg :is(th, td) {
+  font-size: inherit;
+  padding: 2.5pt 4pt;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 0.25pt solid var(--paper-hair);
+}
+.pg thead th {
+  font-weight: 700;
+  background: var(--paper-tint);
+}
+.pg thead tr:last-child th,
+.pg thead th[rowspan] {
+  border-bottom: 0.5pt solid var(--paper-rule);
+}
+.pg tbody + tbody tr:first-child td {
+  border-top: 0.5pt solid var(--paper-gray-light);
+}
+.pg-section td {
+  font-weight: 700;
+}
+.pg-name {
+  padding-left: 10pt !important;
+}
+.pg .pg-time {
+  position: relative;
+  padding: 0;
+  border-left: 0.5pt solid var(--paper-gray-light);
+}
+.pg-months,
+.pg-weeks {
+  height: 12pt;
+}
+.pg-months {
+  border-bottom: 0.25pt solid var(--paper-hair) !important;
+}
+.pg-time > span {
+  position: absolute;
+  top: 50%;
+  padding-left: 2pt;
+  font-size: 7pt;
+  font-weight: 400;
+  color: var(--paper-gray);
+  transform: translateY(-50%);
+}
+.pg-months > span {
+  font-weight: 700;
+  color: var(--paper-ink);
+}
+.pg-time > i {
+  position: absolute;
+  font-style: normal;
+}
+.pg-line {
+  top: 0;
+  bottom: 0;
+  border-left: 0.25pt solid var(--paper-hair);
+}
+.pg-month-line {
+  border-left-color: var(--paper-gray-light);
+}
+.pg-bar {
+  top: 50%;
+  height: 6pt;
+  background: color-mix(in srgb, var(--paper-accent) 28%, white);
+  border: 0.5pt solid var(--paper-accent);
+  transform: translateY(-50%);
+}
+.pg-summary {
+  top: 50%;
+  height: 2.5pt;
+  background: var(--paper-ink);
+  transform: translateY(-50%);
+}
+.pg-milestone {
+  top: 50%;
+  font-size: 8pt;
+  line-height: 1;
+  color: var(--paper-accent);
+  transform: translate(-50%, -50%);
+}
+
+/* ---- ページ遷移図（components/FlowDiagram の PDF 版）：色の面と影をやめ、細い罫と墨の線で描く。
+   図は Scaled で縮めて載せるので、ここの大きさは縮める前の px で書く（縮める率はおよそ 0.8） ---- */
+.ks-paper .fl {
+  margin: 6pt 0 8pt;
+}
+.ks-paper .fl-zone {
+  padding: 10px 16px;
+  background: none;
+  border: 1px solid var(--paper-gray-light);
+  border-radius: 0;
+}
+.ks-paper .fl-zone-tag {
+  padding: 0;
+  font-size: 13px;
+  color: var(--paper-ink);
+  background: none;
+  border-radius: 0;
+}
+.ks-paper .fl-zone-note,
+.ks-paper .fl-lane-name,
+.ks-paper .fl-lane-note,
+.ks-paper .fl-footnote {
+  font-size: 11px;
+  color: var(--paper-gray);
+}
+.ks-paper .fl-lane + .fl-lane {
+  border-top: 1px dashed var(--paper-hair);
+}
+.ks-paper .fl-card {
+  padding: 0 10px;
+  border: 1px solid var(--paper-gray);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.ks-paper .fl-id {
+  font-size: 10px;
+  color: var(--paper-gray);
+}
+.ks-paper .fl-name {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--paper-ink);
+}
+.ks-paper .fl-edge,
+.ks-paper .fl-arrow {
+  stroke: var(--paper-gray);
+}
+.ks-paper .fl-edge[data-back] {
+  stroke: var(--paper-gray-light);
+}
+.ks-paper .fl-edge-label {
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--paper-ink);
+  background: #fff;
+  border-radius: 0;
+  box-shadow: none;
+}
+.ks-paper .fl-terminal {
+  font-size: 11px;
+}
+.ks-paper .fl-terminal[data-role="start"] {
+  color: var(--paper-ink);
+  background: #fff;
+  border: 1px solid var(--paper-gray);
+}
+.ks-paper .fl-terminal[data-role="end"] {
+  color: #fff;
+  background: var(--paper-ink);
+}
+.ks-paper .fl-flow {
+  padding: 10px 0;
+}
+.ks-paper .fl-flow-line {
+  border-left: 1.5px dashed var(--paper-gray);
+}
+.ks-paper .fl-flow-card {
+  padding: 4px 10px;
+  background: #fff;
+  border: 1px solid var(--paper-gray-light);
+  border-radius: 0;
+  box-shadow: none;
+}
+.ks-paper .fl-flow-card b {
+  font-size: 12px;
+}
+.ks-paper .fl-flow-card small,
+.ks-paper .fl-legend {
+  font-size: 11px;
+  color: var(--paper-gray);
+}
+.ks-paper .fl-legend {
+  margin-top: 8px;
+}
+.ks-paper .fl-table {
+  margin-top: 10pt;
+}
+
+@media print {
+  .ks-print-toolbar {
+    display: none;
+  }
+  .ks-draft-mark {
+    display: block;
+    position: fixed;
+    top: 45%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 72pt;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: rgb(28 33 43 / 0.06);
+    transform: rotate(-30deg);
+    pointer-events: none;
+  }
+  /* body 直下のポップアップ置き場などは、ページの名前が切り替わって空のページが 1 枚増えるので出さない */
+  body:has(.ks-print-sheet) > :not(#root) {
+    display: none;
+  }
+  .ks-print-screen {
+    min-height: 0;
+    padding: 0;
+    background: none;
+  }
+  .ks-print-sheet {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .ks-print-sheet,
+  .ks-print-sheet * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* 資料ごとに新しいページから。資料ごとの名前付きページ（page）で、柱に資料名を出す */
+  .ks-print-page + .ks-print-page {
+    break-before: page;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  /* 図はページの途中で切らない（1 ページに入る高さに縮めてある）。表はページをまたいでよいが、行は切らない */
+  .ks-paper :is(figure, .ks-diagram, pre, blockquote, .ks-estimate-total) {
+    break-inside: avoid;
+  }
+  .ks-paper :is(tr, li, .uc-zone) {
+    break-inside: avoid;
+  }
+  /* 表の最初と最後の 2 行だけが別のページに取り残されないようにする */
+  .ks-paper tbody tr:nth-child(-n + 2),
+  .ks-paper tbody tr:nth-last-child(-n + 2) {
+    break-before: avoid;
+  }
+  .ks-paper tbody tr:first-child {
+    break-before: auto;
+  }
+  .ks-paper :is(h1, h2, h3, h4, .ks-paper-head) {
+    break-after: avoid;
+    break-inside: avoid;
+  }
+  .ks-paper :is(p, li) {
+    orphans: 3;
+    widows: 3;
+  }
+}

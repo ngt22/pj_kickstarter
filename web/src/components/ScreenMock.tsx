@@ -746,6 +746,9 @@ function appName(spec: MockSpec): string | undefined {
   return t == null ? undefined : String(t);
 }
 
+// PDF では画面イメージの下の項目の表まで同じページに入るよう、図の高さを抑える
+const MOCK_PRINT_MAX_HEIGHT = 500;
+
 const DEVICES: Record<DeviceKind, { label: string; icon: Icon }> = {
   desktop: { label: "パソコン", icon: IconDeviceDesktop },
   tablet: { label: "タブレット", icon: IconDeviceTablet },
@@ -811,20 +814,26 @@ export default function ScreenMock({ source }: { source: string }) {
 
   return (
     <figure className="mock-stage" data-device={kind}>
-      <figcaption className="mock-band">
-        <span className="mock-band-pill">
-          <DeviceIcon size={14} stroke={ICON_STROKE} />
-          画面イメージ
-        </span>
-        <span className="mock-band-note">実際のデザインとは異なります</span>
-        <span className="mock-switches">
-          {withPwa && display && <Switch label="表示のしかた" options={DISPLAYS} value={display} onChange={setShown} />}
-          {devices.length > 1 && <Switch label="表示する端末" options={pick(DEVICES, devices)} value={kind} onChange={setView} />}
-        </span>
-      </figcaption>
+      {print ? (
+        <figcaption className="mock-band">
+          画面イメージ（{DEVICES[kind].label}{display === "pwa" ? "・アプリとして表示" : ""}）　※実際のデザインとは異なります
+        </figcaption>
+      ) : (
+        <figcaption className="mock-band">
+          <span className="mock-band-pill">
+            <DeviceIcon size={14} stroke={ICON_STROKE} />
+            画面イメージ
+          </span>
+          <span className="mock-band-note">実際のデザインとは異なります</span>
+          <span className="mock-switches">
+            {withPwa && display && <Switch label="表示のしかた" options={DISPLAYS} value={display} onChange={setShown} />}
+            {devices.length > 1 && <Switch label="表示する端末" options={pick(DEVICES, devices)} value={kind} onChange={setView} />}
+          </span>
+        </figcaption>
+      )}
       <div className="mock-body">
         <div className="mock-device">
-          <Scaled width={kind === "desktop" ? DEVICE_WIDTH[narrow ? "desktopNarrow" : "desktop"] : DEVICE_WIDTH[kind]}>
+          <Scaled printMaxHeight={MOCK_PRINT_MAX_HEIGHT} width={kind === "desktop" ? DEVICE_WIDTH[narrow ? "desktopNarrow" : "desktop"] : DEVICE_WIDTH[kind]}>
             <AppTheme color={color}>
               <Device spec={spec} kind={kind} display={display} />
             </AppTheme>

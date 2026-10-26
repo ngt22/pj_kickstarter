@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseYaml } from "./docs";
-import { CARD_W, layoutFlow, type FlowSpec } from "./flow";
+import { layoutFlow, SCREEN_DIMS, type FlowSpec } from "./flow";
 
 const sample = readFileSync(new URL("../../../projects/sample/page-flow.md", import.meta.url), "utf-8");
 const spec = parseYaml<FlowSpec>(/```flow\n([\s\S]*?)\n```/.exec(sample)![1]);
@@ -15,7 +15,7 @@ describe("layoutFlow", async () => {
     expect(l.zones.map((z) => z.lanes.length)).toEqual([1, 2]);
     const xs = ["start", "SC-01", "SC-02", "SC-03", "SC-04"].map((id) => node("customer", id).x);
     expect([...xs].sort((a, b) => a - b)).toEqual(xs);
-    expect(node("customer", "SC-02").x - node("customer", "SC-01").x).toBeGreaterThanOrEqual(CARD_W);
+    expect(node("customer", "SC-02").x - node("customer", "SC-01").x).toBeGreaterThanOrEqual(SCREEN_DIMS.cardW);
   });
 
   it("戻る線はカードの下をくぐり、開始・終了の丸を見分ける", () => {

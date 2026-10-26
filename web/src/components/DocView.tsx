@@ -49,6 +49,20 @@ export default function DocView({ doc, index, total, prev, next, basePath }: Pro
       })()
     );
 
+  // PDF では画面用の紙（枠と影）・「DOCUMENT 01 / 14」・最終更新を出さず、資料番号と資料名だけを見出しにする
+  if (print)
+    return (
+      <article className="ks-paper-doc">
+        <header className="ks-paper-head">
+          <h1>
+            <span className="ks-paper-num">{index + 1}</span>
+            {doc.title}
+          </h1>
+        </header>
+        {body}
+      </article>
+    );
+
   return (
     <>
       <Paper component="article" withBorder shadow="xs" p={{ base: "lg", sm: "xl" }}>
@@ -61,12 +75,10 @@ export default function DocView({ doc, index, total, prev, next, basePath }: Pro
         </header>
         {body}
       </Paper>
-      {!print && (
       <SimpleGrid cols={{ base: 1, xs: 2 }} mt="lg" spacing="md">
         <Pager label="← 前のドキュメント" doc={prev} basePath={basePath} align="left" />
         <Pager label="次のドキュメント →" doc={next} basePath={basePath} align="right" />
       </SimpleGrid>
-      )}
     </>
   );
 }

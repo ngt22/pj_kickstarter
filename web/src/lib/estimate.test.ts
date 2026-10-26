@@ -20,4 +20,22 @@ describe("estimate", () => {
     expect(estimateTotals(e)).toEqual({ months: 0.3, initial: 240000, monthly: undefined });
     expect(e.monthly).toBeUndefined();
   });
+
+  it("合計の人月は小数の誤差を出さない", () => {
+    const e = normalizeEstimate(
+      parseYaml("initial:\n  unit_price: 1000000\n  items:\n    - { phase: a, task: a, person_months: 0.3 }\n    - { phase: b, task: b, person_months: 0.3 }\n    - { phase: c, task: c, person_months: 1.2 }\n    - { phase: d, task: d, person_months: 0.3 }"),
+    );
+    expect(estimateTotals(e).months).toBe(2.1);
+  });
+
+  it("金額の直接指定・月額のリスト・オプション・内訳を隠す指定を読む", () => {
+    const e = normalizeEstimate(
+      parseYaml(
+        "show_breakdown: false\ninitial:\n  unit_price: 800000\n  items:\n    - { phase: 開発, task: アプリ, amount: 1200000 }\n    - { phase: 導入, task: 説明, person_months: 0.5 }\nmonthly:\n  - { name: 保守, amount: 30000 }\noptions:\n  - { name: PDF 出力, amount: 200000 }",
+      ),
+    );
+    expect(estimateTotals(e)).toEqual({ months: 0.5, initial: 1600000, monthly: 30000 });
+    expect(e.show_breakdown).toBe(false);
+    expect(e.options).toHaveLength(1);
+  });
 });

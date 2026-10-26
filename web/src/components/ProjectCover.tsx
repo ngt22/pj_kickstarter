@@ -107,7 +107,9 @@ export default function ProjectCover({ project, docs, site }: { project: Project
               ? "見積もりから集計します"
               : ov.estimate.monthly != null
                 ? `月額 ${yen.format(ov.estimate.monthly)}（${ov.estimate.tax}）`
-                : `${ov.estimate.months} 人月（${ov.estimate.tax}）`
+                : ov.estimate.breakdown
+                  ? `${ov.estimate.months} 人月（${ov.estimate.tax}）`
+                  : ov.estimate.tax
           }
         />
         <Stat

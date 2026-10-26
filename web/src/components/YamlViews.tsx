@@ -1,5 +1,5 @@
 import { Badge, Code, List, Paper, SimpleGrid, Stack, Table, Text, Title } from "@mantine/core";
-import { estimateTotals, normalizeEstimate, taxLabel } from "../lib/estimate";
+import { estimateTotals, itemAmount, normalizeEstimate, taxLabel } from "../lib/estimate";
 import { usePrint } from "../lib/print";
 
 type Glossary = { terms: { term: string; reading?: string; definition: string }[] };
@@ -109,35 +109,36 @@ export function EstimateView({ data }: { data: Record<string, unknown> }) {
   const fmt = new Intl.NumberFormat("ja-JP", { style: "currency", currency: e.currency });
   const total = estimateTotals(e);
   const tax = taxLabel(e);
+  const breakdown = e.show_breakdown;
   return (
     <Stack gap="xl">
       <SimpleGrid cols={{ base: 1, xs: e.monthly ? 2 : 1 }} spacing="md">
         <Total
           label="初期費用"
           value={fmt.format(total.initial)}
-          sub={`${tax}・${total.months} 人月（人月単価 ${fmt.format(e.initial.unit_price)}）`}
+          sub={breakdown ? `${tax}・${total.months} 人月（人月単価 ${fmt.format(e.initial.unit_price)}）` : `${tax}・開発時に一括`}
         />
         {total.monthly != null && <Total label="月額費用" value={`${fmt.format(total.monthly)} / 月`} sub={`${tax}・本番公開後の継続利用料`} />}
       </SimpleGrid>
 
       <section>
-        <Title order={3} mb="sm">初期費用</Title>
-        <DataTable head={["フェーズ", "作業", "人月", "金額"]} right={["人月", "金額"]}>
+        <Title order={3} mb="sm">初期費用（一括）</Title>
+        <DataTable head={breakdown ? ["フェーズ", "作業", "人月", "金額"] : ["フェーズ", "作業", "金額"]} right={["人月", "金額"]}>
           <Table.Tbody>
             {e.initial.items.map((i) => (
               <Table.Tr key={i.phase + i.task}>
                 <Table.Td style={{ whiteSpace: "nowrap" }}>{i.phase}</Table.Td>
                 <Table.Td>{i.task}</Table.Td>
-                <Table.Td ta="right">{i.person_months}</Table.Td>
-                <Table.Td ta="right">{fmt.format(Math.round(i.person_months * e.initial.unit_price))}</Table.Td>
+                {breakdown && <Table.Td ta="right">{i.person_months ?? "—"}</Table.Td>}
+                <Table.Td ta="right" style={{ whiteSpace: "nowrap" }}>{fmt.format(itemAmount(e, i))}</Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
           <Table.Tfoot>
             <Table.Tr>
               <Table.Th colSpan={2}>初期費用 合計（{tax}）</Table.Th>
-              <Table.Th ta="right">{total.months}</Table.Th>
-              <Table.Th ta="right">{fmt.format(total.initial)}</Table.Th>
+              {breakdown && <Table.Th ta="right">{total.months}</Table.Th>}
+              <Table.Th ta="right" style={{ whiteSpace: "nowrap" }}>{fmt.format(total.initial)}</Table.Th>
             </Table.Tr>
           </Table.Tfoot>
         </DataTable>
@@ -152,6 +153,7 @@ export function EstimateView({ data }: { data: Record<string, unknown> }) {
                 <Table.Tr key={i.name}>
                   <Table.Td fw={500} style={{ whiteSpace: "nowrap" }}>{i.name}</Table.Td>
                   <Table.Td>
+                    {i.note && <Text size="sm" mb={4}>{i.note}</Text>}
                     {i.includes?.length ? (
                       <List size="sm">{i.includes.map((n) => <List.Item key={n}>{n}</List.Item>)}</List>
                     ) : null}
@@ -167,6 +169,26 @@ export function EstimateView({ data }: { data: Record<string, unknown> }) {
                 <Table.Th ta="right" style={{ whiteSpace: "nowrap" }}>{fmt.format(total.monthly!)}</Table.Th>
               </Table.Tr>
             </Table.Tfoot>
+          </DataTable>
+        </section>
+      )}
+
+      {e.options.length > 0 && (
+        <section>
+          <Title order={3} mb="sm">オプション</Title>
+          <Text size="sm" c="dimmed" mb="sm">ご希望に応じて追加できる項目です。上の合計には含まれません。</Text>
+          <DataTable head={["項目", "内容", "金額"]} right={["金額"]}>
+            <Table.Tbody>
+              {e.options.map((o) => (
+                <Table.Tr key={o.name}>
+                  <Table.Td fw={500} style={{ whiteSpace: "nowrap" }}>{o.name}</Table.Td>
+                  <Table.Td>{o.note}</Table.Td>
+                  <Table.Td ta="right" style={{ whiteSpace: "nowrap" }}>
+                    {fmt.format(o.amount)}{o.per === "monthly" ? " / 月" : "（一括）"}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
           </DataTable>
         </section>
       )}

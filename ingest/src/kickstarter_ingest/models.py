@@ -131,11 +131,18 @@ class RisksDoc(DocHeader, Strict):
 class EstimateItem(Strict):
     phase: str = Field(description="フェーズ（例: 要件定義、設計、開発、テスト）")
     task: str = Field(description="作業内容")
-    person_months: float = Field(ge=0, description="工数（人月）")
+    person_months: float | None = Field(None, ge=0, description="工数（人月）。金額は人月 × 単価で計算する")
+    amount: int | None = Field(None, ge=0, description="金額の直接指定（人月で計算しない作業）")
+
+    @model_validator(mode="after")
+    def months_or_amount(self) -> "EstimateItem":
+        if self.person_months is None and self.amount is None:
+            raise ValueError(f"{self.task}: person_months か amount のどちらかを書いてください")
+        return self
 
 
 class InitialCost(Strict):
-    unit_price: int = Field(ge=0, description="人月単価はいくらですか？")
+    unit_price: int = Field(0, ge=0, description="人月単価はいくらですか？（すべて amount で書くなら省略可）")
     items: list[EstimateItem] = Field(min_length=1, description="初期開発のフェーズごとの作業と工数はどのくらいですか？")
 
 
@@ -145,6 +152,14 @@ class MonthlyItem(Strict):
     # 内訳に金額を持たせない（サーバー・クラウド・API などの原価が構造上出ないようにする）
     includes: list[str] = Field([], description="含まれるもの（金額は書かない）")
     limits: str | None = Field(None, description="利用の上限や条件（例: 月間 1 万予約まで）")
+    note: str | None = Field(None, description="補足（金額の内訳は書かない）")
+
+
+class OptionItem(Strict):
+    name: str = Field(description="オプションの名前（例: 帳票の PDF 出力）")
+    amount: int = Field(ge=0, description="金額")
+    per: Literal["once", "monthly"] = Field("once", description="once（一括）| monthly（月額）")
+    note: str | None = Field(None, description="内容")
 
 
 class MonthlyCost(Strict):
@@ -160,7 +175,9 @@ class EstimateDoc(DocHeader, Strict):
     tax: Literal["excluded", "included"] = Field("excluded", description="金額が税抜（excluded）か税込（included）か")
     valid_until: str = Field(default="", pattern=r"^(\d{4}-\d{2}-\d{2})?$", description="見積もりの有効期限は？（YYYY-MM-DD）")
     initial: InitialCost = Field(description="初期費用（開発時に一度だけいただく費用）")
-    monthly: MonthlyCost | None = Field(None, description="月額費用（公開後の継続利用料）")
+    monthly: MonthlyCost | None = Field(None, description="月額費用（公開後の継続利用料）。items を省いてリストだけでも書ける")
+    options: list[OptionItem] = Field([], description="合計に含めない任意の追加はありますか？")
+    show_breakdown: bool = Field(True, description="false で人月・単価を見せず、フェーズ・作業・金額だけにする")
     excludes: list[str] = Field([], description="見積もりに含まれない費用はありますか？（例: ドメイン取得費用）")
     terms: list[str] = Field([], description="支払条件などの取引条件は？（例: 納品検収後の翌月末払い）")
     notes: list[str] = Field([], description="そのほかの前提はありますか？")
@@ -171,8 +188,16 @@ class EstimateDoc(DocHeader, Strict):
     def legacy_to_initial(cls, v: Any) -> Any:
         if isinstance(v, dict) and "initial" not in v and "items" in v:
             v = dict(v)
-            v["initial"] = {"unit_price": v.pop("unit_price", None), "items": v.pop("items")}
+            v["initial"] = {"unit_price": v.pop("unit_price", 0), "items": v.pop("items")}
+        if isinstance(v, dict) and isinstance(v.get("monthly"), list):
+            v = {**v, "monthly": {"items": v["monthly"]}}
         return v
+
+    @model_validator(mode="after")
+    def unit_price_for_months(self) -> "EstimateDoc":
+        if self.initial.unit_price == 0 and any(i.amount is None and i.person_months for i in self.initial.items):
+            raise ValueError("initial.unit_price（人月単価）がないと人月から金額を計算できません")
+        return self
 
     @field_validator("valid_until", mode="before")
     @classmethod

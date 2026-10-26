@@ -255,6 +255,35 @@ def test_estimate_cannot_mix_legacy_and_initial(tmp_path):
     assert any(e.startswith("estimate.yaml") for e in result.errors)
 
 
+AMOUNT_ESTIMATE = """\
+title: 見積もり
+show_breakdown: false
+initial:
+  items:
+    - { phase: 開発, task: アプリ開発, amount: 1200000 }
+    - { phase: 導入, task: 操作説明, amount: 100000 }
+monthly:
+  - { name: 運用保守サービス, amount: 30000, note: 平日の問い合わせ対応 }
+options:
+  - { name: 帳票の PDF 出力, amount: 200000 }
+  - { name: 写真の容量追加, amount: 3000, per: monthly }
+"""
+
+
+def test_estimate_amounts_and_options(tmp_path):
+    path = copy_sample(tmp_path)
+    (path / "estimate.yaml").write_text(AMOUNT_ESTIMATE, encoding="utf-8")
+    result = load_project(path)
+    assert [e for e in result.errors if e.startswith("estimate.yaml")] == []
+
+    # 単価がないのに人月だけの行はエラー
+    (path / "estimate.yaml").write_text(AMOUNT_ESTIMATE.replace("amount: 100000", "person_months: 0.2"), encoding="utf-8")
+    assert any("unit_price" in e for e in load_project(path).errors)
+    # 人月も金額もない行はエラー
+    (path / "estimate.yaml").write_text(AMOUNT_ESTIMATE.replace(", amount: 100000", ""), encoding="utf-8")
+    assert any("person_months か amount" in e for e in load_project(path).errors)
+
+
 def test_invalid_usecase_is_reported(tmp_path):
     path = copy_sample(tmp_path)
     personas = path / "personas.md"

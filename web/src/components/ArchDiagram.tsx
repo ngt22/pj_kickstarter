@@ -27,6 +27,7 @@ import { layoutArch, roundedPath, type ArchKind, type ArchLayout, type ArchNode,
 import { parseYaml } from "../lib/docs";
 import { ICON_STROKE } from "./icons";
 import Scaled from "./Scaled";
+import { usePrint } from "../lib/print";
 
 const PAD = 4;
 
@@ -126,7 +127,9 @@ export default function ArchDiagram({ source }: { source: string }) {
   }, [source]);
   const [layout, setLayout] = useState<ArchLayout | string>();
   const [opened, { open, close }] = useDisclosure(false);
-  const narrow = useMediaQuery("(max-width: 48em)") ?? false;
+  // PDF は紙の幅で組むので、スマホで開いていても縦積みにしない
+  const print = usePrint();
+  const narrow = (useMediaQuery("(max-width: 48em)") ?? false) && !print;
 
   useEffect(() => {
     if (!parsed.spec) return;
@@ -165,11 +168,13 @@ export default function ArchDiagram({ source }: { source: string }) {
   );
   return (
     <figure className="ar">
+      {!print && (
       <Group justify="flex-end" mb={4}>
         <Button size="compact-xs" variant="subtle" color="gray" leftSection={<IconArrowsMaximize size={14} stroke={ICON_STROKE} />} onClick={open}>
           拡大して見る
         </Button>
       </Group>
+      )}
       <Scaled width={width}>{content}</Scaled>
       <Modal opened={opened} onClose={close} fullScreen title="システム構成図">
         <div style={{ width }}>{content}</div>

@@ -4,6 +4,7 @@ import Admin from "./pages/Admin";
 import CliLogin from "./pages/CliLogin";
 import Login from "./pages/Login";
 import ProjectList from "./pages/ProjectList";
+import ProjectPrint from "./pages/ProjectPrint";
 import ProjectView from "./pages/ProjectView";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route path="/" element={<ProjectList />} />
         <Route path="/projects/:projectId" element={<ProjectView />} />
+        <Route path="/projects/:projectId/print" element={<ProjectPrint />} />
         <Route path="/projects/:projectId/:docType" element={<ProjectView />} />
         <Route element={<RequireAdmin />}>
           <Route path="/admin" element={<Admin />} />

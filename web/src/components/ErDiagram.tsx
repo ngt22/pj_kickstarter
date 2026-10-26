@@ -37,6 +37,7 @@ import {
 } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
 import { parseYaml } from "../lib/docs";
+import { PENDING, usePrint } from "../lib/print";
 import DiagramFrame from "./DiagramFrame";
 import { buildErModel, matchesQuery, neighbors, type ErModel, type ErSpec, type ErTableSpec } from "../lib/er";
 
@@ -239,6 +240,8 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
   const theme = useMantineTheme();
   const scheme = useComputedColorScheme("light");
   const rf = useReactFlow();
+  const print = usePrint();
+  const [fitted, setFitted] = useState(false);
   const many = model.tables.length > 30;
   const [domains, setDomains] = useState<string[]>(model.domains.map((d) => d.id));
   const [withRelated, setWithRelated] = useState(true);
@@ -265,13 +268,14 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
       .then((g) => {
         if (cancelled) return;
         setGraph(g);
-        setTimeout(() => rf.fitView({ padding: 0.05, duration: 300 }), 50); // 新しいノードの描画を待つ
+        // 新しいノードの描画を待つ。PDF では動かさずに収め、収まってから印刷する
+        setTimeout(() => rf.fitView({ padding: 0.05, duration: print ? 0 : 300 }).then(() => setFitted(true)), 50);
       })
       .catch((e) => setError(String(e)));
     return () => {
       cancelled = true;
     };
-  }, [model, visible, keyOnly, rf]);
+  }, [model, visible, keyOnly, rf, print]);
 
   const focus = selected ? neighbors(model, selected) : null;
   const nodes = useMemo(
@@ -303,8 +307,9 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
   if (error) return <Code block c="red">{error}</Code>;
 
   return (
-    <div className="er er-bp" style={{ height }}>
+    <div className="er er-bp" style={{ height }} {...(print && !fitted ? PENDING : {})}>
       <Markers />
+      {!print && (
       <Stack className="er-side" gap="xs">
         <TextInput size="xs" placeholder="テーブル・列を検索" value={query} onChange={(e) => setQuery(e.currentTarget.value)} />
         <Chip.Group multiple value={domains} onChange={setDomains}>
@@ -338,6 +343,7 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
           </Box>
         )}
       </Stack>
+      )}
       <div className="er-canvas">
         <ReactFlow
           nodes={nodes}
@@ -350,11 +356,11 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
           onPaneClick={() => setSelected(null)}
           minZoom={0.05}
           maxZoom={2}
-          onlyRenderVisibleElements
+          onlyRenderVisibleElements={!print}
         >
           <Background variant={BackgroundVariant.Lines} gap={24} />
-          <Controls showInteractive={false} />
-          {model.tables.length > 15 && ( // 小さい図ではミニマップが本体を隠すだけなので出さない
+          {!print && <Controls showInteractive={false} />}
+          {!print && model.tables.length > 15 && ( // 小さい図ではミニマップが本体を隠すだけなので出さない
           <MiniMap
             pannable
             zoomable
@@ -385,6 +391,7 @@ export default function ErDiagram({ source }: { source: string }) {
       title="ER図"
       summary={`${model.tables.length} テーブル / ${model.relations.length} リレーション / ${model.domains.length} ドメイン`}
       height="min(75vh, 620px)"
+      printHeight="125mm"
     >
       {(height) => <Explorer model={model} height={height} />}
     </DiagramFrame>

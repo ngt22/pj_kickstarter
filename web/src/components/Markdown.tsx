@@ -50,6 +50,14 @@ export function remarkStripComments() {
   return strip;
 }
 
+// 表の短いセル（ID・日付・状態など）は途中で折り返さない。長い列に幅を取られて「Q-」「01」のように割れるのを防ぐ
+const SHORT_CELL = 8;
+function cellClass(children: React.ReactNode): string | undefined {
+  const parts = Array.isArray(children) ? children : [children];
+  if (!parts.every((c) => typeof c === "string" || typeof c === "number")) return undefined;
+  return parts.join("").trim().length <= SHORT_CELL ? "ks-cell-short" : undefined;
+}
+
 export default function Markdown({ text }: { text: string }) {
   return (
     <ReactMarkdown
@@ -63,6 +71,8 @@ export default function Markdown({ text }: { text: string }) {
           }
           return <pre {...props}>{children}</pre>;
         },
+        td: ({ node: _, children, ...props }) => <td {...props} className={cellClass(children)}>{children}</td>,
+        th: ({ node: _, children, ...props }) => <th {...props} className={cellClass(children)}>{children}</th>,
       }}
     >
       {text}

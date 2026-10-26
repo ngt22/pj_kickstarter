@@ -6,8 +6,8 @@ const dir = new URL("../../../ingest/src/kickstarter_ingest/templates/", import.
 const files = readdirSync(dir).filter((f) => f !== "project.yaml");
 
 describe("雛形の読み込み", () => {
-  it("16種すべての雛形から title を読める", () => {
-    expect(files).toHaveLength(16);
+  it("17種すべての雛形から title を読める", () => {
+    expect(files).toHaveLength(17);
     const docs = files.map((f, i) => {
       const [type, ext] = f.split(".");
       return parseTemplate(type, ext === "md" ? "markdown" : "yaml", readFileSync(new URL(f, dir), "utf-8"), i + 1);
@@ -18,6 +18,6 @@ describe("雛形の読み込み", () => {
   });
 
   it("front matter がない Markdown はエラーにする", () => {
-    expect(() => parseTemplate("adr", "markdown", "# ADR", 16)).toThrow();
+    expect(() => parseTemplate("adr", "markdown", "# ADR", 17)).toThrow();
   });
 });

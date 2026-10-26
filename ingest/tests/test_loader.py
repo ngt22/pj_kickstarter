@@ -21,7 +21,7 @@ def test_sample_project_is_valid():
     result = load_project(ROOT / "projects" / "sample")
     assert result.errors == []
     assert [d.type for d in result.docs] == [dt.key for dt in DOC_TYPES]
-    assert [d.order for d in result.docs] == list(range(1, 17))
+    assert [d.order for d in result.docs] == list(range(1, 18))
 
 
 def test_old_order_in_front_matter_is_ignored(tmp_path):

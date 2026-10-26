@@ -25,6 +25,7 @@ export const DOC_PARTS: Record<string, string> = {
   "test-plan": "process",
   operations: "process",
   risks: "process",
+  assumptions: "process",
   estimate: "cost",
   glossary: "appendix",
   adr: "appendix",

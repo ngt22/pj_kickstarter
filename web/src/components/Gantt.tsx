@@ -80,7 +80,9 @@ function Chart({ tasks, sectionNames, maxHeight }: { tasks: GanttTask[]; section
   const today = todayDay();
   const print = usePrint();
   const { ref: fitRef, width: avail } = useElementSize();
-  const LABEL_W = useMediaQuery("(max-width: 48em)") && !print ? 150 : 260;
+  const narrow = useMediaQuery("(max-width: 48em)");
+  // PDF（A4 縦）では期間に幅を回すため、工程名の列を少し細くする
+  const LABEL_W = print ? 200 : narrow ? 150 : 260;
 
   // 前後に余白を取り、目盛りの切れ目にそろえる
   const span = (s: Scale) => {

@@ -391,7 +391,7 @@ export default function ErDiagram({ source }: { source: string }) {
       title="ER図"
       summary={`${model.tables.length} テーブル / ${model.relations.length} リレーション / ${model.domains.length} ドメイン`}
       height="min(75vh, 620px)"
-      printHeight="125mm"
+      printHeight="170mm"
     >
       {(height) => <Explorer model={model} height={height} />}
     </DiagramFrame>

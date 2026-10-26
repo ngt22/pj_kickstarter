@@ -85,7 +85,7 @@ export default function ProjectCover({ project, docs, site }: { project: Project
       </Box>
 
       {/* サマリー */}
-      <SimpleGrid cols={print ? 4 : { base: 1, xs: 2, md: 4 }} spacing="md">
+      <SimpleGrid cols={print ? 2 : { base: 1, xs: 2, md: 4 }} spacing="md">
         <Stat
           icon={IconCalendarEvent}
           label="開発期間"
@@ -141,7 +141,7 @@ export default function ProjectCover({ project, docs, site }: { project: Project
       {/* 資料の目次 */}
       <div>
         <Title order={3} mb="md">提案資料</Title>
-        <SimpleGrid cols={print ? 3 : { base: 1, xs: 2, md: 3 }} spacing="sm">
+        <SimpleGrid cols={print ? 2 : { base: 1, xs: 2, md: 3 }} spacing="sm">
           {docs.map((d, i) => (
             <UnstyledButton key={d.type} component={Link} to={print ? `#doc-${d.type}` : `${base}/${d.type}`} className="ks-doc-card">
               <ThemeIcon variant="light" size={36} radius="md">

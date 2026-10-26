@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { usePrint } from "../lib/print";
 
-// PDF では 1 ページに収まるよう、高さもこの値（A4 横の本文の 2/3 ほど。見出しや注釈と同じページに入る高さ）までに縮める
-const PRINT_MAX_HEIGHT = 440;
+// PDF では 1 ページに収まるよう、高さもこの値（A4 縦の本文の 2/3 ほど。見出しや注釈と同じページに入る高さ）までに縮める
+const PRINT_MAX_HEIGHT = 640;
 
 // 論理幅で組んだ中身（画面イメージや図）を、置き場所の幅に合わせて縮小する
 export default function Scaled({ width, children }: { width: number; children: React.ReactNode }) {

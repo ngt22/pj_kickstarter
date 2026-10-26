@@ -120,7 +120,7 @@
   color: var(--paper-gray);
 }
 
-/* ---- 2 ページ目：目次・提案概要・文書情報 ---- */
+/* ---- 目次のページと、提案概要・文書情報のページ ---- */
 .pf-h {
   margin: 0 0 4pt !important;
   padding-left: 2.5mm;

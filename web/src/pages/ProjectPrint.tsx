@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import DocView from "../components/DocView";
 import { ICON_STROKE } from "../components/icons";
-import { PrintContents, PrintCover } from "../components/PrintFront";
+import { PrintCover, PrintOverview, PrintToc } from "../components/PrintFront";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
 import { db } from "../lib/firebase";
 import { loadProject } from "../lib/loadProject";
@@ -136,7 +136,10 @@ export default function ProjectPrint() {
                 <PrintCover project={data.project} site={site} />
               </section>
               <section className="ks-print-page">
-                <PrintContents project={data.project} docs={data.docs} site={site} />
+                <PrintToc docs={data.docs} />
+              </section>
+              <section className="ks-print-page">
+                <PrintOverview project={data.project} docs={data.docs} site={site} />
               </section>
               {data.docs.map((d, i) => (
                 <section key={d.type} id={`doc-${d.type}`} className="ks-print-page" style={{ page: `doc-${i}` }}>

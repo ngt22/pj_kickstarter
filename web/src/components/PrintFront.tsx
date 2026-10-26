@@ -1,4 +1,4 @@
-// PDF の表紙と、2 ページ目の「目次・提案概要・文書情報」。画面の表紙（ProjectCover）とは別に、紙の提案書の体裁で組む
+// PDF の表紙・目次と、提案概要・文書情報のページ。画面の表紙（ProjectCover）とは別に、紙の提案書の体裁で組む
 import { useMemo } from "react";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
 import { fromDay } from "../lib/gantt";
@@ -39,7 +39,25 @@ export function PrintCover({ project, site }: Omit<Props, "docs">) {
   );
 }
 
-export function PrintContents({ project, docs, site }: Props) {
+export function PrintToc({ docs }: Pick<Props, "docs">) {
+  return (
+    <div className="pf">
+      <h2 className="pf-h">目次</h2>
+      <ol className="pf-toc">
+        {docs.map((d, i) => (
+          <li key={d.type}>
+            <a href={`#doc-${d.type}`}>
+              <span className="pf-toc-num">{i + 1}</span>
+              {d.title}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+export function PrintOverview({ project, docs, site }: Props) {
   const ov = useMemo(() => buildOverview(docs), [docs]);
   const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: ov.estimate?.currency ?? "JPY" });
   const summary = [
@@ -58,18 +76,6 @@ export function PrintContents({ project, docs, site }: Props) {
 
   return (
     <div className="pf">
-      <h2 className="pf-h">目次</h2>
-      <ol className="pf-toc">
-        {docs.map((d, i) => (
-          <li key={d.type}>
-            <a href={`#doc-${d.type}`}>
-              <span className="pf-toc-num">{i + 1}</span>
-              {d.title}
-            </a>
-          </li>
-        ))}
-      </ol>
-
       {summary.length > 0 && (
         <>
           <h2 className="pf-h">提案概要</h2>

@@ -77,6 +77,21 @@ files:
 - ID が中身のハッシュなので、変えていないファイルは push で送り直しません。`files` から外したファイルは push で消えます
 - 全資料の PDF では、リンクは URL を書き出し、ファイルは名前だけを載せます
 
+#### 画面モックを Hosting にデプロイする
+
+静的にビルドした画面モック（`index.html` がある `dist` など）は、`mock` コマンドで案件専用の Hosting サイトに置けます。
+
+```sh
+uv run kickstarter-ingest mock ../projects/my-project ../my-mock/dist --note "予約から完了までを操作できます"
+uv run kickstarter-ingest push ../projects/my-project
+```
+
+- 初回は `ks-mock-<案件ID>-<ランダム8文字>` という名前のサイトを作り、`project.yaml` に `mock_site`（サイトには送らない）と `links` の「画面モック」を書き足します。2 回目からは同じサイトに上書きします
+- デプロイは手元の firebase CLI（`firebase login` 済み）で行います。デプロイ先は login したサイトの Firebase プロジェクト（`--gcp-project` で変更可）。CLI が PATH にないときは `KICKSTARTER_FIREBASE="pnpm --dir web exec firebase"` のように指定します
+- 本体サイトとは別のサイトなので、本体やほかの案件のモックには影響しません。1 ページで画面を切り替える SPA のモックにも対応しています
+- **モックのサイトは URL を知っていれば誰でも開けます**（Spark プランの Hosting はアクセス制限をかけられません）。推測されにくい名前にし、検索よけ（`X-Robots-Tag: noindex`）を付けていますが、実データや社外秘の情報は入れないでください
+- 案件をやめたら `firebase hosting:sites:delete <mock_site>` でサイトを消してください（「案件の管理」の削除では消えません）
+
 ### 全資料を 1 つの PDF に
 
 案件のページのヘッダー右上にある PDF のボタンを押すと、別のタブに表紙と 17 種の資料を順に並べたページ（`/projects/{id}/print`）が開き、図を描き終えたところでブラウザの印刷画面が出ます。送信先で「PDF に保存」を選ぶと 1 つの PDF になります（「ヘッダーとフッター」をオフにすると、余白に URL や日付が入りません）。

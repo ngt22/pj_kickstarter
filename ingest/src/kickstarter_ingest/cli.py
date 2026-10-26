@@ -7,6 +7,7 @@
   uv run kickstarter-ingest whoami | logout
   uv run kickstarter-ingest push ../projects/sample                  （login したアカウントで書き込む）
   uv run kickstarter-ingest push ../projects/sample (--emulator | --gcp-project ID)   （Admin SDK で書き込む）
+  uv run kickstarter-ingest mock ../projects/sample ../mock/dist [--title 画面モック] [--note 説明] [--gcp-project ID]
   uv run kickstarter-ingest admin grant you@example.com (--emulator | --gcp-project ID)
   uv run kickstarter-ingest admin revoke you@example.com (--emulator | --gcp-project ID)
   uv run kickstarter-ingest admin list (--emulator | --gcp-project ID)
@@ -168,7 +169,26 @@ def logout(_: argparse.Namespace) -> int:
     return 0
 
 
-COMMANDS = {"admin": admin, "init": init, "schema": schema, "site-assets": site_assets, "login": login, "whoami": whoami, "logout": logout}
+def mock(args: argparse.Namespace) -> int:
+    from .mock import MockError, mock_deploy
+    from .remote import load_credentials
+
+    creds = load_credentials()
+    gcp_project = args.gcp_project or (creds.project_id if creds and not creds.emulator else None)
+    if not gcp_project:
+        print("[error] デプロイ先の Firebase プロジェクトが分かりません。login するか --gcp-project を指定してください", file=sys.stderr)
+        return 1
+    try:
+        url = mock_deploy(args.project_dir, args.build_dir, gcp_project, args.title, args.note)
+    except MockError as e:
+        print(f"[error] {e}", file=sys.stderr)
+        return 1
+    print(f"[ok] {url} にデプロイし、project.yaml の links に追記しました。push するとサイトの補足資料に出ます")
+    print("     （このサイトは URL を知っていれば誰でも開けます。実データや社外秘の情報はモックに入れないでください）")
+    return 0
+
+
+COMMANDS = {"admin": admin, "init": init, "schema": schema, "site-assets": site_assets, "login": login, "whoami": whoami, "logout": logout, "mock": mock}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -193,6 +213,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--emulator", action="store_true", help="localhost:9099 の Auth エミュレータにログインする")
     sub.add_parser("whoami", help="ログイン中のアカウントを表示する")
     sub.add_parser("logout", help="保存したログイン情報を消す")
+    p = sub.add_parser("mock", help="画面モックのビルド結果を案件専用の Hosting サイトにデプロイし、links に追記する")
+    p.add_argument("project_dir", type=Path)
+    p.add_argument("build_dir", type=Path, help="モックのビルド結果（index.html があるディレクトリ）")
+    p.add_argument("--title", default="画面モック", help="links に書くリンクの名前（既定: 画面モック）")
+    p.add_argument("--note", default="", help="links に書くひとことの説明")
+    p.add_argument("--gcp-project", help="Firebase プロジェクトID（省略すると login したサイトのプロジェクト）")
     p = sub.add_parser("admin", help="管理者（全案件を閲覧し、閲覧権限を編集できる）を付け外しする")
     p.add_argument("action", choices=("grant", "revoke", "list"))
     p.add_argument("email", nargs="?")

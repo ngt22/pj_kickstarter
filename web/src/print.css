@@ -337,6 +337,138 @@
   font-size: 16pt !important;
 }
 
+/* ---- ユースケース図（components/UsecaseDiagram の PDF 版）：灰色の面と影をやめ、細い罫で詰めて組む ---- */
+.ks-paper .uc {
+  margin: 6pt 0 8pt;
+}
+.ks-paper .uc-zone {
+  padding: 6pt 10pt 8pt;
+  background: none;
+  border: 0.5pt solid var(--paper-gray-light);
+  border-radius: 0;
+}
+.ks-paper .uc-zone-head {
+  margin-bottom: 2pt;
+}
+.ks-paper .uc-zone-tag {
+  padding: 0;
+  font-size: 9.5pt;
+  color: var(--paper-ink);
+  background: none !important;
+  border-radius: 0;
+}
+.ks-paper :is(.uc-zone-note, .uc-actor-note, .uc-card-sub, .uc-legend, .uc-flow, .uc-inherits) {
+  font-size: 7.5pt;
+  color: var(--paper-gray);
+}
+.ks-paper .uc-row {
+  grid-template-columns: 22mm 1fr;
+  gap: 6mm;
+  padding: 5pt 0;
+}
+.ks-paper .uc-row + .uc-row {
+  border-top: 0.5pt dashed var(--paper-hair);
+}
+.ks-paper .uc-row:has(.uc-avatar) .uc-row-body::before {
+  left: -5.5mm;
+  width: 4.5mm;
+  border-top: 0.5pt solid var(--paper-gray);
+}
+.ks-paper .uc-avatar {
+  width: 22pt;
+  height: 22pt;
+  margin-bottom: 2pt;
+  border: 0.5pt solid var(--paper-gray-light);
+  box-shadow: none;
+}
+.ks-paper .uc-avatar svg {
+  width: 13pt;
+  height: 13pt;
+}
+.ks-paper .uc-actor-name {
+  font-size: 9pt;
+}
+.ks-paper .uc-cards {
+  grid-template-columns: repeat(auto-fill, minmax(42mm, 1fr));
+  gap: 4pt;
+}
+.ks-paper .uc-card {
+  min-height: 0;
+  padding: 3pt 6pt 3pt 8pt;
+  background: #fff;
+  border: 0.5pt solid var(--paper-gray-light);
+  border-radius: 0;
+  box-shadow: inset 2pt 0 0 var(--uc-color);
+}
+.ks-paper .uc-card[data-condition] {
+  border-style: dashed;
+  outline: 0;
+}
+.ks-paper .uc-card-id {
+  font-size: 7pt;
+  color: var(--paper-gray);
+}
+.ks-paper .uc-card-name {
+  font-size: 9pt;
+  line-height: 1.4;
+  color: var(--paper-ink);
+}
+.ks-paper .uc-flow {
+  padding: 5pt 0;
+}
+.ks-paper .uc-flow b {
+  color: var(--paper-ink);
+}
+.ks-paper .uc-flow::before,
+.ks-paper .uc-flow::after {
+  border-top: 1pt dashed var(--paper-gray-light);
+}
+
+/* ---- システム構成図（components/ArchDiagram の PDF 版）：色の面と影をやめ、細い罫と墨の線で描く（縮める前の px） ---- */
+.ks-paper .ar-zone {
+  background: none;
+  border: 1px solid var(--paper-gray-light);
+  border-radius: 0;
+}
+.ks-paper .ar-zone[data-external] {
+  border: 1px dashed var(--paper-gray-light);
+}
+.ks-paper .ar-zone-tag {
+  padding: 0;
+  color: var(--paper-ink);
+  background: none;
+  border-radius: 0;
+}
+.ks-paper :is(.ar-zone-note, .ar-meta, .ar-note, .ar-legend) {
+  color: var(--paper-gray);
+}
+.ks-paper :is(.ar-link, .ar-arrow) {
+  stroke: var(--paper-gray);
+}
+.ks-paper .ar-link-label {
+  color: var(--paper-ink);
+  background: #fff;
+}
+.ks-paper .ar-card {
+  border: 1px solid var(--paper-gray-light);
+  border-radius: 2px;
+  box-shadow: inset 3px 0 0 var(--ar-color);
+}
+.ks-paper .ar-card[data-external] {
+  box-shadow: inset 3px 0 0 var(--paper-gray-light);
+}
+.ks-paper .ar-name {
+  color: var(--paper-ink);
+}
+.ks-paper .ar-user {
+  border: 1px solid var(--paper-gray);
+}
+.ks-paper .ar-user-icon {
+  color: var(--paper-ink);
+  background: none;
+  border: 1px solid var(--paper-gray);
+}
+
 /* ---- 画面イメージ（components/ScreenMock の PDF 版）：方眼の台と丸い札をやめ、細い罫の枠と小さな注記にする ---- */
 .ks-paper .mock-stage {
   --mock-on-stage: var(--paper-ink);

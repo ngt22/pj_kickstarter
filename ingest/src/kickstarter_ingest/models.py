@@ -67,11 +67,16 @@ class ProjectMeta(Strict):
         [], description="会社案内や既存の資料など、一緒に渡したいファイル（PDF など）はありますか？"
     )
 
+    # 画面モックをデプロイした Hosting のサイト名。kickstarter-ingest mock が書き、次回のデプロイで同じサイトに上書きする
+    mock_site: str = Field(
+        "", pattern=r"^([a-z0-9][a-z0-9-]{4,28}[a-z0-9])?$", description="画面モックの Hosting サイト名（mock コマンドが書く。手で書かない）"
+    )
+
     # push 前に原稿から探す語（社内のあだ名など）。サイトには送らない。サイト共通の禁止語は管理画面で設定する
     forbidden_terms: list[str] = Field([], description="クライアントに見せてはいけない語（社内のあだ名など）はありますか？")
 
     # サイトに送らない項目
-    PRIVATE_FIELDS: ClassVar[set[str]] = {"members", "forbidden_terms"}
+    PRIVATE_FIELDS: ClassVar[set[str]] = {"members", "forbidden_terms", "mock_site"}
     # 原稿の形のままでは送らない項目（files は読み込んだファイルの情報に置き換えて送る）
     SITE_EXCLUDE: ClassVar[set[str]] = PRIVATE_FIELDS | {"files"}
 

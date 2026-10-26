@@ -1980,7 +1980,7 @@ table {
 }
 .ks-ink-boxinput {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   pointer-events: auto;
   padding: 6px 8px;
   border: 2px dashed var(--ink);
@@ -2229,7 +2229,7 @@ table {
 /* 囲みの右下のつまみ：引っ張って大きさを変える */
 .ks-annot-resize {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   width: 14px;
   height: 14px;
   margin: -9px 0 0 -9px;
@@ -2256,4 +2256,16 @@ table {
 }
 .ks-ink-boxtext[data-kind="memo"] span {
   background: none;
+}
+/* メモ欄の上をつかんで動かす（点はそのまま、引出線がついてくる） */
+.ks-annot-grab {
+  position: absolute;
+  z-index: 2;
+  border-radius: 6px;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: move;
+}
+.ks-annot-grab:hover {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mantine-color-brand-5) 45%, transparent);
 }

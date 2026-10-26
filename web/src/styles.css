@@ -1517,6 +1517,36 @@ table {
   transform: translateY(-1px);
 }
 
+/* 補足資料（リンク・ファイル） */
+.ks-material {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--ks-surface);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.ks-material:is(a, button):hover {
+  border-color: var(--mantine-color-brand-3);
+  box-shadow: var(--mantine-shadow-sm);
+}
+.ks-material:disabled {
+  cursor: progress;
+}
+.ks-material-action {
+  flex: none;
+  margin-top: 2px;
+  color: var(--mantine-color-dimmed);
+}
+.ks-material:hover .ks-material-action {
+  color: var(--mantine-color-brand-light-color);
+}
+.ks-material-meta {
+  overflow-wrap: anywhere;
+}
+
 /* 空の状態 */
 .ks-empty {
   border: 1px dashed var(--mantine-color-default-border);

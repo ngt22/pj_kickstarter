@@ -177,8 +177,12 @@ def _value(v: Any) -> dict[str, Any]:
         return {"doubleValue": v}
     if isinstance(v, str):
         return {"stringValue": v}
+    if isinstance(v, bytes):
+        return {"bytesValue": base64.b64encode(v).decode()}
     if isinstance(v, list):
         return {"arrayValue": {"values": [_value(x) for x in v]}}
+    if isinstance(v, dict):
+        return {"mapValue": {"fields": {k: _value(x) for k, x in v.items()}}}
     raise TypeError(f"Firestore に書けない値です: {v!r}")
 
 
@@ -195,7 +199,8 @@ def build_writes(result: LoadResult, database: str, is_new: bool, existing_docs:
     assert result.meta is not None
     root = f"{database}/documents"
     project = f"{root}/projects/{result.meta.id}"
-    writes = [_set(project, result.meta.model_dump(exclude=ProjectMeta.PRIVATE_FIELDS))]
+    meta = result.meta.model_dump(exclude=ProjectMeta.SITE_EXCLUDE)
+    writes = [_set(project, {**meta, "files": [f.record() for f in result.files]})]
     # members は新規案件の初期値としてだけ使う。以降は管理画面で外した人を push で戻さないよう、触らない
     for email in result.meta.members if is_new else []:
         writes.append(
@@ -220,6 +225,46 @@ def build_writes(result: LoadResult, database: str, is_new: bool, existing_docs:
     # 原稿から消したドキュメントは Firestore からも消す
     writes.extend({"delete": f"{project}/docs/{t}"} for t in sorted(existing_docs - keep))
     return writes
+
+
+# 1 回の commit で送るファイルの断片の数（REST では base64 で 1.3 倍になる。1 リクエストは 10MiB まで）
+BLOBS_PER_COMMIT = 4
+
+
+def blob_commits(result: LoadResult, database: str, existing: set[str]) -> list[list[dict[str, Any]]]:
+    """まだサイトにないファイルの断片（blobs）を書く commit の一覧。中身のハッシュが ID なので、変わっていなければ送らない。"""
+    assert result.meta is not None
+    root = f"{database}/documents/projects/{result.meta.id}/blobs"
+    writes = [
+        {"update": {"name": f"{root}/{blob_id}", "fields": {k: _value(v) for k, v in {"file": f.id, "index": i, "data": chunk}.items()}}}
+        for f in result.files
+        for i, (blob_id, chunk) in enumerate(zip(f.blob_ids(), f.chunks()))
+        if blob_id not in existing
+    ]
+    return [writes[i : i + BLOBS_PER_COMMIT] for i in range(0, len(writes), BLOBS_PER_COMMIT)]
+
+
+def stale_blob_deletes(result: LoadResult, database: str, existing: set[str]) -> list[dict[str, Any]]:
+    """原稿から外したファイルの断片を消す書き込み。"""
+    assert result.meta is not None
+    keep = {b for f in result.files for b in f.blob_ids()}
+    root = f"{database}/documents/projects/{result.meta.id}/blobs"
+    return [{"delete": f"{root}/{b}"} for b in sorted(existing - keep)]
+
+
+def _list_ids(creds: Credentials, path: str, headers: dict[str, str], field: str) -> set[str]:
+    ids: set[str] = set()
+    page_token = ""
+    while True:
+        params = {"pageSize": 300, "mask.fieldPaths": field, **({"pageToken": page_token} if page_token else {})}
+        res = requests.get(creds.firestore_url(path), headers=headers, params=params, timeout=TIMEOUT)
+        if not res.ok:
+            raise RemoteError(_error_message(res))
+        body = res.json()
+        ids |= {d["name"].rsplit("/", 1)[1] for d in body.get("documents", [])}
+        page_token = body.get("nextPageToken", "")
+        if not page_token:
+            return ids
 
 
 def forbidden_terms(creds: Credentials) -> list[str]:
@@ -249,20 +294,15 @@ def push(result: LoadResult, creds: Credentials) -> int:
         raise RemoteError(_error_message(res))
     is_new = res.status_code == 404
 
-    existing: set[str] = set()
-    page_token = ""
-    while True:
-        params = {"pageSize": 100, "mask.fieldPaths": "type", **({"pageToken": page_token} if page_token else {})}
-        res = requests.get(creds.firestore_url(project_path + "/docs"), headers=headers, params=params, timeout=TIMEOUT)
-        if not res.ok:
-            raise RemoteError(_error_message(res))
-        body = res.json()
-        existing |= {d["name"].rsplit("/", 1)[1] for d in body.get("documents", [])}
-        page_token = body.get("nextPageToken", "")
-        if not page_token:
-            break
+    existing = _list_ids(creds, project_path + "/docs", headers, "type")
+    existing_blobs = _list_ids(creds, project_path + "/blobs", headers, "file")
 
-    writes = build_writes(result, creds.database, is_new, existing)
     url = creds.firestore_url(":commit")
-    _post(url, {"writes": writes}, headers)
+    # ファイルの中身を先に置き、案件ドキュメントが参照したときには読めるようにする
+    for writes in blob_commits(result, creds.database, existing_blobs):
+        _post(url, {"writes": writes}, headers)
+    _post(url, {"writes": build_writes(result, creds.database, is_new, existing)}, headers)
+    stale = stale_blob_deletes(result, creds.database, existing_blobs)
+    for i in range(0, len(stale), 500):
+        _post(url, {"writes": stale[i : i + 500]}, headers)
     return len(result.docs)

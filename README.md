@@ -23,8 +23,9 @@ pj_kickstarter/
 
 | パス | 内容 |
 | --- | --- |
-| `projects/{id}` | `project.yaml` の内容（name, summary, status）と updatedAt |
+| `projects/{id}` | `project.yaml` の内容（name, summary, status, links など）、files（補足資料のファイルの名前・大きさなど）と updatedAt |
 | `projects/{id}/docs/{type}` | type, title, order, format（markdown / yaml）, body（原文）, updatedAt |
+| `projects/{id}/blobs/{fileId}-{n}` | 補足資料のファイルの中身を 900KiB ずつに分けたもの。file（中身のハッシュ）, index, data（bytes）。閲覧権限は案件と同じ |
 | `projects/{id}/annotations/{autoId}` | 付箋。docType（表紙は `_cover`）, authorUid / authorName / authorEmail, items（ペン・メモ。初期の囲み・引出線も表示できる）, comment, tags, status（open / close）, anchor（目印の要素と位置）, width, createdAt, updatedAt |
 | `access/{email}` | 閲覧権限。projects（閲覧できる案件IDの配列）, updatedAt。ドキュメントIDは小文字のメールアドレス |
 | `settings/site` | 表紙に出す提案者。vendor_name（自社名）, contact（担当者）, updatedAt。ログインした人なら読める |
@@ -56,6 +57,25 @@ uv run kickstarter-ingest admin grant boss@example.com --emulator
 新しい案件は「案件の管理」の「新規案件」から、案件ID・案件名などを入力して作成できます。16種のドキュメントには `kickstarter-ingest init` と同じ雛形（記入例）が入るので、Claude との対話や ingest CLI の push で中身を書き換えてください。雛形はサイトで公開している `/templates` から読むため、ingest 側で雛形を直してデプロイすれば反映されます。
 
 「案件の管理」の「提案者と表現チェック」では、全案件の表紙に出す提案者（自社名・担当者）と、クライアント向けの資料に出してはいけない禁止語（社内のあだ名など）を設定します。ingest CLI は push の前に、禁止語と雛形の仮の文字（〇〇）が原稿に残っていないかを調べ、見つかれば push を止めます。原価・粗利・無料枠・TODO などの注意語と「未定」は警告だけ出します。
+
+### 補足資料（画面モックの URL・PDF など）
+
+`project.yaml` の `links` に画面モックや参考サイトの URL を、`files` に一緒に渡すファイル（案件ディレクトリの `attachments/` などに置く）を書いて push すると、表紙の下とサイドバーの「補足資料」に一覧で出ます。リンクと PDF・画像は新しいタブで開き、そのほかのファイルは保存されます。
+
+```yaml
+links:
+  - title: 画面モック（Figma）
+    url: https://www.figma.com/proto/...
+    note: 予約から完了までの流れを操作できます
+files:
+  - path: attachments/会社案内.pdf
+    title: 会社案内
+```
+
+- Spark プランでは Cloud Storage のバケットを新しく作れないため、ファイルは Firestore の `blobs` に分けて保存します。閲覧権限は資料と同じで、URL を知っていても権限のない人は開けません
+- 1 ファイル 10MB まで。Firestore の無料枠（保存 1GiB・読み取り 5 万回/日）の中に収まる使い方を想定しています（10MB のファイルを 1 回開くと 12 回ほど読み取ります）
+- ID が中身のハッシュなので、変えていないファイルは push で送り直しません。`files` から外したファイルは push で消えます
+- 全資料の PDF では、リンクは URL を書き出し、ファイルは名前だけを載せます
 
 ### 全資料を 1 つの PDF に
 

@@ -9,6 +9,7 @@ import { buildOverview } from "../lib/overview";
 import { usePrint } from "../lib/print";
 import type { SiteSettings } from "../lib/settings";
 import { DocIcon, ICON_STROKE } from "./icons";
+import { hasMaterials, MaterialsList } from "./Materials";
 
 const longDate = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 const shortDate = new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", timeZone: "UTC" });
@@ -163,6 +164,14 @@ export default function ProjectCover({ project, docs, site }: { project: Project
           ))}
         </Stack>
       </div>
+
+      {/* 補足資料（画面モックのリンク、PDF など） */}
+      {hasMaterials(project) && (
+        <div>
+          <Title order={3} mb="md">補足資料</Title>
+          <MaterialsList project={project} columns={2} />
+        </div>
+      )}
     </Stack>
   );
 }

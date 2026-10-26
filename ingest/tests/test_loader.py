@@ -281,3 +281,47 @@ def test_invalid_arch_is_reported(tmp_path):
 
     spec.write_text(text.replace("kind: function", "kind: lambda", 1), encoding="utf-8")
     assert any(e.startswith("tech-spec.md: arch") for e in load_project(path).errors)
+
+
+def test_sample_materials_are_loaded():
+    result = load_project(ROOT / "projects" / "sample")
+    assert [l.title for l in result.meta.links][0] == "画面モック（Figma）"
+    [f] = result.files
+    assert (f.name, f.title, f.content_type) == ("service-overview.pdf", "サービス概要", "application/pdf")
+    record = f.record()
+    assert record["size"] == len(f.data) and record["chunks"] == 1
+    assert "path" not in record
+
+
+def test_large_file_is_split_into_chunks(tmp_path):
+    from kickstarter_ingest.loader import CHUNK_BYTES
+
+    path = copy_sample(tmp_path)
+    (path / "attachments" / "big.bin").write_bytes(b"x" * (CHUNK_BYTES * 2 + 1))
+    meta = yaml.safe_load((path / "project.yaml").read_text(encoding="utf-8"))
+    meta["files"] = [{"path": "attachments/big.bin"}]
+    (path / "project.yaml").write_text(yaml.safe_dump(meta, allow_unicode=True), encoding="utf-8")
+    [f] = load_project(path).files
+    assert f.title == "big" and len(f.chunks()) == 3
+    assert b"".join(f.chunks()) == f.data
+    assert f.blob_ids() == [f"{f.id}-0", f"{f.id}-1", f"{f.id}-2"]
+
+
+def test_bad_materials_are_reported(tmp_path):
+    from kickstarter_ingest.models import MAX_FILE_BYTES
+
+    path = copy_sample(tmp_path)
+    (tmp_path / "outside.pdf").write_bytes(b"%PDF")
+    (path / "attachments" / "huge.pdf").write_bytes(b"0" * (MAX_FILE_BYTES + 1))
+    meta = yaml.safe_load((path / "project.yaml").read_text(encoding="utf-8"))
+    meta["files"] = [{"path": "../outside.pdf"}, {"path": "attachments/none.pdf"}, {"path": "attachments/huge.pdf"}]
+    (path / "project.yaml").write_text(yaml.safe_dump(meta, allow_unicode=True), encoding="utf-8")
+    errors = load_project(path).errors
+    assert any("案件ディレクトリの中" in e for e in errors)
+    assert any("ファイルがありません" in e for e in errors)
+    assert any("10MB まで" in e for e in errors)
+
+    meta["files"] = []
+    meta["links"] = [{"title": "モック", "url": "figma.com/proto"}]
+    (path / "project.yaml").write_text(yaml.safe_dump(meta, allow_unicode=True), encoding="utf-8")
+    assert any("project.yaml" in e for e in load_project(path).errors)

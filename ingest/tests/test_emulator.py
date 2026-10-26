@@ -72,6 +72,42 @@ def test_admin_can_push(tmp_path):
     assert firestore_get("/projects/e2e/docs/adr").status_code == 404
 
 
+def blob_ids(project_id: str) -> set[str]:
+    docs = firestore_get(f"/projects/{project_id}/blobs").json().get("documents", [])
+    return {d["name"].rsplit("/", 1)[1] for d in docs}
+
+
+@pytest.mark.parametrize("mode", ["login", "admin-sdk"])
+def test_push_materials(tmp_path, mode):
+    project = tmp_path / f"files-{mode}"
+    shutil.copytree(ROOT / "projects" / "sample", project)
+    meta = project / "project.yaml"
+    meta.write_text(meta.read_text(encoding="utf-8").replace("id: sample", f"id: files-{mode}"), encoding="utf-8")
+    (project / "attachments" / "big.bin").write_bytes(os.urandom(2 * 1024 * 1024))
+    meta.write_text(
+        meta.read_text(encoding="utf-8").replace("files:\n", "files:\n  - path: attachments/big.bin\n    title: 大きな資料\n"),
+        encoding="utf-8",
+    )
+    if mode == "login":
+        assert main(["login", "--emulator", "--email", create_user(admin=True)]) == 0
+        push = ["push", str(project)]
+    else:
+        push = ["push", str(project), "--emulator"]
+    assert main(push) == 0
+
+    result = load_project(project)
+    big = next(f for f in result.files if f.name == "big.bin")
+    assert blob_ids(project.name) == {b for f in result.files for b in f.blob_ids()}
+    assert len(big.blob_ids()) == 3
+    files = firestore_get(f"/projects/{project.name}").json()["fields"]["files"]["arrayValue"]["values"]
+    assert [v["mapValue"]["fields"]["title"]["stringValue"] for v in files] == ["大きな資料", "サービス概要"]
+
+    # 原稿から外したファイルの中身は消える
+    meta.write_text(meta.read_text(encoding="utf-8").replace("  - path: attachments/big.bin\n    title: 大きな資料\n", ""), encoding="utf-8")
+    assert main(push) == 0
+    assert blob_ids(project.name) == {f"{f.id}-0" for f in load_project(project).files}
+
+
 def test_pasted_token_works(monkeypatch):
     email = create_user(admin=True)
     creds = remote.sign_in_with_password(remote.Credentials("emulator", "demo-key", "demo-kickstarter", ""), email, "password123")

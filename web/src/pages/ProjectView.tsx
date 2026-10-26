@@ -1,5 +1,5 @@
 import { ActionIcon, Alert, Box, Button, NavLink, Paper, Skeleton, Stack, Text, Tooltip } from "@mantine/core";
-import { IconFileOff, IconFileTypePdf, IconHome } from "@tabler/icons-react";
+import { IconFileOff, IconFileTypePdf, IconHome, IconPaperclip } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import AnnotationButtons from "../components/annotations/AnnotationButtons";
@@ -10,12 +10,14 @@ import DocView from "../components/DocView";
 import EmptyState from "../components/EmptyState";
 import { DocIcon, ICON_STROKE } from "../components/icons";
 import Layout from "../components/Layout";
+import MaterialsPage, { hasMaterials } from "../components/Materials";
 import ProjectCover from "../components/ProjectCover";
 import { COVER } from "../lib/annotations";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
 import { groupByPart } from "../lib/doctypes";
 import { db } from "../lib/firebase";
 import { loadProject } from "../lib/loadProject";
+import { MATERIALS } from "../lib/materials";
 import { ProjectColorContext } from "../lib/projectColor";
 import { EMPTY_SITE, loadSiteSettings, type SiteSettings } from "../lib/settings";
 
@@ -42,7 +44,7 @@ export default function ProjectView() {
   const [site, setSite] = useState<SiteSettings>(EMPTY_SITE);
   const [error, setError] = useState("");
   const pageTitles = useMemo(
-    () => Object.fromEntries([[COVER, "表紙・概要"], ...(docs ?? []).map((d) => [d.type, d.title])]),
+    () => Object.fromEntries([[COVER, "表紙・概要"], ...(docs ?? []).map((d) => [d.type, d.title]), [MATERIALS, "補足資料"]]),
     [docs],
   );
 
@@ -93,11 +95,22 @@ export default function ProjectView() {
           ))}
         </Box>
       ))}
+      {hasMaterials(project) && (
+        <NavLink
+          component={Link}
+          to={`${base}/${MATERIALS}`}
+          leftSection={<IconPaperclip size={18} stroke={ICON_STROKE} />}
+          label="補足資料"
+          active={docType === MATERIALS}
+          mt={4}
+        />
+      )}
     </>
   );
 
   let content;
   if (!docType) content = <ProjectCover project={project} docs={docs} site={site} />;
+  else if (docType === MATERIALS) content = <MaterialsPage project={project} />;
   else if (current)
     content = (
       <ProjectColorContext.Provider value={project.color || "brand"}>

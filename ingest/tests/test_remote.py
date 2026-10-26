@@ -71,3 +71,26 @@ def test_urls():
         "http://localhost:9099/identitytoolkit.googleapis.com/v1/"
     )
     assert emu.firestore_url().startswith("http://localhost:8080/v1/projects/demo-kickstarter/")
+
+
+def test_build_writes_sends_materials():
+    result = load_project(ROOT / "projects" / "sample")
+    fields = build_writes(result, DB, is_new=False, existing_docs=set())[0]["update"]["fields"]
+    link = fields["links"]["arrayValue"]["values"][0]["mapValue"]["fields"]
+    assert link["url"] == {"stringValue": "https://www.figma.com/"}
+    file = fields["files"]["arrayValue"]["values"][0]["mapValue"]["fields"]
+    assert file["name"] == {"stringValue": "service-overview.pdf"}
+    assert "path" not in file
+    assert "forbidden_terms" not in fields
+
+
+def test_blob_writes_skip_existing_and_delete_stale():
+    result = load_project(ROOT / "projects" / "sample")
+    [f] = result.files
+    root = f"{DB}/documents/projects/sample/blobs"
+    [[write]] = remote.blob_commits(result, DB, existing={"old-0"})
+    assert write["update"]["name"] == f"{root}/{f.id}-0"
+    assert base64.b64decode(write["update"]["fields"]["data"]["bytesValue"]) == f.data
+    # 中身が変わっていなければ送り直さない
+    assert remote.blob_commits(result, DB, existing={f"{f.id}-0"}) == []
+    assert remote.stale_blob_deletes(result, DB, {"old-0", f"{f.id}-0"}) == [{"delete": f"{root}/old-0"}]

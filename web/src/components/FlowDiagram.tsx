@@ -28,12 +28,14 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { parseYaml } from "../lib/docs";
-import { layoutFlow, NOTE_W, type FlowLane, type FlowLayout, type FlowNode, type FlowSpec } from "../lib/flow";
+import { layoutFlow, PRINT_DIMS, SCREEN_DIMS, type FlowLane, type FlowLayout, type FlowNode, type FlowSpec } from "../lib/flow";
 import { ICON_STROKE } from "./icons";
 import Scaled from "./Scaled";
 import { usePrint } from "../lib/print";
 
-const PAD_X = 28; // 区画の左右の余白（styles.css の .fl-zone と合わせる）
+// 区画の左右の余白（styles.css・print.css の .fl-zone と合わせる）
+const PAD_X = 28;
+const PRINT_PAD_X = 16;
 
 // 画面名から、それらしいアイコンを選ぶ（先に書いたものが優先）
 const SCREEN_ICONS: [RegExp, Icon][] = [
@@ -59,7 +61,7 @@ function iconFor(name: string): Icon {
   return SCREEN_ICONS.find(([re]) => re.test(name))?.[1] ?? IconDeviceDesktop;
 }
 
-function Node({ n, color }: { n: FlowNode; color: string }) {
+function Node({ n, color, print }: { n: FlowNode; color: string; print: boolean }) {
   const style = { left: n.x, top: n.y, width: n.w, height: n.h };
   if (n.kind === "terminal")
     return (
@@ -70,9 +72,9 @@ function Node({ n, color }: { n: FlowNode; color: string }) {
   const I = iconFor(n.label);
   return (
     <div className="fl-card" style={style}>
-      <span className="fl-icon" style={{ color: `var(--mantine-color-${color}-filled)`, background: `var(--mantine-color-${color}-light)` }}>
+      {!print && <span className="fl-icon" style={{ color: `var(--mantine-color-${color}-filled)`, background: `var(--mantine-color-${color}-light)` }}>
         <I size={20} stroke={ICON_STROKE} />
-      </span>
+      </span>}
       <span className="fl-text">
         <span className="fl-id">{n.id}</span>
         <span className="fl-name">{n.label}</span>
@@ -81,7 +83,7 @@ function Node({ n, color }: { n: FlowNode; color: string }) {
   );
 }
 
-function Lane({ lane, color, width, marker }: { lane: FlowLane; color: string; width: number; marker: string }) {
+function Lane({ lane, color, width, marker, print }: { lane: FlowLane; color: string; width: number; marker: string; print: boolean }) {
   return (
     <div className="fl-lane">
       {lane.name && <div className="fl-lane-name">{lane.name}</div>}
@@ -106,14 +108,53 @@ function Lane({ lane, color, width, marker }: { lane: FlowLane; color: string; w
           ) : null,
         )}
         {lane.nodes.map((n) => (
-          <Node key={n.id} n={n} color={color} />
+          <Node key={n.id} n={n} color={color} print={print} />
         ))}
         {lane.note && (
-          <p className="fl-lane-note" style={{ left: lane.noteX, width: NOTE_W }}>
+          <p className="fl-lane-note" style={{ left: lane.noteX, width: lane.noteW }}>
             {lane.note}
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+// PDF では図の下に遷移の一覧を表で載せる（図の線とラベルを、文字で確かめられるように）
+function TransitionTable({ spec }: { spec: FlowSpec }) {
+  const name = new Map<string, string>([
+    ...spec.screens.map((s) => [s.id, `${s.id}　${s.name}`] as [string, string]),
+    ...(spec.terminals ?? []).map((t) => [t.id, `（${t.label}）`] as [string, string]),
+    ...spec.zones.map((z) => [z.id, `［${z.name}］`] as [string, string]),
+  ]);
+  const rows = [
+    ...(spec.edges ?? []).map((e) => ({ from: e.from, to: e.to, label: e.label, note: e.type === "back" ? "戻る" : undefined })),
+    ...(spec.flows ?? []).map((f) => ({ from: f.from, to: f.to, label: f.label, note: f.note ?? "区画の間の受け渡し" })),
+  ];
+  if (!rows.length) return null;
+  return (
+    <div className="fl-table ks-table-frame">
+      <p className="ks-print-caption">画面遷移の一覧</p>
+      <table>
+        <thead>
+          <tr>
+            <th>遷移元</th>
+            <th>操作・きっかけ</th>
+            <th>遷移先</th>
+            <th>備考</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i}>
+              <td>{name.get(r.from) ?? r.from}</td>
+              <td>{r.label ?? "—"}</td>
+              <td>{name.get(r.to) ?? r.to}</td>
+              <td>{r.note}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -136,19 +177,19 @@ export default function FlowDiagram({ source }: { source: string }) {
   useEffect(() => {
     if (!parsed.spec) return;
     let alive = true;
-    layoutFlow(parsed.spec)
+    layoutFlow(parsed.spec, print ? PRINT_DIMS : SCREEN_DIMS)
       .then((l) => alive && setLayout(l))
       .catch((e) => alive && setLayout(String(e)));
     return () => {
       alive = false;
     };
-  }, [parsed]);
+  }, [parsed, print]);
 
   if (parsed.error) return <Code block c="red">ページ遷移図を読めません: {parsed.error}</Code>;
   if (typeof layout === "string") return <Code block c="red">ページ遷移図を配置できません: {layout}</Code>;
   if (!layout) return <Loader size="sm" />;
 
-  const width = layout.width + PAD_X * 2;
+  const width = layout.width + (print ? PRINT_PAD_X : PAD_X) * 2;
   const content = (
     <>
       <svg width={0} height={0} className="fl-defs" aria-hidden>
@@ -166,7 +207,7 @@ export default function FlowDiagram({ source }: { source: string }) {
               {z.note && <span className="fl-zone-note">{z.note}</span>}
             </header>
             {z.lanes.map((l, i) => (
-              <Lane key={l.id || i} lane={l} color={z.color} width={layout.width} marker={marker} />
+              <Lane key={l.id || i} lane={l} color={z.color} width={layout.width} marker={marker} print={print} />
             ))}
             {z.footnote && <p className="fl-footnote">{z.footnote}</p>}
           </section>
@@ -204,6 +245,7 @@ export default function FlowDiagram({ source }: { source: string }) {
       </Group>
       )}
       <Scaled width={width}>{content}</Scaled>
+      {print && parsed.spec && <TransitionTable spec={parsed.spec} />}
       <Modal opened={opened} onClose={close} fullScreen title="ページ遷移図">
         <div className="fl-full" style={{ width }}>{content}</div>
       </Modal>

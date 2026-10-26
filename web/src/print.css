@@ -283,7 +283,9 @@
 .ks-paper .ks-table-frame > div {
   min-width: 0 !important;
 }
+/* Mantine の Typography が td に 14px を当てるので、表の文字の大きさ（9pt）を継がせる */
 .ks-paper :is(.doc-body > table, .ks-table-frame table) :is(th, td) {
+  font-size: inherit;
   padding: 4pt 6pt !important;
   vertical-align: top;
   border-bottom: 0.25pt solid var(--paper-hair);
@@ -335,9 +337,207 @@
   font-size: 16pt !important;
 }
 
-/* ---- 図：スクロールで見せていたものは、すべて紙に出す ---- */
-.ks-paper .gantt {
-  overflow: visible;
+/* ---- 工程表（components/PrintGantt）：表の右に週の目盛りと棒 ---- */
+.pg {
+  margin: 6pt 0 10pt;
+}
+/* 図と表の題（工程表・遷移の一覧など） */
+.ks-paper .ks-print-caption {
+  margin: 0 0 3pt;
+  font-size: 9pt;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.pg table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 8.5pt;
+  line-height: 1.35;
+  border-top: 0.75pt solid var(--paper-rule);
+  border-bottom: 0.75pt solid var(--paper-rule);
+}
+.pg :is(th, td) {
+  font-size: inherit;
+  padding: 2.5pt 4pt;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 0.25pt solid var(--paper-hair);
+}
+.pg thead th {
+  font-weight: 700;
+  background: var(--paper-tint);
+}
+.pg thead tr:last-child th,
+.pg thead th[rowspan] {
+  border-bottom: 0.5pt solid var(--paper-rule);
+}
+.pg tbody + tbody tr:first-child td {
+  border-top: 0.5pt solid var(--paper-gray-light);
+}
+.pg-section td {
+  font-weight: 700;
+}
+.pg-name {
+  padding-left: 10pt !important;
+}
+.pg .pg-time {
+  position: relative;
+  padding: 0;
+  border-left: 0.5pt solid var(--paper-gray-light);
+}
+.pg-months,
+.pg-weeks {
+  height: 12pt;
+}
+.pg-months {
+  border-bottom: 0.25pt solid var(--paper-hair) !important;
+}
+.pg-time > span {
+  position: absolute;
+  top: 50%;
+  padding-left: 2pt;
+  font-size: 7pt;
+  font-weight: 400;
+  color: var(--paper-gray);
+  transform: translateY(-50%);
+}
+.pg-months > span {
+  font-weight: 700;
+  color: var(--paper-ink);
+}
+.pg-time > i {
+  position: absolute;
+  font-style: normal;
+}
+.pg-line {
+  top: 0;
+  bottom: 0;
+  border-left: 0.25pt solid var(--paper-hair);
+}
+.pg-month-line {
+  border-left-color: var(--paper-gray-light);
+}
+.pg-bar {
+  top: 50%;
+  height: 6pt;
+  background: color-mix(in srgb, var(--paper-accent) 28%, white);
+  border: 0.5pt solid var(--paper-accent);
+  transform: translateY(-50%);
+}
+.pg-summary {
+  top: 50%;
+  height: 2.5pt;
+  background: var(--paper-ink);
+  transform: translateY(-50%);
+}
+.pg-milestone {
+  top: 50%;
+  font-size: 8pt;
+  line-height: 1;
+  color: var(--paper-accent);
+  transform: translate(-50%, -50%);
+}
+
+/* ---- ページ遷移図（components/FlowDiagram の PDF 版）：色の面と影をやめ、細い罫と墨の線で描く。
+   図は Scaled で縮めて載せるので、ここの大きさは縮める前の px で書く（縮める率はおよそ 0.8） ---- */
+.ks-paper .fl {
+  margin: 6pt 0 8pt;
+}
+.ks-paper .fl-zone {
+  padding: 10px 16px;
+  background: none;
+  border: 1px solid var(--paper-gray-light);
+  border-radius: 0;
+}
+.ks-paper .fl-zone-tag {
+  padding: 0;
+  font-size: 13px;
+  color: var(--paper-ink);
+  background: none;
+  border-radius: 0;
+}
+.ks-paper .fl-zone-note,
+.ks-paper .fl-lane-name,
+.ks-paper .fl-lane-note,
+.ks-paper .fl-footnote {
+  font-size: 11px;
+  color: var(--paper-gray);
+}
+.ks-paper .fl-lane + .fl-lane {
+  border-top: 1px dashed var(--paper-hair);
+}
+.ks-paper .fl-card {
+  padding: 0 10px;
+  border: 1px solid var(--paper-gray);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.ks-paper .fl-id {
+  font-size: 10px;
+  color: var(--paper-gray);
+}
+.ks-paper .fl-name {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--paper-ink);
+}
+.ks-paper .fl-edge,
+.ks-paper .fl-arrow {
+  stroke: var(--paper-gray);
+}
+.ks-paper .fl-edge[data-back] {
+  stroke: var(--paper-gray-light);
+}
+.ks-paper .fl-edge-label {
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--paper-ink);
+  background: #fff;
+  border-radius: 0;
+  box-shadow: none;
+}
+.ks-paper .fl-terminal {
+  font-size: 11px;
+}
+.ks-paper .fl-terminal[data-role="start"] {
+  color: var(--paper-ink);
+  background: #fff;
+  border: 1px solid var(--paper-gray);
+}
+.ks-paper .fl-terminal[data-role="end"] {
+  color: #fff;
+  background: var(--paper-ink);
+}
+.ks-paper .fl-flow {
+  padding: 10px 0;
+}
+.ks-paper .fl-flow-line {
+  border-left: 1.5px dashed var(--paper-gray);
+}
+.ks-paper .fl-flow-card {
+  padding: 4px 10px;
+  background: #fff;
+  border: 1px solid var(--paper-gray-light);
+  border-radius: 0;
+  box-shadow: none;
+}
+.ks-paper .fl-flow-card b {
+  font-size: 12px;
+}
+.ks-paper .fl-flow-card small,
+.ks-paper .fl-legend {
+  font-size: 11px;
+  color: var(--paper-gray);
+}
+.ks-paper .fl-legend {
+  margin-top: 8px;
+}
+.ks-paper .fl-table {
+  margin-top: 10pt;
 }
 
 @media print {
@@ -386,10 +586,10 @@
     border-top: 0;
   }
   /* 図はページの途中で切らない（1 ページに入る高さに縮めてある）。表はページをまたいでよいが、行は切らない */
-  .ks-paper :is(figure, .ks-diagram, .gantt-wrap, pre, blockquote, .ks-estimate-total) {
+  .ks-paper :is(figure, .ks-diagram, pre, blockquote, .ks-estimate-total) {
     break-inside: avoid;
   }
-  .ks-paper :is(tr, li, .gantt-row, .uc-zone) {
+  .ks-paper :is(tr, li, .uc-zone) {
     break-inside: avoid;
   }
   /* 表の最初と最後の 2 行だけが別のページに取り残されないようにする */

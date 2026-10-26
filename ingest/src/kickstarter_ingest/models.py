@@ -13,6 +13,26 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MaterialLink(Strict):
+    """補足資料のリンク（画面モック、参考サイトなど）。"""
+
+    title: str = Field(description="リンクの名前（例: 画面モック（Figma））")
+    url: str = Field(pattern=r"^https?://\S+$", description="URL（https://...）")
+    note: str = Field("", description="ひとことの説明（例: 予約から完了までを操作できます）")
+
+
+# 1 ファイルの上限。Firestore に分割して保存するので、無理なく読み込める大きさにとどめる
+MAX_FILE_BYTES = 10 * 1024 * 1024
+
+
+class MaterialFile(Strict):
+    """補足資料のファイル（PDF など）。原稿のディレクトリに置き、push でサイトに送る。"""
+
+    path: str = Field(description="案件ディレクトリからの相対パス（例: attachments/会社案内.pdf）。1 ファイル 10MB まで")
+    title: str = Field("", description="一覧に出す名前（省略するとファイル名）")
+    note: str = Field("", description="ひとことの説明")
+
+
 class ProjectMeta(Strict):
     """案件の基本情報（project.yaml）。"""
 
@@ -39,11 +59,21 @@ class ProjectMeta(Strict):
         [], description="この案件を閲覧するクライアントのメールアドレスは？（初回 push 時だけ閲覧権限に追加される）"
     )
 
+    # 補足資料（表紙と「補足資料」のページに一覧で出る）
+    links: list[MaterialLink] = Field(
+        [], description="画面モックや参考サイトなど、資料と一緒に見てほしい URL はありますか？"
+    )
+    files: list[MaterialFile] = Field(
+        [], description="会社案内や既存の資料など、一緒に渡したいファイル（PDF など）はありますか？"
+    )
+
     # push 前に原稿から探す語（社内のあだ名など）。サイトには送らない。サイト共通の禁止語は管理画面で設定する
     forbidden_terms: list[str] = Field([], description="クライアントに見せてはいけない語（社内のあだ名など）はありますか？")
 
     # サイトに送らない項目
     PRIVATE_FIELDS: ClassVar[set[str]] = {"members", "forbidden_terms"}
+    # 原稿の形のままでは送らない項目（files は読み込んだファイルの情報に置き換えて送る）
+    SITE_EXCLUDE: ClassVar[set[str]] = PRIVATE_FIELDS | {"files"}
 
     # YAML は 2026-10-24 を日付型として読むので、文字列に戻す
     @field_validator("proposed_at", mode="before")

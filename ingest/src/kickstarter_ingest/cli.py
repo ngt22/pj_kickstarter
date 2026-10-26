@@ -209,7 +209,8 @@ def main(argv: list[str] | None = None) -> int:
     result = report(args.project_dir)
     if result.errors:
         return 1
-    print(f"[ok] {result.meta.id}: {len(result.docs)} 件のドキュメントを検証しました")
+    materials = f"、補足資料 {len(result.meta.links)} リンク・{len(result.files)} ファイル" if result.meta.links or result.files else ""
+    print(f"[ok] {result.meta.id}: {len(result.docs)} 件のドキュメント{materials}を検証しました")
 
     if args.command == "push":
         return push(args, result)

@@ -7,6 +7,9 @@ from firebase_admin import auth, credentials, firestore
 from google.auth.credentials import AnonymousCredentials
 
 from .loader import LoadResult
+
+# 1 回の書き込みで送るファイルの断片の数（Firestore の 1 リクエストは 10MiB まで）
+BLOBS_PER_BATCH = 4
 from .models import ProjectMeta
 
 
@@ -33,9 +36,32 @@ def push(result: LoadResult, gcp_project: str | None) -> int:
 
     project_ref = db.collection("projects").document(result.meta.id)
     is_new = not project_ref.get().exists
+
+    # 補足資料のファイルは、案件ドキュメントが参照する前に中身（blobs）を置く。中身のハッシュが ID なので、変わっていなければ送らない
+    blobs = project_ref.collection("blobs")
+    existing_blobs = {s.id for s in blobs.select(["file"]).stream()}
+    pending = [
+        (blob_id, f.id, i, chunk)
+        for f in result.files
+        for i, (blob_id, chunk) in enumerate(zip(f.blob_ids(), f.chunks()))
+        if blob_id not in existing_blobs
+    ]
+    for i in range(0, len(pending), BLOBS_PER_BATCH):
+        batch = db.batch()
+        for blob_id, file_id, index, chunk in pending[i : i + BLOBS_PER_BATCH]:
+            batch.set(blobs.document(blob_id), {"file": file_id, "index": index, "data": chunk})
+        batch.commit()
+
     batch = db.batch()
     # 閲覧者は案件ドキュメントに載せない（クライアント同士でメールが見えないように access に分ける）
-    batch.set(project_ref, {**result.meta.model_dump(exclude=ProjectMeta.PRIVATE_FIELDS), "updatedAt": firestore.SERVER_TIMESTAMP})
+    batch.set(
+        project_ref,
+        {
+            **result.meta.model_dump(exclude=ProjectMeta.SITE_EXCLUDE),
+            "files": [f.record() for f in result.files],
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        },
+    )
     # members は新規案件の初期値としてだけ使う。以降は管理画面で外した人を push で戻さないよう、触らない
     for email in result.meta.members if is_new else []:
         batch.set(
@@ -63,6 +89,15 @@ def push(result: LoadResult, gcp_project: str | None) -> int:
         if snap.id not in keep:
             batch.delete(snap.reference)
     batch.commit()
+
+    # 原稿から外したファイルの中身を消す
+    keep_blobs = {b for f in result.files for b in f.blob_ids()}
+    stale = sorted(existing_blobs - keep_blobs)
+    for i in range(0, len(stale), 500):
+        batch = db.batch()
+        for blob_id in stale[i : i + 500]:
+            batch.delete(blobs.document(blob_id))
+        batch.commit()
     return len(result.docs)
 
 

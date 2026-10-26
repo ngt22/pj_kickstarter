@@ -1,6 +1,6 @@
 # pj_kickstarter
 
-新規プロジェクトの提案資料（14種）を Markdown / YAML で書き、Firestore に流し込んで、ログイン付きのブラウザサイトで閲覧するためのフレームワークです。
+新規プロジェクトの提案資料（17種）を Markdown / YAML で書き、Firestore に流し込んで、ログイン付きのブラウザサイトで閲覧するためのフレームワークです。
 
 ## 構成
 
@@ -8,7 +8,7 @@
 pj_kickstarter/
 ├─ web/        閲覧サイト（Vite + React + React Router の SPA、Mantine、Firebase Auth、Mermaid、React Flow）
 ├─ ingest/     取り込み CLI（Python / uv）：原稿を検証して Firestore に投入
-├─ templates/  14種の原稿テンプレート（記入例つき）。実体は ingest/src/kickstarter_ingest/templates（CLI に同梱）
+├─ templates/  17種の原稿テンプレート（記入例つき）。実体は ingest/src/kickstarter_ingest/templates（CLI に同梱）
 ├─ projects/   案件ごとの原稿。`kickstarter-ingest init` で templates から作って記入する
 ├─ firebase.json / firestore.rules / .firebaserc
 ```
@@ -54,7 +54,7 @@ uv run kickstarter-ingest admin grant boss@example.com --emulator
 
 クライアントの閲覧権限は、管理者がサイト右上の「案件の管理」から案件ごとにメールアドレスで追加・削除します。サインアップ前のメールアドレスも指定でき、そのアドレスでログインした時点で閲覧できるようになります。`project.yaml` の `members` は新規案件を初めて push したときの初期値としてだけ使い、以降の push では閲覧権限を変更しません。
 
-新しい案件は「案件の管理」の「新規案件」から、案件ID・案件名などを入力して作成できます。14種のドキュメントには `kickstarter-ingest init` と同じ雛形（記入例）が入るので、Claude との対話や ingest CLI の push で中身を書き換えてください。雛形はサイトで公開している `/templates` から読むため、ingest 側で雛形を直してデプロイすれば反映されます。
+新しい案件は「案件の管理」の「新規案件」から、案件ID・案件名などを入力して作成できます。17種のドキュメントには `kickstarter-ingest init` と同じ雛形（記入例）が入るので、Claude との対話や ingest CLI の push で中身を書き換えてください。雛形はサイトで公開している `/templates` から読むため、ingest 側で雛形を直してデプロイすれば反映されます。
 
 「案件の管理」の「提案者と表現チェック」では、全案件の表紙に出す提案者（自社名・担当者）と、クライアント向けの資料に出してはいけない禁止語（社内のあだ名など）を設定します。ingest CLI は push の前に、禁止語と雛形の仮の文字（〇〇）が原稿に残っていないかを調べ、見つかれば push を止めます。原価・粗利・無料枠・TODO などの注意語と「未定」は警告だけ出します。
 
@@ -79,7 +79,7 @@ files:
 
 ### 全資料を 1 つの PDF に
 
-案件のページのヘッダー右上にある PDF のボタンを押すと、別のタブに表紙と 14 種の資料を順に並べたページ（`/projects/{id}/print`）が開き、図を描き終えたところでブラウザの印刷画面が出ます。送信先で「PDF に保存」を選ぶと 1 つの PDF になります（「ヘッダーとフッター」をオフにすると、余白に URL や日付が入りません）。
+案件のページのヘッダー右上にある PDF のボタンを押すと、別のタブに表紙と 17 種の資料を順に並べたページ（`/projects/{id}/print`）が開き、図を描き終えたところでブラウザの印刷画面が出ます。送信先で「PDF に保存」を選ぶと 1 つの PDF になります（「ヘッダーとフッター」をオフにすると、余白に URL や日付が入りません）。
 
 - 用紙は A4 縦で、資料ごとに改ページします。ページの上に案件名と資料名、下に提案者・版と提案日・ページ番号が入ります（表紙には入りません）。ファイル名は「案件名_提案資料_第◯版_提案日」です
 - 1 ページ目は表紙（宛名・表題・提出日・版・提案者と担当・取扱いの注記）、2 ページ目は目次、3 ページ目は提案概要（期間・費用・マイルストーン）と文書情報です。下書き（status: draft）の案件は全ページに DRAFT の透かしが入ります
@@ -108,26 +108,31 @@ files:
 
 不要になった案件（試しに push したものなど）は、「案件の管理」で案件の「削除」を押し、確認のため案件IDを入力すると削除できます。原稿（docs）・付箋と、その案件の閲覧権限もまとめて消えます。元の原稿ファイルは残るので、もう一度 push すれば復元できます。
 
-## ドキュメント14種
+## ドキュメント17種
 
-| type | ファイル | 表示 |
-| --- | --- | --- |
-| executive-summary | executive-summary.md | Markdown |
-| personas | personas.md | Markdown（ユースケース図は Mermaid） |
-| requirements | requirements.md | Markdown |
-| tech-spec | tech-spec.md | Markdown |
-| screens | screens.md | Markdown（` ```mock ` ブロックで画面モック） |
-| page-flow | page-flow.md | Mermaid flowchart |
-| er-diagram | er-diagram.md | ` ```er ` ブロック → ズーム・検索・ドメイン絞り込みできる ER 図 |
-| api | api.yaml | OpenAPI 3 → エンドポイント一覧 |
-| roadmap | roadmap.md | ` ```gantt ` ブロック → スクロール・ズームできるガントチャート |
-| estimate | estimate.yaml | 表＋合計の自動計算 |
-| risks | risks.yaml | 表 |
-| test-plan | test-plan.md | Markdown |
-| glossary | glossary.yaml | 表（読み順に並べ替え） |
-| adr | adr.md | Markdown |
+サイトの一覧・表紙・PDF の目次は、次の順に部の見出しを付けて並びます（概要 → 要件 → 設計 → 進め方 → 費用 → 付録）。並び順は資料の種類で決まり、`ingest/src/kickstarter_ingest/doctypes.py` と `web/src/lib/doctypes.ts` で定義しています（両者がずれるとテストが落ちます）。原稿がない資料は一覧にも PDF にも出ません。
 
-Markdown の原稿には front matter（`title`, `order`）が必要です。不要なドキュメントはファイルを消せば省略されます。
+| 部 | type | ファイル | 表示 |
+| --- | --- | --- | --- |
+| 第1部 提案の概要 | executive-summary | executive-summary.md | Markdown |
+| 第2部 要件 | requirements | requirements.md | Markdown |
+|  | personas | personas.md | Markdown（` ```usecase ` ブロックでユースケース図） |
+| 第3部 設計 | tech-spec | tech-spec.md | Markdown |
+|  | page-flow | page-flow.md | ` ```flow ` ブロックでページ遷移図 |
+|  | screens | screens.md | Markdown（` ```mock ` ブロックで画面モック） |
+|  | er-diagram | er-diagram.md | ` ```er ` ブロック → ズーム・検索・ドメイン絞り込みできる ER 図 |
+|  | api | api.yaml | OpenAPI 3 → エンドポイント一覧 |
+| 第4部 進め方 | roadmap | roadmap.md | ` ```gantt ` ブロック → スクロール・ズームできるガントチャート |
+|  | team | team.md | Markdown（体制、会議と報告、納品物と検収、お願いすること） |
+|  | test-plan | test-plan.md | Markdown |
+|  | operations | operations.md | Markdown（保守の範囲、問い合わせと障害対応、月額に含まれるもの） |
+|  | risks | risks.yaml | 表 |
+|  | assumptions | assumptions.md | Markdown（前提条件と、ご判断いただく確認事項の一覧） |
+| 第5部 費用 | estimate | estimate.yaml | 表＋合計の自動計算 |
+| 付録 | glossary | glossary.yaml | 表（読み順に並べ替え） |
+|  | adr | adr.md | Markdown |
+
+Markdown の原稿には front matter（`title`）が必要です。以前の原稿にある `order` は無視されます（消さなくても構いません）。不要なドキュメントはファイルを消せば省略されます。
 
 ### 図のブロック
 

@@ -1,6 +1,7 @@
 // PDF の表紙・目次と、提案概要・文書情報のページ。画面の表紙（ProjectCover）とは別に、紙の提案書の体裁で組む
 import { useMemo } from "react";
 import type { DocRecord, ProjectRecord } from "../lib/docs";
+import { groupByPart } from "../lib/doctypes";
 import { fromDay } from "../lib/gantt";
 import { buildOverview } from "../lib/overview";
 import type { SiteSettings } from "../lib/settings";
@@ -44,12 +45,19 @@ export function PrintToc({ docs }: Pick<Props, "docs">) {
     <div className="pf">
       <h2 className="pf-h">目次</h2>
       <ol className="pf-toc">
-        {docs.map((d, i) => (
-          <li key={d.type}>
-            <a href={`#doc-${d.type}`}>
-              <span className="pf-toc-num">{i + 1}</span>
-              {d.title}
-            </a>
+        {groupByPart(docs).map((g) => (
+          <li key={g.key} className="pf-toc-part">
+            <span className="pf-toc-part-title">{g.title}</span>
+            <ol>
+              {g.docs.map(({ doc: d, index: i }) => (
+                <li key={d.type}>
+                  <a href={`#doc-${d.type}`}>
+                    <span className="pf-toc-num">{i + 1}</span>
+                    {d.title}
+                  </a>
+                </li>
+              ))}
+            </ol>
           </li>
         ))}
       </ol>

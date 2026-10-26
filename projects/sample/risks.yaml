@@ -1,5 +1,4 @@
 title: リスク管理表
-order: 11
 risks:
   - id: R-01
     title: 要件の追加による遅延

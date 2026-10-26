@@ -94,7 +94,9 @@ class DocHeader(BaseModel):
     """Markdown の front matter と YAML 原稿に共通する項目。"""
 
     title: str = Field(description="ページの見出し（サイドバーにも表示）")
-    order: int = Field(description="サイドバーでの並び順（雛形の値のままでよい）")
+    order: int | None = Field(
+        None, description="使わない（並び順は資料の種類で決まる）。古い原稿に書いてあっても無視する"
+    )
 
 
 class GlossaryTerm(Strict):

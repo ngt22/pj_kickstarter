@@ -1,6 +1,5 @@
 # API仕様（OpenAPI 3 形式）
 title: API仕様
-order: 8
 spec:
   openapi: 3.0.3
   info:

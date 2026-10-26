@@ -1,6 +1,5 @@
 ---
 title: ER図
-order: 7
 ---
 
 ```er

@@ -117,6 +117,10 @@
   letter-spacing: 0.02em;
 }
 
+.ks-cell-short {
+  white-space: nowrap;
+}
+
 /* ---- ページ見出し（DocView） ---- */
 .ks-eyebrow {
   font-size: var(--mantine-font-size-xs);
@@ -1398,6 +1402,13 @@ table {
 }
 .mantine-NavLink-root[data-active] .ks-nav-num {
   color: inherit;
+}
+/* 部の見出し（第1部 提案の概要 など）。サイドバーと表紙の資料一覧 */
+.ks-nav-part {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--mantine-color-dimmed);
 }
 
 /* Mermaid の図：影を消し、角丸をトークンにそろえる */

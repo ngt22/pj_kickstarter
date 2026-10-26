@@ -1,5 +1,4 @@
 title: 見積もり
-order: 10
 currency: JPY
 tax: excluded          # excluded（税抜）| included（税込）
 valid_until: 2026-11-30   # 見積もりの有効期限（省略可）

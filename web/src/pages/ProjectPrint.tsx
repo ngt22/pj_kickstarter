@@ -12,12 +12,36 @@ import { PrintContext } from "../lib/print";
 import { ProjectColorContext } from "../lib/projectColor";
 import { EMPTY_SITE, loadSiteSettings, type SiteSettings } from "../lib/settings";
 
-// 用紙は A4 縦。ほかのページの印刷には効かないよう、このページを開いている間だけ入れる
-const PAGE_CSS = `@page {
+import "../print.css";
+
+const longDate = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+
+// CSS の content に入れる文字列
+const cssString = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ")}"`;
+
+// 用紙（A4 縦）と柱。ほかのページの印刷には効かないよう、このページを開いている間だけ入れる。
+// 柱：上左に案件名、上右に資料番号と資料名（資料ごとの名前付きページ）、下に提案者・版と提案日・ページ番号。表紙には入れない
+function pageCss(project: ProjectRecord, docs: DocRecord[], site: SiteSettings) {
+  const box = `font-family: "Noto Sans JP", sans-serif; font-size: 7.5pt; color: #8a909b;`;
+  const edition = [project.version && `第${project.version}版`, project.proposed_at && longDate.format(new Date(project.proposed_at))]
+    .filter(Boolean)
+    .join("　");
+  const vendor = [site.vendor_name, "Confidential"].filter(Boolean).join("　");
+  return [
+    `@page {
   size: A4 portrait;
-  margin: 12mm 12mm 14mm;
-  @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; color: #868e96; }
-}`;
+  margin: 20mm 18mm 18mm;
+  @top-left { content: ${cssString(`${project.name}　ご提案資料`)}; ${box} vertical-align: bottom; padding-bottom: 4mm; }
+  @bottom-left { content: ${cssString(vendor)}; ${box} vertical-align: top; padding-top: 4mm; }
+  @bottom-center { content: ${cssString(edition)}; ${box} vertical-align: top; padding-top: 4mm; }
+  @bottom-right { content: counter(page); ${box} vertical-align: top; padding-top: 4mm; }
+}`,
+    `@page cover { @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-center { content: none; } @bottom-right { content: none; } }`,
+    ...docs.map(
+      (d, i) => `@page doc-${i} { @top-right { content: ${cssString(`${i + 1}　${d.title}`)}; ${box} vertical-align: bottom; padding-bottom: 4mm; } }`,
+    ),
+  ].join("\n");
+}
 
 // PDF の既定のファイル名になる（ブラウザはページのタイトルをファイル名に使う）
 function fileTitle(p: ProjectRecord) {
@@ -83,7 +107,7 @@ export default function ProjectPrint() {
   const base = `/projects/${projectId}`;
   return (
     <div className="ks-print-screen">
-      <style>{PAGE_CSS}</style>
+      {data && <style>{pageCss(data.project, data.docs, site)}</style>}
       <Group className="ks-print-toolbar" justify="space-between" wrap="nowrap" gap="sm">
         <Button component={Link} to={base} variant="subtle" size="xs" leftSection={<IconArrowLeft size={16} stroke={ICON_STROKE} />}>
           資料に戻る
@@ -105,12 +129,12 @@ export default function ProjectPrint() {
       {data && (
         <PrintContext.Provider value={true}>
           <ProjectColorContext.Provider value={data.project.color || "brand"}>
-            <Box ref={sheet} className="ks-print-sheet">
-              <section className="ks-print-page">
+            <Box ref={sheet} className="ks-print-sheet ks-paper">
+              <section className="ks-print-page" style={{ page: "cover" }}>
                 <ProjectCover project={data.project} docs={data.docs} site={site} />
               </section>
               {data.docs.map((d, i) => (
-                <section key={d.type} id={`doc-${d.type}`} className="ks-print-page">
+                <section key={d.type} id={`doc-${d.type}`} className="ks-print-page" style={{ page: `doc-${i}` }}>
                   <DocView doc={d} index={i} total={data.docs.length} basePath={base} />
                 </section>
               ))}

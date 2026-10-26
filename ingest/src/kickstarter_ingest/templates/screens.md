@@ -8,6 +8,8 @@ title: 画面仕様 / ワイヤーフレーム
   devices: [desktop, tablet, mobile]（切り替えに出す端末。省略時はパソコンとスマホ。タブレットは書いたときだけ出る）
   pwa: true（ブラウザ表示とアプリ（PWA）表示を切り替えられる。PWA ではアドレスバーが消え、パソコンはアプリ名の窓になる）
   display: browser | pwa（最初に見せる表示）   app: PWA の窓に出すアプリ名（省略時は header の title）
+  orientation: portrait | landscape（タブレット・スマホの向き）   theme: field（屋外・暗所向けの高コントラスト・大きめの文字とボタン）
+  帯には直前の見出し（## SC-01 …）の画面IDと端末（例: SC-01 タブレット横）が出ます（screen: で上書き可）
   パソコンで見ると tabbar は横のメニューに、スマホで見ると nav は上のチップに、row は縦並びになります
 画面の骨組み:
   header {title, links, actions, back, action}（先頭に置くと上のバー。スマホは back: true で戻る矢印）
@@ -16,7 +18,7 @@ title: 画面仕様 / ワイヤーフレーム
 部品（「- 種類: 中身」）:
   heading  text  breadcrumb [名前...]  stepper {items, active}  alert {title, text, color}  toast {title, text, tone}
   input {label, type: text|email|date|number|password|textarea, placeholder, value, required, help, error}
-  search {placeholder}  select {label, options}  checkbox {label, checked}  radio {label, options}
+  search {placeholder, value, suggestions: [文字 または {title, sub, to}]}（suggestions で入力中の候補も出す）  select {label, options}  checkbox {label, checked}  radio {label, options}
   button {label, variant: primary|default|danger|link, to: 遷移先の画面ID, full}  buttons [ボタン...]
   row [部品...] または {items: [部品...], widths: [1, 2, 1.3]}（横並び。widths は列の幅の比）  card {title, items: [部品...]}  tabs [名前...]
   stats [{label, value, delta}]（数値カード）  list [文字...] または [{title, sub, meta, badge, thumb, avatar, to}]
@@ -25,6 +27,10 @@ title: 画面仕様 / ワイヤーフレーム
   drawing {title, floors, floor, rooms: [部屋名...], groups: [{id, label, color}], pins: [{x, y, label, status: new|prev|done, group, color, text}], selected}
     （図面と指摘位置などのピン。図面は部屋名から自動で描き、ピンの x・y は図面に対する %。selected のピンは吹き出しに text を出す。
      ピンは status の色で塗る。group を付けると groups の区分の色（例: 建築物＝red、建築設備＝blue）、color で直接指定もできる）
+  photos {label, items: [名前...] または count, action}（写真の横並び＋撮影ボタン。action: false で撮影ボタンなし）
+  segmented {label, items, active}（大きな選択ボタン）  progress {label, value: %, text}（進捗のバー）
+  statusbar {offline, pending, text}（オフライン・未送信件数などの通信の状態）
+  actionbar [ボタン...]（画面の下に固定。最後のボタンが主ボタン）  fab {label, to}（右下に浮かせたボタン）
 どの部品にも note: 番号 を付けると画面の外に注釈が並び、下の項目表と対応させられます。
 to: に書いた遷移先は画面の下に「画面遷移」として一覧になります。
 -->

@@ -164,7 +164,11 @@ Python のツール uv があれば、どのディレクトリからでも実行
   devices: [desktop, tablet, mobile]、ホーム画面に追加して使う PWA なら pwa: true（ブラウザ／アプリ表示の切り替え）を書く。先頭の header（上のバー）、
   nav（パソコンの横メニュー）、tabbar（スマホの下のタブ）で画面の骨組みを作り、中身は stats・list・table・card などで
   実際に表示する内容（それらしい名前・日時・件数）を書く。ボタンなどの to: には遷移先の画面ID（SC-xx）を書き、
-  note: 番号は直後の項目表の No と合わせる。図面の上で位置を指す画面（点検の指摘位置、座席、設備の配置など）は
+  note: 番号は直後の項目表の No と合わせる。
+  現場で使う画面は、orientation: landscape（タブレット横）、theme: field（屋外・暗所向けの高コントラスト）、photos（写真＋撮影ボタン）、
+  actionbar（画面下に固定したボタン）、statusbar（オフライン・未送信件数）、segmented（大きな選択ボタン）、fab（右下の追加ボタン）、
+  progress（進捗）、search の suggestions（入力中の候補）が使える。帯には直前の見出しの画面ID（SC-xx）と端末の向きが出る。
+  図面の上で位置を指す画面（点検の指摘位置、座席、設備の配置など）は
   drawing（rooms に部屋名、pins に {{x, y: 図面に対する %, label, status: new|prev|done, text}}）で描く。指摘の区分で塗り分けるときは
   groups: [{{id: bldg, label: 建築物, color: red}}] を書き、ピンに group: bldg を付ける（凡例に区分が出る）。
   row は列を等分に並べる。幅の比を変えるときは row: {{items: [...], widths: [1, 2, 1.3]}}（スマホでは縦に積む）

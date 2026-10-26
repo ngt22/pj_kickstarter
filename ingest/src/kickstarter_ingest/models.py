@@ -293,7 +293,7 @@ MOCK_ELEMENTS: dict[str, set[str] | None] = {
     "heading": {"text", "level", "note"},
     "text": {"text", "dimmed", "note"},
     "input": {"label", "type", "placeholder", "value", "required", "help", "error", "note"},
-    "search": {"placeholder", "note"},
+    "search": {"placeholder", "value", "suggestions", "note"},
     "select": {"label", "options", "value", "required", "note"},
     "checkbox": {"label", "checked", "note"},
     "radio": {"label", "options", "value", "note"},
@@ -315,6 +315,12 @@ MOCK_ELEMENTS: dict[str, set[str] | None] = {
     "empty": {"title", "hint", "action", "note"},
     "image": {"label", "height", "note"},
     "drawing": {"title", "floors", "floor", "rooms", "pins", "groups", "selected", "note"},
+    "photos": {"label", "items", "count", "action", "note"},
+    "actionbar": {"items", "note"},
+    "statusbar": {"text", "offline", "pending", "note"},
+    "segmented": {"label", "items", "active", "note"},
+    "fab": {"label", "to", "note"},
+    "progress": {"label", "value", "text", "note"},
     "divider": None,
     "space": None,
 }
@@ -324,7 +330,7 @@ STAT_KEYS = {"label", "value", "delta"}
 PIN_KEYS = {"x", "y", "label", "status", "group", "color", "text"}
 PIN_GROUP_KEYS = {"id", "label", "color"}
 PIN_STATUSES = {"new", "prev", "done"}
-LIST_KINDS = {"buttons", "row", "list", "tabs", "nav", "tabbar", "breadcrumb", "stats", "stepper"}
+LIST_KINDS = {"buttons", "row", "list", "tabs", "nav", "tabbar", "breadcrumb", "stats", "stepper", "actionbar", "segmented", "photos"}
 BUTTON_KEYS = MOCK_ELEMENTS["button"]
 CONTAINERS = {"row", "card"}
 
@@ -348,7 +354,7 @@ def check_mock_elements(items: Any, where: str = "body") -> None:
                 raise ValueError(f"{path}: {kind} に書けない項目 {sorted(unknown)}（書ける項目: {sorted(allowed)}）")
             if kind in CONTAINERS and "items" in value:
                 check_mock_elements(value["items"], f"{path}.{kind}")
-            if kind == "buttons":
+            if kind in ("buttons", "actionbar"):
                 for b in value.get("items", []):
                     if isinstance(b, dict) and set(b) - BUTTON_KEYS:
                         raise ValueError(f"{path}: ボタンに書けない項目 {sorted(set(b) - BUTTON_KEYS)}")
@@ -416,6 +422,9 @@ class MockBlock(Strict):
     display: Literal["browser", "pwa"] | None = Field(None, description="最初に見せる表示（pwa を書くと切り替えも出る）")
     app: str | None = Field(None, description="PWA 表示のタイトルバーに出すアプリ名（省略時は header の title）")
     title: str | None = Field(None, description="アドレスバーに出す文字（例: /reservations）")
+    screen: str | None = Field(None, description="帯に出す画面ID（省略すると直前の見出し ## SC-xx から取る）")
+    orientation: Literal["portrait", "landscape"] = Field("portrait", description="タブレット・スマホの向き（landscape は横向き）")
+    theme: Literal["default", "field"] = Field("default", description="field で屋外・暗所向けの高コントラスト・大きめの文字とボタン")
     body: list[Any] = Field(min_length=1, json_schema_extra=_mock_body_schema)
 
     @model_validator(mode="after")

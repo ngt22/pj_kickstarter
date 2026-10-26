@@ -2,8 +2,15 @@
 export type Element = Record<string, any>;
 export type Props = Record<string, any>;
 
+export type DeviceKind = "desktop" | "tablet" | "mobile";
+export type DisplayKind = "browser" | "pwa";
+
 export type MockSpec = {
-  device?: "desktop" | "mobile";
+  device?: DeviceKind;
+  devices?: DeviceKind[];
+  pwa?: boolean;
+  display?: DisplayKind;
+  app?: string;
   title?: string;
   body: Element[];
 };

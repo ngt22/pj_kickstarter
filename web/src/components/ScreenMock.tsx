@@ -45,6 +45,9 @@ import {
   IconCircle,
   IconDeviceDesktop,
   IconDeviceMobile,
+  IconDeviceTablet,
+  IconAppWindow,
+  IconWorldWww,
   IconDots,
   IconFileText,
   IconHeart,
@@ -76,6 +79,8 @@ import {
   normalize,
   props,
   splitShell,
+  type DeviceKind,
+  type DisplayKind,
   type Element,
   type MockSpec,
   type Props,
@@ -90,7 +95,8 @@ import { ICON_STROKE } from "./icons";
 export type { MockSpec };
 
 // 端末の論理幅。資料の幅に合わせて縮小表示する。スマホで資料を見るときは、パソコンの画面を狭めて文字を読める大きさに保つ
-const DEVICE_WIDTH = { desktop: 1024, desktopNarrow: 720, mobile: 375 };
+// 枠の太さ（左右合計）も足して縮小する
+const DEVICE_WIDTH = { desktop: 1024, desktopNarrow: 720, tablet: 820 + 32, mobile: 375 + 24 };
 
 const BUTTON_VARIANT: Record<string, { variant: string; color?: string }> = {
   primary: { variant: "filled" },
@@ -628,10 +634,12 @@ function AppTheme({ color, children }: { color: string; children: React.ReactNod
   );
 }
 
-function Screen({ spec, mobile }: { spec: MockSpec; mobile: boolean }) {
+// タブレットは部品の並びをパソコンと同じにし、下のタブはそのまま残す
+function Screen({ spec, kind }: { spec: MockSpec; kind: DeviceKind }) {
+  const mobile = kind === "mobile";
   const shell = splitShell(spec.body);
   // スマホ向けに書いた画面をパソコンで見るときは、下のタブを横のメニューにする
-  if (!mobile && shell.tabbar && !shell.nav) {
+  if (kind === "desktop" && shell.tabbar && !shell.nav) {
     shell.nav = { nav: kindOf(shell.tabbar)[1] };
     shell.tabbar = undefined;
   }
@@ -660,47 +668,126 @@ function Screen({ spec, mobile }: { spec: MockSpec; mobile: boolean }) {
   );
 }
 
-function Device({ spec, mobile }: { spec: MockSpec; mobile: boolean }) {
-  if (mobile)
+function StatusBar({ island }: { island?: boolean }) {
+  return (
+    <div className="mock-statusbar">
+      <span>9:41</span>
+      {island && <span className="mock-island" />}
+      <span className="mock-status-icons">
+        <IconWifi size={14} stroke={2} />
+        <IconBattery3 size={18} stroke={1.8} />
+      </span>
+    </div>
+  );
+}
+
+// スマホ・タブレットのブラウザで開いたときのアドレスバー（PWA ではブラウザの枠が消える）
+function MobileUrl({ url }: { url: string }) {
+  return (
+    <div className="mock-mobile-url">
+      <span>
+        <IconLock size={11} stroke={2} />
+        {url}
+      </span>
+    </div>
+  );
+}
+
+// パソコンで PWA としてインストールしたときの窓: アドレスバーの代わりにアプリ名だけのタイトルバー
+function AppTitleBar({ name }: { name: string }) {
+  return (
+    <div className="mock-toolbar" data-pwa="">
+      <span className="mock-app-title">
+        <ThemeIcon size={18} radius="sm" variant="filled" aria-hidden>
+          <IconStar size={11} stroke={ICON_STROKE} />
+        </ThemeIcon>
+        {name}
+      </span>
+      <span className="mock-window-controls" aria-hidden><i /><i /><i /></span>
+    </div>
+  );
+}
+
+// display が undefined（PWA の切り替えなし）のときは、スマホ・タブレットはブラウザの枠なし（従来の見た目）、パソコンはブラウザで描く
+function Device({ spec, kind, display }: { spec: MockSpec; kind: DeviceKind; display?: DisplayKind }) {
+  const url = `example.com${spec.title?.startsWith("/") ? spec.title : `/${spec.title ?? ""}`}`;
+  const showUrl = display === "browser";
+  if (kind !== "desktop")
     return (
-      <div className="mock-phone">
-        <div className="mock-statusbar">
-          <span>9:41</span>
-          <span className="mock-island" />
-          <span className="mock-status-icons">
-            <IconWifi size={14} stroke={2} />
-            <IconBattery3 size={18} stroke={1.8} />
-          </span>
-        </div>
-        <Screen spec={spec} mobile />
+      <div className={kind === "mobile" ? "mock-phone" : "mock-tablet"}>
+        <StatusBar island={kind === "mobile"} />
+        {showUrl && <MobileUrl url={url} />}
+        <Screen spec={spec} kind={kind} />
         <div className="mock-home-indicator" />
       </div>
     );
   return (
     <div className="mock-browser">
-      <div className="mock-toolbar">
-        <span className="mock-lights"><i /><i /><i /></span>
-        <span className="mock-url">
-          <IconLock size={12} stroke={2} />
-          {`example.com${spec.title?.startsWith("/") ? spec.title : `/${spec.title ?? ""}`}`}
-        </span>
-      </div>
-      <Screen spec={spec} mobile={false} />
+      {display === "pwa" ? (
+        <AppTitleBar name={spec.app ?? appName(spec) ?? "アプリ"} />
+      ) : (
+        <div className="mock-toolbar">
+          <span className="mock-lights"><i /><i /><i /></span>
+          <span className="mock-url">
+            <IconLock size={12} stroke={2} />
+            {url}
+          </span>
+        </div>
+      )}
+      <Screen spec={spec} kind="desktop" />
     </div>
   );
 }
 
-const DEVICES = [
-  { value: "desktop", label: "パソコン", icon: IconDeviceDesktop },
-  { value: "mobile", label: "スマートフォン", icon: IconDeviceMobile },
-] as const;
+function appName(spec: MockSpec): string | undefined {
+  const header = splitShell(spec.body).header;
+  if (!header) return undefined;
+  const t = normalize("header", kindOf(header)[1]).title;
+  return t == null ? undefined : String(t);
+}
+
+const DEVICES: Record<DeviceKind, { label: string; icon: Icon }> = {
+  desktop: { label: "パソコン", icon: IconDeviceDesktop },
+  tablet: { label: "タブレット", icon: IconDeviceTablet },
+  mobile: { label: "スマートフォン", icon: IconDeviceMobile },
+};
+
+const DISPLAYS: Record<DisplayKind, { label: string; icon: Icon }> = {
+  browser: { label: "ブラウザ", icon: IconWorldWww },
+  pwa: { label: "アプリ（PWA）", icon: IconAppWindow },
+};
+
+function Switch<T extends string>({ label, options, value, onChange }: {
+  label: string;
+  options: Record<T, { label: string; icon: Icon }>;
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <span className="mock-switch" role="group" aria-label={label}>
+      {(Object.keys(options) as T[]).map((k) => {
+        const o = options[k];
+        return (
+          <button key={k} type="button" aria-pressed={k === value} onClick={() => onChange(k)}>
+            <o.icon size={14} stroke={ICON_STROKE} />
+            {o.label}
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
+const pick = <T extends string>(all: Record<T, unknown>, keys: T[]) =>
+  Object.fromEntries(keys.map((k) => [k, all[k]])) as Record<T, { label: string; icon: Icon }>;
 
 export default function ScreenMock({ source }: { source: string }) {
   const color = useContext(ProjectColorContext);
   const print = usePrint();
   const narrow = useMediaQuery("(max-width: 48em)") && !print;
-  // 原稿の device は最初に見せる端末。帯の切り替えで、同じ画面をもう一方の端末でも見られる
-  const [view, setView] = useState<"desktop" | "mobile">();
+  // 原稿の device・display は最初に見せる端末と表示。帯の切り替えで、同じ画面を別の端末・表示でも見られる
+  const [view, setView] = useState<DeviceKind>();
+  const [shown, setShown] = useState<DisplayKind>();
   const parsed = useMemo(() => {
     try {
       const spec = parseYaml<MockSpec>(source);
@@ -713,31 +800,33 @@ export default function ScreenMock({ source }: { source: string }) {
 
   if ("error" in parsed) return <Code block c="red">画面モックを読めません: {parsed.error}</Code>;
   const { spec, notes, transitions } = parsed;
-  const mobile = (view ?? spec.device ?? "desktop") === "mobile";
-  const DeviceIcon = mobile ? IconDeviceMobile : IconDeviceDesktop;
+  const initial = spec.device ?? "desktop";
+  // tablet は原稿に書いたときだけ切り替えに出す。並びはパソコン → タブレット → スマホに揃える
+  const listed = spec.devices ?? (initial === "tablet" ? ["desktop", "tablet", "mobile"] : ["desktop", "mobile"]);
+  const devices = (Object.keys(DEVICES) as DeviceKind[]).filter((d) => listed.includes(d) || d === initial);
+  const kind = view ?? initial;
+  const withPwa = !!spec.pwa || spec.display === "pwa";
+  const display = withPwa ? (shown ?? spec.display ?? "browser") : undefined;
+  const DeviceIcon = DEVICES[kind].icon;
 
   return (
-    <figure className="mock-stage" data-device={mobile ? "mobile" : "desktop"}>
+    <figure className="mock-stage" data-device={kind}>
       <figcaption className="mock-band">
         <span className="mock-band-pill">
           <DeviceIcon size={14} stroke={ICON_STROKE} />
           画面イメージ
         </span>
         <span className="mock-band-note">実際のデザインとは異なります</span>
-        <span className="mock-switch" role="group" aria-label="表示する端末">
-          {DEVICES.map((d) => (
-            <button key={d.value} type="button" aria-pressed={(d.value === "mobile") === mobile} onClick={() => setView(d.value)}>
-              <d.icon size={14} stroke={ICON_STROKE} />
-              {d.label}
-            </button>
-          ))}
+        <span className="mock-switches">
+          {withPwa && display && <Switch label="表示のしかた" options={DISPLAYS} value={display} onChange={setShown} />}
+          {devices.length > 1 && <Switch label="表示する端末" options={pick(DEVICES, devices)} value={kind} onChange={setView} />}
         </span>
       </figcaption>
       <div className="mock-body">
         <div className="mock-device">
-          <Scaled width={mobile ? DEVICE_WIDTH.mobile + 24 : DEVICE_WIDTH[narrow ? "desktopNarrow" : "desktop"]}>
+          <Scaled width={kind === "desktop" ? DEVICE_WIDTH[narrow ? "desktopNarrow" : "desktop"] : DEVICE_WIDTH[kind]}>
             <AppTheme color={color}>
-              <Device spec={spec} mobile={mobile} />
+              <Device spec={spec} kind={kind} display={display} />
             </AppTheme>
           </Scaled>
         </div>

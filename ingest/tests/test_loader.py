@@ -288,7 +288,7 @@ def test_invalid_usecase_is_reported(tmp_path):
     path = copy_sample(tmp_path)
     personas = path / "personas.md"
     text = personas.read_text(encoding="utf-8")
-    personas.write_text(text.replace("actors: [staff] }", "actors: [nobody] }", 1), encoding="utf-8")
+    personas.write_text(text.replace("actors: [staff]", "actors: [nobody]", 1), encoding="utf-8")
     result = load_project(path)
     assert any(e.startswith("personas.md: usecase") and "nobody" in e and "候補" in e for e in result.errors)
 
@@ -383,3 +383,12 @@ def test_bad_materials_are_reported(tmp_path):
     meta["links"] = [{"title": "モック", "url": "figma.com/proto"}]
     (path / "project.yaml").write_text(yaml.safe_dump(meta, allow_unicode=True), encoding="utf-8")
     assert any("project.yaml" in e for e in load_project(path).errors)
+
+
+def test_usecase_screen_ids_are_checked(tmp_path):
+    path = copy_sample(tmp_path)
+    personas = path / "personas.md"
+    text = personas.read_text(encoding="utf-8")
+    personas.write_text(text.replace("screen: SC-11", "screen: SC-77", 1), encoding="utf-8")
+    result = load_project(path)
+    assert any("UC-04 の画面 SC-77" in w for w in result.warnings)

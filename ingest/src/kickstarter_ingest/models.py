@@ -461,6 +461,7 @@ class ErTable(Strict):
     label: str | None = None
     domain: str | None = None
     note: str | None = None
+    local: bool = Field(False, description="true でタブレットなどの端末の中にも持つ表（「端末内」の札が付く）")
     columns: list[ErColumn] = Field(min_length=1)
 
 
@@ -513,6 +514,7 @@ class UsecaseActor(Strict):
     inherits: str | None = Field(None, description="このアクターが全操作を引き継ぐ別のアクターの id（例: 管理者 → 事務員）")
     side: Literal["left", "right"] | None = Field(None, description="旧形式の項目。今は使わない")
     color: ThemeColor | None = Field(None, description="カードの色帯とアイコンの色（省略すると自動）")
+    device: Device | list[Device] | None = Field(None, description="使う端末（名前の下に端末の印が出る）")
 
 
 class UsecaseCase(Strict):
@@ -521,6 +523,8 @@ class UsecaseCase(Strict):
     actors: list[str] = Field([], description="このユースケースを使うアクターの id。最初のアクターの段に並ぶ")
     condition: str | None = Field(None, description="条件付きの操作の条件（例: 前回結果がある場合のみ）。点線のカードになる")
     note: str | None = Field(None, description="カードに小さく出す補足")
+    screen: str | list[str] | None = Field(None, description="対応する画面の ID（例: SC-02）。画面仕様へのリンクになる")
+    phase: str | None = Field(None, description="later で本番公開より後に作る機能（淡く描き「本番以降」の札が付く）")
 
 
 class UsecaseRelation(Strict):
@@ -612,7 +616,9 @@ class FlowEdge(Strict):
     from_: str = Field(alias="from", description="遷移元の画面・丸の id")
     to: str = Field(description="遷移先の画面・丸の id（同じレーンの中）")
     label: str | None = Field(None, description="線に添える操作（例: 案件を開く）")
-    type: Literal["go", "back"] = Field("go", description="go: 進む / back: 確定・キャンセルで戻る（点線）")
+    type: Literal["go", "back", "sync"] = Field(
+        "go", description="go: 進む / back: 確定・キャンセルで戻る（点線）/ sync: データの同期（太い点線）"
+    )
 
 
 class FlowSync(Strict):
@@ -631,6 +637,7 @@ class FlowBlock(Strict):
     edges: list[FlowEdge] = []
     flows: list[FlowSync] = []
     notes: list[str] = []
+    thumbnails: bool = Field(True, description="false で画面のサムネイル（画面仕様の ```mock の縮小）を出さない")
 
     @model_validator(mode="after")
     def check_refs(self) -> "FlowBlock":

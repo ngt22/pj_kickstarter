@@ -83,6 +83,13 @@ function cellClass(children: React.ReactNode): string | undefined {
   return parts.join("").trim().length <= SHORT_CELL ? "ks-cell-short" : undefined;
 }
 
+// 画面ID（SC-01 など）で始まる見出しにはその ID を付け、ページ遷移図などからリンクできるようにする
+function headingId(children: React.ReactNode): string | undefined {
+  const parts = Array.isArray(children) ? children : [children];
+  const text = parts.filter((c) => typeof c === "string").join("");
+  return /^([A-Za-z]+-\d+)/.exec(text.trim())?.[1];
+}
+
 export default function Markdown({ text }: { text: string }) {
   return (
     <ReactMarkdown
@@ -96,6 +103,8 @@ export default function Markdown({ text }: { text: string }) {
           }
           return <pre {...props}>{children}</pre>;
         },
+        h2: ({ node: _, children, ...props }) => <h2 {...props} id={headingId(children)}>{children}</h2>,
+        h3: ({ node: _, children, ...props }) => <h3 {...props} id={headingId(children)}>{children}</h3>,
         td: ({ node: _, children, ...props }) => <td {...props} className={cellClass(children)}>{children}</td>,
         th: ({ node: _, children, ...props }) => <th {...props} className={cellClass(children)}>{children}</th>,
       }}

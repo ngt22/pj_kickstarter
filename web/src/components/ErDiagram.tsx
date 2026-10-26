@@ -60,6 +60,7 @@ function TableNode({ data }: NodeProps<Node<TableData>>) {
       <div className="er-table-head">
         <span className="er-table-name">{table.name}</span>
         {table.label && <span className="er-table-label">{table.label}</span>}
+        {table.local && <span className="er-local" title="端末の中にも持つ表">端末内</span>}
       </div>
       {columns.map((c, i) => (
         <div key={c.name} className="er-col" style={{ height: ROW_H }}>
@@ -389,6 +390,7 @@ function ErTables({ model }: { model: ErModel }) {
         <div key={t.name} className="er-def ks-table-frame">
           <p className="ks-print-caption">
             {t.label ? `${t.label}（${t.name}）` : t.name}
+            {t.local && "　［端末内にも保存］"}
             {t.note && <span className="er-def-note">{t.note}</span>}
           </p>
           <table>
@@ -449,6 +451,12 @@ export default function ErDiagram({ source }: { source: string }) {
       >
         {(height) => <Explorer model={model} height={height} />}
       </DiagramFrame>
+      <p className="er-legend">
+        <span><b>PK</b>主キー</span>
+        <span><b>FK</b>外部キー（ほかの表を参照）</span>
+        <span><b>列名?</b>空でもよい列（任意）</span>
+        {model.tables.some((t) => t.local) && <span><b className="er-local">端末内</b>タブレットなどの端末の中にも持つ表</span>}
+      </p>
       {print && <ErTables model={model} />}
     </>
   );

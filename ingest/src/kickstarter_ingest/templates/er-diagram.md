@@ -5,7 +5,7 @@ title: ER図
 <!--
 ```er ブロックに YAML でテーブルを書くと、ズーム・検索・ドメイン絞り込みができる ER 図になります。
   domains: ドメイン（業務のまとまり）。color は Mantine の色名（blue, teal, grape, orange ...）
-  tables:  name（物理名） label（論理名） domain note columns
+  tables:  name（物理名） label（論理名） domain note columns local（true でタブレットなど端末の中にも持つ表。「端末内」の札が付く）
   columns: name type pk fk（"テーブル名" か "テーブル名.列名"） unique（fk と併用で 1対1） nullable note
 リレーションは fk から自動で引かれます。100 テーブル程度まで想定しています。
 -->

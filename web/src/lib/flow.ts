@@ -8,9 +8,12 @@ export type FlowSpec = {
   zones: { id: string; name: string; note?: string; color?: string; footnote?: string; lanes?: { id: string; name: string; note?: string }[] }[];
   screens: { id: string; name: string; zone?: string; lane?: string }[];
   terminals?: { id: string; label: string; zone?: string; lane?: string }[];
-  edges?: { from: string; to: string; label?: string; type?: "go" | "back" }[];
+  // sync: 同じレーンの中のデータの同期（太い点線）
+  edges?: { from: string; to: string; label?: string; type?: "go" | "back" | "sync" }[];
   flows?: { from: string; to: string; label: string; note?: string }[];
   notes?: string[];
+  // false で画面のサムネイル（画面仕様の ```mock の縮小）を出さない
+  thumbnails?: boolean;
 };
 
 // 寸法。PDF（A4 縦の本文幅）では縮めたときに文字が小さくなりすぎないよう、カードを細くして線の間も詰める
@@ -23,10 +26,20 @@ const COLORS = ["teal", "indigo", "grape", "orange", "cyan", "pink"];
 export type FlowNode = { id: string; kind: "screen" | "terminal"; label: string; x: number; y: number; w: number; h: number; role?: "start" | "end" };
 // ラベルは線にかぶせず、線の横の空いている側に置く: (lx, ly) は線の上の点、side はその点から見てラベルを置く側、
 // align はラベルのどこを lx に合わせるか（end: 右端。行き先のカードの手前に寄せる）
-export type FlowEdge = { id: string; path: string; label?: string; lx: number; ly: number; side: "above" | "below"; align: "center" | "end"; back: boolean };
+export type FlowEdge = {
+  id: string;
+  path: string;
+  label?: string;
+  lx: number;
+  ly: number;
+  side: "above" | "below";
+  align: "center" | "end";
+  back: boolean;
+  sync: boolean;
+};
 export type FlowLane = { id: string; name?: string; note?: string; noteX: number; noteW: number; width: number; height: number; nodes: FlowNode[]; edges: FlowEdge[] };
 export type FlowZone = { id: string; name: string; note?: string; footnote?: string; color: string; lanes: FlowLane[]; flowAfter?: { label: string; note?: string; up: boolean } };
-export type FlowLayout = { zones: FlowZone[]; width: number; hasBack: boolean; hasFlow: boolean; notes: string[] };
+export type FlowLayout = { zones: FlowZone[]; width: number; hasBack: boolean; hasSync: boolean; hasFlow: boolean; notes: string[] };
 
 type Elk = InstanceType<typeof ELK>;
 let elk: Elk | undefined;
@@ -37,7 +50,7 @@ const labelWidth = (label: string | undefined, [narrow, wide]: [number, number])
 
 const center = (n: FlowNode) => ({ x: n.x + n.w / 2, y: n.y + n.h / 2 });
 
-function forwardEdge(s: FlowNode, t: FlowNode): Omit<FlowEdge, "id" | "label" | "back"> {
+function forwardEdge(s: FlowNode, t: FlowNode): Omit<FlowEdge, "id" | "label" | "back" | "sync"> {
   const a = { x: s.x + s.w, y: center(s).y };
   const b = { x: t.x, y: center(t).y };
   const dx = Math.max(24, (b.x - a.x) / 2);
@@ -49,7 +62,7 @@ function forwardEdge(s: FlowNode, t: FlowNode): Omit<FlowEdge, "id" | "label" | 
 }
 
 // 戻る線: 両方のカードの下をくぐって、戻り先のカードの下辺に入る
-function backEdge(s: FlowNode, t: FlowNode, bottom: number, dip: number): Omit<FlowEdge, "id" | "label" | "back"> {
+function backEdge(s: FlowNode, t: FlowNode, bottom: number, dip: number): Omit<FlowEdge, "id" | "label" | "back" | "sync"> {
   const a = { x: center(s).x, y: s.y + s.h };
   const b = { x: center(t).x, y: t.y + t.h };
   const low = bottom + dip;
@@ -120,7 +133,13 @@ export async function layoutFlow(spec: FlowSpec, d: FlowDims = SCREEN_DIMS): Pro
         const s = byId.get(e.from)!;
         const t = byId.get(e.to)!;
         const back = e.type === "back";
-        return { id: `${place}#${i}`, label: e.label, back, ...(back ? backEdge(s, t, bottom, d.backDip) : forwardEdge(s, t)) };
+        return {
+          id: `${place}#${i}`,
+          label: e.label,
+          back,
+          sync: e.type === "sync",
+          ...(back ? backEdge(s, t, bottom, d.backDip) : forwardEdge(s, t)),
+        };
       });
       const right = Math.max(0, ...nodes.map((n) => n.x + n.w));
       lanes.push({
@@ -149,6 +168,7 @@ export async function layoutFlow(spec: FlowSpec, d: FlowDims = SCREEN_DIMS): Pro
     zones,
     width: Math.max(...zones.flatMap((z) => z.lanes.map((l) => l.width))),
     hasBack: edges.some((e) => e.type === "back"),
+    hasSync: edges.some((e) => e.type === "sync"),
     hasFlow: zones.some((z) => z.flowAfter),
     notes: spec.notes ?? [],
   };

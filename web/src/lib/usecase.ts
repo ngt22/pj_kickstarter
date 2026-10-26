@@ -12,9 +12,21 @@ export type UsecaseSpec = {
     kind?: "person" | "system";
     inherits?: string;
     color?: string;
+    // 使う端末（名前の下に端末の印を出す）
+    device?: Device | Device[];
     side?: "left" | "right"; // 旧形式。並びには使わない
   }[];
-  cases: { id: string; name: string; actors?: string[]; note?: string; condition?: string }[];
+  cases: {
+    id: string;
+    name: string;
+    actors?: string[];
+    note?: string;
+    condition?: string;
+    // 対応する画面の ID（画面仕様へのリンクになる）
+    screen?: string | string[];
+    // later: 本番公開より後に作る機能（淡く描き「本番以降」の札を付ける）
+    phase?: string;
+  }[];
   relations?: { from: string; to: string; type: "include" | "extend" }[];
   flows?: { from: string; to: string; label: string; note?: string }[];
 };
@@ -34,7 +46,10 @@ export type UsecaseRow = {
 };
 export type UsecaseZone = { id: string; name: string; note?: string; color: string; rows: UsecaseRow[] };
 export type UsecaseFlow = { label: string; note?: string; up: boolean };
-export type UsecaseView = { zones: (UsecaseZone & { flowAfter?: UsecaseFlow })[]; hasCondition: boolean };
+export type UsecaseView = { zones: (UsecaseZone & { flowAfter?: UsecaseFlow })[]; hasCondition: boolean; hasLater: boolean };
+export type Device = "desktop" | "tablet" | "mobile";
+
+export const listOf = <T,>(v: T | T[] | undefined): T[] => (v == null ? [] : Array.isArray(v) ? v : [v]);
 
 export function buildUsecase(spec: UsecaseSpec): UsecaseView {
   const zoneSpecs = spec.zones?.length ? spec.zones : [{ id: "", name: spec.system ?? "システム" }];
@@ -80,5 +95,5 @@ export function buildUsecase(spec: UsecaseSpec): UsecaseView {
     if (a < 0 || b < 0 || Math.abs(a - b) !== 1) continue;
     zones[Math.min(a, b)].flowAfter = { label: f.label, note: f.note, up: b < a };
   }
-  return { zones, hasCondition: spec.cases.some((c) => c.condition) };
+  return { zones, hasCondition: spec.cases.some((c) => c.condition), hasLater: spec.cases.some((c) => c.phase === "later") };
 }

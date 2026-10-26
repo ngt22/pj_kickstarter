@@ -19,6 +19,8 @@ import { db } from "../lib/firebase";
 import { loadProject } from "../lib/loadProject";
 import { MATERIALS } from "../lib/materials";
 import { ProjectColorContext } from "../lib/projectColor";
+import { screenMocks } from "../lib/mock";
+import { ScreenLinksContext } from "../lib/screenLinks";
 import { EMPTY_SITE, loadSiteSettings, type SiteSettings } from "../lib/settings";
 
 // 読み込み中は、表示される紙と同じ形の骨組みを出す（画面が跳ねないように）
@@ -114,7 +116,9 @@ export default function ProjectView() {
   else if (current)
     content = (
       <ProjectColorContext.Provider value={project.color || "brand"}>
-        <DocView doc={current} index={i} total={docs.length} prev={docs[i - 1]} next={docs[i + 1]} basePath={base} />
+        <ScreenLinksContext.Provider value={screenLinks(docs, base)}>
+          <DocView doc={current} index={i} total={docs.length} prev={docs[i - 1]} next={docs[i + 1]} basePath={base} />
+        </ScreenLinksContext.Provider>
       </ProjectColorContext.Provider>
     );
   else
@@ -148,4 +152,13 @@ export default function ProjectView() {
       </Layout>
     </AnnotationProvider>
   );
+}
+
+// 画面仕様（screens）の ```mock を画面IDで引けるようにする
+function screenLinks(docs: DocRecord[], base: string) {
+  const screens = docs.find((d) => d.type === "screens");
+  return {
+    mocks: screens ? screenMocks(screens.body) : new Map<string, string>(),
+    href: screens ? (id: string) => `${base}/screens#${id}` : undefined,
+  };
 }

@@ -26,9 +26,12 @@ import {
   IconUser,
   type Icon,
 } from "@tabler/icons-react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useContext, useEffect, useId, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { parseYaml } from "../lib/docs";
-import { layoutFlow, PRINT_DIMS, SCREEN_DIMS, type FlowLane, type FlowLayout, type FlowNode, type FlowSpec } from "../lib/flow";
+import { layoutFlow, PRINT_DIMS, SCREEN_DIMS, type FlowDims, type FlowLane, type FlowLayout, type FlowNode, type FlowSpec } from "../lib/flow";
+import { ScreenLinksContext, type ScreenLinks } from "../lib/screenLinks";
+import { MockThumb } from "./ScreenMock";
 import { ICON_STROKE } from "./icons";
 import Scaled from "./Scaled";
 import { usePrint } from "../lib/print";
@@ -36,6 +39,9 @@ import { usePrint } from "../lib/print";
 // 区画の左右の余白（styles.css・print.css の .fl-zone と合わせる）
 const PAD_X = 28;
 const PRINT_PAD_X = 16;
+// 画面のサムネイルの高さ。サムネイルを出すときはカードをこの分だけ高くする
+const THUMB_H = 116;
+const THUMB_DIMS: FlowDims = { ...SCREEN_DIMS, cardH: SCREEN_DIMS.cardH + THUMB_H };
 
 // 画面名から、それらしいアイコンを選ぶ（先に書いたものが優先）
 const SCREEN_ICONS: [RegExp, Icon][] = [
@@ -61,7 +67,9 @@ function iconFor(name: string): Icon {
   return SCREEN_ICONS.find(([re]) => re.test(name))?.[1] ?? IconDeviceDesktop;
 }
 
-function Node({ n, color, print }: { n: FlowNode; color: string; print: boolean }) {
+type NodeOpts = { color: string; print: boolean; thumbs: boolean; links: ScreenLinks };
+
+function Node({ n, color, print, thumbs, links }: { n: FlowNode } & NodeOpts) {
   const style = { left: n.x, top: n.y, width: n.w, height: n.h };
   if (n.kind === "terminal")
     return (
@@ -70,27 +78,56 @@ function Node({ n, color, print }: { n: FlowNode; color: string; print: boolean 
       </div>
     );
   const I = iconFor(n.label);
-  return (
-    <div className="fl-card" style={style}>
-      {!print && <span className="fl-icon" style={{ color: `var(--mantine-color-${color}-filled)`, background: `var(--mantine-color-${color}-light)` }}>
-        <I size={20} stroke={ICON_STROKE} />
-      </span>}
-      <span className="fl-text">
-        <span className="fl-id">{n.id}</span>
-        <span className="fl-name">{n.label}</span>
+  const mock = links.mocks.get(n.id);
+  const href = !print && mock ? links.href?.(n.id) : undefined;
+  const tint = { color: `var(--mantine-color-${color}-filled)`, background: `var(--mantine-color-${color}-light)` };
+  const inner = (
+    <>
+      {thumbs && (
+        <span className="fl-thumb" style={{ height: THUMB_H }}>
+          {mock ? <MockThumb source={mock} width={n.w} height={THUMB_H} /> : <span className="fl-thumb-empty" style={tint}><I size={28} stroke={ICON_STROKE} /></span>}
+        </span>
+      )}
+      <span className="fl-card-row">
+        {!print && !thumbs && (
+          <span className="fl-icon" style={tint}>
+            <I size={20} stroke={ICON_STROKE} />
+          </span>
+        )}
+        <span className="fl-text">
+          <span className="fl-id">{n.id}</span>
+          <span className="fl-name">{n.label}</span>
+        </span>
       </span>
+    </>
+  );
+  // 画面仕様に同じ ID の画面があれば、クリックでその画面へ移動する
+  return href ? (
+    <Link to={href} className="fl-card" data-thumb={thumbs || undefined} data-link="" style={style} title={`${n.id} の画面仕様を開く`}>
+      {inner}
+    </Link>
+  ) : (
+    <div className="fl-card" data-thumb={thumbs || undefined} style={style}>
+      {inner}
     </div>
   );
 }
 
-function Lane({ lane, color, width, marker, print }: { lane: FlowLane; color: string; width: number; marker: string; print: boolean }) {
+function Lane({ lane, width, marker, ...opts }: { lane: FlowLane; width: number; marker: string } & NodeOpts) {
   return (
     <div className="fl-lane">
       {lane.name && <div className="fl-lane-name">{lane.name}</div>}
       <div className="fl-canvas" style={{ width, height: lane.height }}>
         <svg className="fl-edges" width={width} height={lane.height} aria-hidden>
           {lane.edges.map((e) => (
-            <path key={e.id} d={e.path} className="fl-edge" data-back={e.back || undefined} markerEnd={`url(#${marker})`} />
+            <path
+              key={e.id}
+              d={e.path}
+              className="fl-edge"
+              data-back={e.back || undefined}
+              data-sync={e.sync || undefined}
+              markerEnd={`url(#${marker})`}
+            />
           ))}
         </svg>
         {lane.edges.map((e) =>
@@ -108,7 +145,7 @@ function Lane({ lane, color, width, marker, print }: { lane: FlowLane; color: st
           ) : null,
         )}
         {lane.nodes.map((n) => (
-          <Node key={n.id} n={n} color={color} print={print} />
+          <Node key={n.id} n={n} {...opts} />
         ))}
         {lane.note && (
           <p className="fl-lane-note" style={{ left: lane.noteX, width: lane.noteW }}>
@@ -128,7 +165,12 @@ function TransitionTable({ spec }: { spec: FlowSpec }) {
     ...spec.zones.map((z) => [z.id, `［${z.name}］`] as [string, string]),
   ]);
   const rows = [
-    ...(spec.edges ?? []).map((e) => ({ from: e.from, to: e.to, label: e.label, note: e.type === "back" ? "戻る" : undefined })),
+    ...(spec.edges ?? []).map((e) => ({
+      from: e.from,
+      to: e.to,
+      label: e.label,
+      note: e.type === "back" ? "戻る" : e.type === "sync" ? "データの同期" : undefined,
+    })),
     ...(spec.flows ?? []).map((f) => ({ from: f.from, to: f.to, label: f.label, note: f.note ?? "区画の間の受け渡し" })),
   ];
   if (!rows.length) return null;
@@ -173,17 +215,20 @@ export default function FlowDiagram({ source }: { source: string }) {
   const [layout, setLayout] = useState<FlowLayout | string>();
   const [opened, { open, close }] = useDisclosure(false);
   const print = usePrint();
+  const links = useContext(ScreenLinksContext);
+  // 画面仕様に ```mock がある画面はサムネイルを出す（PDF では出さない）
+  const thumbs = !print && parsed.spec?.thumbnails !== false && !!parsed.spec?.screens.some((s) => links.mocks.has(s.id));
 
   useEffect(() => {
     if (!parsed.spec) return;
     let alive = true;
-    layoutFlow(parsed.spec, print ? PRINT_DIMS : SCREEN_DIMS)
+    layoutFlow(parsed.spec, print ? PRINT_DIMS : thumbs ? THUMB_DIMS : SCREEN_DIMS)
       .then((l) => alive && setLayout(l))
       .catch((e) => alive && setLayout(String(e)));
     return () => {
       alive = false;
     };
-  }, [parsed, print]);
+  }, [parsed, print, thumbs]);
 
   if (parsed.error) return <Code block c="red">ページ遷移図を読めません: {parsed.error}</Code>;
   if (typeof layout === "string") return <Code block c="red">ページ遷移図を配置できません: {layout}</Code>;
@@ -207,7 +252,7 @@ export default function FlowDiagram({ source }: { source: string }) {
               {z.note && <span className="fl-zone-note">{z.note}</span>}
             </header>
             {z.lanes.map((l, i) => (
-              <Lane key={l.id || i} lane={l} color={z.color} width={layout.width} marker={marker} print={print} />
+              <Lane key={l.id || i} lane={l} color={z.color} width={layout.width} marker={marker} print={print} thumbs={thumbs} links={links} />
             ))}
             {z.footnote && <p className="fl-footnote">{z.footnote}</p>}
           </section>
@@ -228,6 +273,7 @@ export default function FlowDiagram({ source }: { source: string }) {
       <figcaption className="fl-legend">
         <span><i className="fl-legend-line" />画面遷移</span>
         {layout.hasBack && <span><i className="fl-legend-line" data-back="" />戻る（確定・キャンセルなど）</span>}
+        {layout.hasSync && <span><i className="fl-legend-line" data-sync="" />データの同期</span>}
         {layout.hasFlow && <span><i className="fl-legend-line" data-flow="" />区画の間のデータの受け渡し</span>}
         {layout.notes.map((n) => (
           <span key={n} className="fl-legend-note">{n}</span>

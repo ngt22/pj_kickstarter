@@ -7,7 +7,7 @@ import { schedule, type GanttSpec } from "./gantt";
 export type Overview = {
   period?: { start: number; end: number; weeks: number };
   milestones: { name: string; day: number }[];
-  estimate?: { months: number; initial: number; monthly?: number; currency: string; tax: string };
+  estimate?: { months: number; initial: number; monthly?: number; currency: string; tax: string; breakdown: boolean };
   risks?: { open: number; high: number; total: number };
 };
 
@@ -40,7 +40,7 @@ export function buildOverview(docs: DocRecord[]): Overview {
   if (estimate) {
     try {
       const data = normalizeEstimate(parseYaml(estimate.body));
-      result.estimate = { ...estimateTotals(data), currency: data.currency, tax: taxLabel(data) };
+      result.estimate = { ...estimateTotals(data), currency: data.currency, tax: taxLabel(data), breakdown: data.show_breakdown };
     } catch {
       // 同上
     }

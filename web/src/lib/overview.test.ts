@@ -28,7 +28,7 @@ describe("overview", () => {
   });
 
   it("見積もりとリスクを集計する", () => {
-    expect(ov.estimate).toEqual({ months: 3, initial: 2400000, monthly: 50000, currency: "JPY", tax: "税抜" });
+    expect(ov.estimate).toEqual({ months: 3, initial: 2400000, monthly: 50000, currency: "JPY", tax: "税抜", breakdown: true });
     expect(ov.risks).toEqual({ total: 2, open: 2, high: 1 });
   });
 

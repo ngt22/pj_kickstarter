@@ -337,6 +337,70 @@
   font-size: 16pt !important;
 }
 
+/* ---- 画面イメージ（components/ScreenMock の PDF 版）：方眼の台と丸い札をやめ、細い罫の枠と小さな注記にする ---- */
+.ks-paper .mock-stage {
+  --mock-on-stage: var(--paper-ink);
+  --mock-on-stage-dim: var(--paper-gray);
+  --mock-stage-line: var(--paper-hair);
+  margin: 6pt 0 8pt;
+  padding: 6pt 10pt 8pt;
+  background: var(--paper-tint);
+  border: 0.5pt solid var(--paper-hair);
+  border-radius: 0;
+}
+.ks-paper .mock-band {
+  margin-bottom: 6pt;
+  font-size: 8pt;
+  color: var(--paper-gray);
+}
+.ks-paper .mock-stage .mock-notes {
+  font-size: 9pt;
+}
+.ks-paper .mock-transitions {
+  margin-top: 6pt;
+  padding-top: 4pt;
+  font-size: 8pt;
+}
+.ks-paper .mock-transition {
+  padding: 0 4pt 0 0;
+  background: none;
+}
+
+/* ---- ER 図（components/ErDiagram の PDF 版）：方眼と青図の色をやめ、図の下にテーブル定義の表を付ける ---- */
+.ks-paper .er-bp {
+  --bp-bg: #fff;
+  --bp-line: var(--paper-gray);
+  --bp-rule: var(--paper-hair);
+  --bp-card: #fff;
+  --bp-ink: var(--paper-ink);
+  --bp-accent: var(--paper-accent);
+  --bp-dim: var(--paper-gray);
+}
+/* 図の上の「7 テーブル / 6 リレーション」 */
+.ks-paper .ks-diagram > .mantine-Text-root {
+  margin-bottom: 3pt !important;
+  font-size: 9pt !important;
+}
+.ks-paper .er {
+  border: 0.5pt solid var(--paper-hair);
+  border-radius: 0;
+}
+.ks-paper .er-defs h3 {
+  margin-top: 12pt !important;
+}
+.ks-paper .er-def {
+  margin-bottom: 8pt;
+  break-inside: avoid;
+}
+.ks-paper .er-def-note {
+  margin-left: 8pt;
+  font-weight: 400;
+  color: var(--paper-gray);
+}
+.ks-paper .er-def-name {
+  font-family: var(--mantine-font-family-monospace);
+}
+
 /* ---- 工程表（components/PrintGantt）：表の右に週の目盛りと棒 ---- */
 .pg {
   margin: 6pt 0 10pt;

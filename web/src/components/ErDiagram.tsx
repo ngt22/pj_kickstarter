@@ -245,7 +245,8 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
   const many = model.tables.length > 30;
   const [domains, setDomains] = useState<string[]>(model.domains.map((d) => d.id));
   const [withRelated, setWithRelated] = useState(true);
-  const [keyOnly, setKeyOnly] = useState(many);
+  // PDF の図は全体の見取り図にして（キー列だけ）、列の一覧は図の下のテーブル定義に載せる
+  const [keyOnly, setKeyOnly] = useState(many || print);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [graph, setGraph] = useState<Layout | null>(null);
@@ -357,8 +358,9 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
           minZoom={0.05}
           maxZoom={2}
           onlyRenderVisibleElements={!print}
+          proOptions={{ hideAttribution: print }}
         >
-          <Background variant={BackgroundVariant.Lines} gap={24} />
+          {!print && <Background variant={BackgroundVariant.Lines} gap={24} />}
           {!print && <Controls showInteractive={false} />}
           {!print && model.tables.length > 15 && ( // 小さい図ではミニマップが本体を隠すだけなので出さない
           <MiniMap
@@ -374,7 +376,58 @@ function Explorer({ model, height }: { model: ErModel; height: string }) {
   );
 }
 
+// PDF 用のテーブル定義（テーブルごとに列の表）
+function ErTables({ model }: { model: ErModel }) {
+  const key = (c: ErTableSpec["columns"][number]) =>
+    [c.pk && "PK", c.fk && `FK → ${c.fk.includes(".") ? c.fk : `${c.fk}.${model.tables.find((t) => t.name === c.fk)?.columns.find((x) => x.pk)?.name ?? "id"}`}`, c.unique && !c.pk && "UQ"]
+      .filter(Boolean)
+      .join("・");
+  return (
+    <div className="er-defs">
+      <h3>テーブル定義</h3>
+      {model.tables.map((t) => (
+        <div key={t.name} className="er-def ks-table-frame">
+          <p className="ks-print-caption">
+            {t.label ? `${t.label}（${t.name}）` : t.name}
+            {t.note && <span className="er-def-note">{t.note}</span>}
+          </p>
+          <table>
+            <colgroup>
+              <col style={{ width: "24%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "22%" }} />
+              <col style={{ width: "8%" }} />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>列名</th>
+                <th>型</th>
+                <th>キー</th>
+                <th>NULL</th>
+                <th>説明</th>
+              </tr>
+            </thead>
+            <tbody>
+              {t.columns.map((c) => (
+                <tr key={c.name}>
+                  <td className="er-def-name">{c.name}</td>
+                  <td>{c.type}</td>
+                  <td>{key(c)}</td>
+                  <td>{c.nullable ? "可" : ""}</td>
+                  <td>{c.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ErDiagram({ source }: { source: string }) {
+  const print = usePrint();
   const parsed = useMemo(() => {
     try {
       return { model: buildErModel(parseYaml<ErSpec>(source)) };
@@ -387,13 +440,16 @@ export default function ErDiagram({ source }: { source: string }) {
   const { model } = parsed;
 
   return (
-    <DiagramFrame
-      title="ER図"
-      summary={`${model.tables.length} テーブル / ${model.relations.length} リレーション / ${model.domains.length} ドメイン`}
-      height="min(75vh, 620px)"
-      printHeight="170mm"
-    >
-      {(height) => <Explorer model={model} height={height} />}
-    </DiagramFrame>
+    <>
+      <DiagramFrame
+        title="ER図"
+        summary={`${model.tables.length} テーブル / ${model.relations.length} リレーション / ${model.domains.length} ドメイン`}
+        height="min(75vh, 620px)"
+        printHeight="95mm"
+      >
+        {(height) => <Explorer model={model} height={height} />}
+      </DiagramFrame>
+      {print && <ErTables model={model} />}
+    </>
   );
 }

@@ -525,6 +525,14 @@ table {
 .mock-band-note {
   color: var(--mock-on-stage-dim);
 }
+.mock-band-id {
+  font-family: var(--mantine-font-family-monospace);
+  font-weight: 700;
+  color: var(--mock-on-stage);
+}
+.mock-band-device {
+  color: var(--mock-on-stage);
+}
 .mock-switches {
   display: inline-flex;
   flex-wrap: wrap;
@@ -766,6 +774,13 @@ table {
   background: var(--mantine-color-gray-0);
   box-shadow: 0 0 0 1.5px #8b9099, 0 20px 40px -14px rgb(0 0 0 / 0.4);
 }
+.mock-tablet[data-orientation="landscape"] {
+  min-height: 640px;
+}
+.mock-phone[data-orientation="landscape"] {
+  min-height: 375px;
+  border-radius: 36px;
+}
 .mock-tablet .mock-statusbar {
   height: 28px;
   padding: 0 20px;
@@ -913,6 +928,102 @@ table {
   padding-bottom: 10px;
   background: var(--mantine-color-white);
   border-top: 1px solid var(--mantine-color-gray-2);
+}
+/* 画面の下に固定したボタン */
+.mock-actionbar {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  background: var(--mantine-color-white);
+  border-top: 1px solid var(--mantine-color-gray-3);
+}
+.mock-screen {
+  position: relative;
+}
+.mock-fab-slot {
+  position: absolute;
+  right: var(--mantine-spacing-lg);
+  bottom: 88px;
+  z-index: 2;
+}
+.mock-fab {
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+}
+/* 通信の状態 */
+.mock-syncbar {
+  padding: 8px 12px;
+  color: var(--mantine-color-teal-9);
+  background: var(--mantine-color-teal-0);
+  border-radius: var(--mantine-radius-md);
+}
+.mock-syncbar[data-offline] {
+  color: var(--mantine-color-white);
+  background: var(--mantine-color-orange-8);
+}
+/* 写真の横並び */
+.mock-photos {
+  display: flex;
+  gap: 8px;
+  overflow: hidden;
+}
+.mock-photo {
+  display: grid;
+  flex: none;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  width: 84px;
+  height: 84px;
+  font-size: 11px;
+  color: var(--mantine-color-gray-6);
+  background: var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-md);
+}
+.mock-photo-add {
+  font-weight: 700;
+  color: var(--mantine-primary-color-filled);
+  background: var(--mantine-color-white);
+  border: 2px dashed var(--mantine-primary-color-filled);
+}
+/* 検索と候補 */
+.mock-search[data-open] .mantine-TextInput-input {
+  border-color: var(--mantine-primary-color-filled);
+}
+.mock-suggestions {
+  margin-top: 4px;
+  overflow: hidden;
+  background: var(--mantine-color-white);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+}
+.mock-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+.mock-suggestion + .mock-suggestion {
+  border-top: 1px solid var(--mantine-color-gray-1);
+}
+.mock-cell-badge {
+  flex-shrink: 0;
+  max-width: none;
+  overflow: visible;
+}
+.mock-cell-badge .mantine-Badge-label {
+  overflow: visible;
+}
+/* theme: field（屋外・暗所向け）: 文字を濃く、枠を太くする */
+.mock-app[data-field] {
+  --mantine-color-dimmed: var(--mantine-color-gray-8);
+  --mantine-color-text: var(--mantine-color-black);
+  color: var(--mantine-color-black);
+}
+.mock-app[data-field] :is(.mock-card, .mantine-Input-input, .mantine-SegmentedControl-root) {
+  border: 2px solid var(--mantine-color-gray-7);
+}
+.mock-app[data-field] .mock-screen {
+  background: var(--mantine-color-white);
 }
 .mock-tab {
   font-size: 10px;

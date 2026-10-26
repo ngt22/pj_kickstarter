@@ -4,6 +4,7 @@ export type Props = Record<string, any>;
 
 export type DeviceKind = "desktop" | "tablet" | "mobile";
 export type DisplayKind = "browser" | "pwa";
+export type Orientation = "portrait" | "landscape";
 
 export type MockSpec = {
   device?: DeviceKind;
@@ -12,6 +13,11 @@ export type MockSpec = {
   display?: DisplayKind;
   app?: string;
   title?: string;
+  // 帯に出す画面ID。省略すると直前の見出し（## SC-01 …）から取る
+  screen?: string;
+  orientation?: Orientation;
+  // field: 屋外・暗所向けの高コントラスト・大きめの文字とボタン
+  theme?: "default" | "field";
   body: Element[];
 };
 
@@ -28,7 +34,9 @@ export function itemsOf(value: unknown): Props {
 }
 
 // 並びを書ける部品（「- list: [a, b]」の短縮形）と、文字列だけ書いたときの項目名
-export const LIST_KINDS = new Set(["buttons", "row", "list", "tabs", "nav", "tabbar", "breadcrumb", "stats", "stepper"]);
+export const LIST_KINDS = new Set([
+  "buttons", "row", "list", "tabs", "nav", "tabbar", "breadcrumb", "stats", "stepper", "actionbar", "segmented", "photos",
+]);
 const SHORT_KEY: Record<string, string> = {
   header: "title",
   heading: "text",
@@ -40,6 +48,9 @@ const SHORT_KEY: Record<string, string> = {
   search: "placeholder",
   footer: "text",
   drawing: "title",
+  statusbar: "text",
+  fab: "label",
+  progress: "value",
 };
 
 export function normalize(kind: string, value: unknown): Props {
@@ -73,6 +84,12 @@ const KIND_LABEL: Record<string, string> = {
   card: "カード",
   avatar: "ユーザー",
   badge: "バッジ",
+  photos: "写真",
+  actionbar: "操作バー",
+  statusbar: "状態表示",
+  segmented: "切り替え",
+  fab: "追加ボタン",
+  progress: "進捗",
 };
 
 export type Note = { n: string; label: string };
@@ -91,7 +108,8 @@ function walk(items: Element[] | undefined, visit: (kind: string, p: Props) => v
       walk(itemsOf(value).items, visit);
       continue;
     }
-    if (kind === "buttons") {
+    if (kind === "buttons" || kind === "actionbar") {
+      if (kind === "actionbar") visit(kind, itemsOf(value));
       for (const b of itemsOf(value).items ?? []) visit("button", props(b));
       continue;
     }
@@ -101,7 +119,7 @@ function walk(items: Element[] | undefined, visit: (kind: string, p: Props) => v
     if (kind === "header") for (const a of p.actions ?? []) visit("button", props(a));
     if (kind === "list" || kind === "nav" || kind === "tabbar")
       for (const it of p.items ?? []) if (it && typeof it === "object") visit("item", it);
-    if (kind === "empty" && p.action) visit("button", props(p.action));
+    if ((kind === "empty" || kind === "photos") && p.action) visit("button", props(p.action));
   }
 }
 
@@ -128,8 +146,9 @@ export function collectTransitions(body: Element[]): Transition[] {
   return out;
 }
 
-// 画面の骨組み: 先頭の header は上のバー、nav は横のメニュー、tabbar は下のタブ、footer は最後に置く
-export type Shell = { header?: Element; nav?: Element; tabbar?: Element; footer?: Element; main: Element[] };
+// 画面の骨組み: 先頭の header は上のバー、nav は横のメニュー、tabbar は下のタブ、footer は最後に置く。
+// actionbar は画面の下に固定したボタン（tabbar の上）、fab は右下に浮かせたボタン
+export type Shell = { header?: Element; nav?: Element; tabbar?: Element; footer?: Element; actionbar?: Element; fab?: Element; main: Element[] };
 
 export function splitShell(body: Element[]): Shell {
   const shell: Shell = { main: [] };
@@ -139,6 +158,8 @@ export function splitShell(body: Element[]): Shell {
     else if (kind === "nav" && !shell.nav) shell.nav = el;
     else if (kind === "tabbar" && !shell.tabbar) shell.tabbar = el;
     else if (kind === "footer" && !shell.footer) shell.footer = el;
+    else if (kind === "actionbar" && !shell.actionbar) shell.actionbar = el;
+    else if (kind === "fab" && !shell.fab) shell.fab = el;
     else shell.main.push(el);
   });
   return shell;
@@ -175,4 +196,21 @@ export function excludeMock(selector: string): string {
       return pseudo < 0 ? `${s}${NOT_IN_MOCK}` : `${s.slice(0, pseudo)}${NOT_IN_MOCK}${s.slice(pseudo)}`;
     })
     .join(", ");
+}
+
+// 原稿の ```mock ごとに、直前の見出しの画面ID（## SC-01 案件一覧 → SC-01）を対応させる。
+// 帯のラベルと、ページ遷移図の画面サムネイルで使う
+const SCREEN_HEADING = /^#{2,4}\s+([A-Za-z]+-\d+)/;
+export function screenMocks(markdown: string): Map<string, string> {
+  const out = new Map<string, string>();
+  let current: string | undefined;
+  const re = /^(#{2,4}\s.*)$|^```mock[^\n]*\n([\s\S]*?)\n```/gm;
+  for (let m = re.exec(markdown); m; m = re.exec(markdown)) {
+    if (m[1]) {
+      const id = SCREEN_HEADING.exec(m[1])?.[1];
+      if (id || m[1].startsWith("## ")) current = id;
+    }
+    else if (current && !out.has(current)) out.set(current, m[2]);
+  }
+  return out;
 }

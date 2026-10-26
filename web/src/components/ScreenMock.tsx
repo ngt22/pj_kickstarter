@@ -2,6 +2,7 @@
 // 資料の本文と見分けがつくよう、方眼のステージの上に端末の枠を置き、中身は案件カラーのライトテーマで実際の画面風に描く。
 // 部品は「- 種類: 中身」の形で並べる。使える種類は ELEMENTS を参照。
 import {
+  ActionIcon,
   Alert,
   Anchor,
   Avatar,
@@ -20,7 +21,9 @@ import {
   Notification,
   Pagination,
   PasswordInput,
+  Progress,
   Radio,
+  SegmentedControl,
   SimpleGrid,
   Stack,
   Stepper,
@@ -39,6 +42,9 @@ import {
   IconBattery3,
   IconBell,
   IconCalendar,
+  IconCamera,
+  IconCloudOff,
+  IconCloudCheck,
   IconChartBar,
   IconChevronLeft,
   IconChevronRight,
@@ -57,6 +63,7 @@ import {
   IconLock,
   IconMapPin,
   IconMessage,
+  IconPlus,
   IconPhoto,
   IconSearch,
   IconSettings,
@@ -82,6 +89,7 @@ import {
   type DeviceKind,
   type DisplayKind,
   type Element,
+  type Orientation,
   type MockSpec,
   type Props,
 } from "../lib/mock";
@@ -97,6 +105,8 @@ export type { MockSpec };
 // 端末の論理幅。資料の幅に合わせて縮小表示する。スマホで資料を見るときは、パソコンの画面を狭めて文字を読める大きさに保つ
 // 枠の太さ（左右合計）も足して縮小する
 const DEVICE_WIDTH = { desktop: 1024, desktopNarrow: 720, tablet: 820 + 32, mobile: 375 + 24 };
+// 横向き（orientation: landscape）の幅
+const LANDSCAPE_WIDTH = { tablet: 1180 + 32, mobile: 812 + 24 };
 
 const BUTTON_VARIANT: Record<string, { variant: string; color?: string }> = {
   primary: { variant: "filled" },
@@ -168,7 +178,8 @@ function Cell({ value }: { value: unknown }) {
   const button = /^\[(.+)\]$/.exec(s);
   if (button) return <Button size="compact-sm" variant="light">{button[1]}</Button>;
   const badge = /^\((.+)\)$/.exec(s);
-  if (badge) return <Badge variant="light">{badge[1]}</Badge>;
+  // 狭い列でも「要確認」が「要…」に切れないよう、バッジは縮めない
+  if (badge) return <Badge variant="light" className="mock-cell-badge">{badge[1]}</Badge>;
   return <>{s}</>;
 }
 
@@ -330,11 +341,34 @@ const ELEMENTS: Record<string, (value: any, mobile: boolean) => React.ReactNode>
     if (p.type === "textarea") return <Noted note={p.note}><Textarea {...common} autosize minRows={3} /></Noted>;
     return <Noted note={p.note}><TextInput {...common} type={p.type ?? "text"} /></Noted>;
   },
+  // 検索欄。value と suggestions を書くと、入力中の候補の一覧も一緒に出す
   search: (v) => {
     const p = normalize("search", v);
+    const suggestions: unknown[] = p.suggestions ?? [];
     return (
       <Noted note={p.note}>
-        <TextInput radius="xl" placeholder={p.placeholder ?? "検索"} leftSection={<IconSearch size={16} stroke={ICON_STROKE} />} />
+        <div className="mock-search" data-open={suggestions.length > 0 || undefined}>
+          <TextInput
+            radius="xl"
+            placeholder={p.placeholder ?? "検索"}
+            defaultValue={p.value}
+            leftSection={<IconSearch size={16} stroke={ICON_STROKE} />}
+          />
+          {suggestions.length > 0 && (
+            <div className="mock-suggestions">
+              {suggestions.map((it, i) => {
+                const s = props(it, "title");
+                return (
+                  <div key={i} className="mock-suggestion" data-to={s.to}>
+                    <IconSearch size={14} stroke={ICON_STROKE} className="mock-dim-icon" />
+                    <Text size="sm" truncate>{s.title}</Text>
+                    {s.sub && <Text size="xs" c="dimmed" ml="auto" style={{ whiteSpace: "nowrap" }}>{s.sub}</Text>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </Noted>
     );
   },
@@ -574,6 +608,106 @@ const ELEMENTS: Record<string, (value: any, mobile: boolean) => React.ReactNode>
       </Noted>
     );
   },
+  // 写真の横並びと撮影ボタン
+  photos: (v) => {
+    const p = normalize("photos", v);
+    const items: unknown[] = typeof p.count === "number" ? Array.from({ length: p.count }, () => "") : (p.items ?? []);
+    const action = p.action === false ? undefined : props(p.action ?? "撮影");
+    return (
+      <Noted note={p.note}>
+        {p.label && <Text size="sm" fw={600} mb={6}>{p.label}</Text>}
+        <div className="mock-photos">
+          {items.map((it, i) => (
+            <div key={i} className="mock-photo">
+              <IconPhoto size={22} stroke={ICON_STROKE} />
+              {labelOf(it) && <span>{labelOf(it)}</span>}
+            </div>
+          ))}
+          {action && (
+            <div className="mock-photo mock-photo-add" data-to={action.to}>
+              <IconCamera size={24} stroke={ICON_STROKE} />
+              <span>{action.label}</span>
+            </div>
+          )}
+        </div>
+      </Noted>
+    );
+  },
+  // 画面の下に固定したボタン（Screen が tabbar の上に置く）
+  actionbar: (v) => {
+    const p = normalize("actionbar", v);
+    const items: unknown[] = p.items ?? [];
+    return (
+      <Noted note={p.note} edge>
+        <Group className="mock-actionbar" gap="sm" grow wrap="nowrap">
+          {items.map((b, i) => (
+            <MockButton key={i} p={{ variant: i === items.length - 1 ? "primary" : "default", ...props(b) }} size="lg" />
+          ))}
+        </Group>
+      </Noted>
+    );
+  },
+  // 通信の状態（オフライン・未送信の件数）
+  statusbar: (v) => {
+    const p = normalize("statusbar", v);
+    const offline = !!p.offline;
+    const pending = Number(p.pending ?? 0);
+    const text = p.text ?? [offline ? "オフライン" : "オンライン", pending > 0 && `未送信 ${pending} 件`].filter(Boolean).join("・");
+    const I = offline ? IconCloudOff : IconCloudCheck;
+    return (
+      <Noted note={p.note}>
+        <Group className="mock-syncbar" data-offline={offline || undefined} gap={8} wrap="nowrap">
+          <I size={18} stroke={ICON_STROKE} />
+          <Text size="sm" fw={600}>{text}</Text>
+          {pending > 0 && <Button size="compact-sm" variant="white" ml="auto">送信する</Button>}
+        </Group>
+      </Noted>
+    );
+  },
+  // 大きな選択ボタン（指で押しやすい切り替え）
+  segmented: (v) => {
+    const p = normalize("segmented", v);
+    const items: string[] = (p.items ?? []).map(labelOf);
+    return (
+      <Noted note={p.note}>
+        {p.label && <Text size="sm" fw={600} mb={6}>{p.label}</Text>}
+        <SegmentedControl fullWidth size="lg" radius="md" data={items} value={String(p.active ?? items[0] ?? "")} readOnly />
+      </Noted>
+    );
+  },
+  // 右下に浮かせたボタン（Screen が画面の右下に置く）
+  fab: (v) => {
+    const p = normalize("fab", v);
+    return (
+      <Noted note={p.note}>
+        <ToTip to={p.to}>
+          {p.label ? (
+            <Button className="mock-fab" size="lg" radius="xl" leftSection={<IconPlus size={20} stroke={2} />} data-to={p.to}>
+              {p.label}
+            </Button>
+          ) : (
+            <ActionIcon className="mock-fab" size={56} radius="xl" variant="filled" aria-label="追加" data-to={p.to}>
+              <IconPlus size={26} stroke={2} />
+            </ActionIcon>
+          )}
+        </ToTip>
+      </Noted>
+    );
+  },
+  // 進捗のバー（value は %）
+  progress: (v) => {
+    const p = normalize("progress", v);
+    const value = Math.max(0, Math.min(100, Number(p.value ?? 0)));
+    return (
+      <Noted note={p.note}>
+        <Group justify="space-between" mb={6} wrap="nowrap">
+          <Text size="sm" fw={600}>{p.label ?? "進捗"}</Text>
+          <Text size="sm" c="dimmed">{p.text ?? `${value}%`}</Text>
+        </Group>
+        <Progress value={value} size="lg" radius="xl" />
+      </Noted>
+    );
+  },
   divider: () => <Divider />,
   space: (v) => <Box h={typeof v === "number" ? v : 16} />,
 };
@@ -621,10 +755,14 @@ const lightOnly: MantineColorSchemeManager = {
   clear: () => {},
 };
 
-function AppTheme({ color, children }: { color: string; children: React.ReactNode }) {
+// field: 屋外・暗所で使う画面。文字とボタンを大きく、色を濃くして見分けやすくする
+function AppTheme({ color, field, children }: { color: string; field?: boolean; children: React.ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const primary = color in (theme.colors ?? {}) ? color : "brand";
-  const appTheme = useMemo(() => ({ ...theme, primaryColor: primary, primaryShade: 6 as const }), [primary]);
+  const appTheme = useMemo(
+    () => ({ ...theme, primaryColor: primary, primaryShade: (field ? 8 : 6) as 6 | 8, ...(field ? { scale: 1.15 } : {}) }),
+    [primary, field],
+  );
   useLayoutEffect(scopeDarkRules, []);
   return (
     <MantineProvider
@@ -636,7 +774,7 @@ function AppTheme({ color, children }: { color: string; children: React.ReactNod
       getRootElement={() => root.current ?? undefined}
       withGlobalClasses={false}
     >
-      <div ref={root} className={`mock-app mock-app-${primary}`} data-mantine-color-scheme="light">
+      <div ref={root} className={`mock-app mock-app-${primary}`} data-mantine-color-scheme="light" data-field={field || undefined}>
         {children}
       </div>
     </MantineProvider>
@@ -671,6 +809,12 @@ function Screen({ spec, kind }: { spec: MockSpec; kind: DeviceKind }) {
           main
         )}
         {shell.footer && <MockElement el={shell.footer} />}
+        {shell.fab && (
+          <div className="mock-fab-slot">
+            <MockElement el={shell.fab} />
+          </div>
+        )}
+        {shell.actionbar && <MockElement el={shell.actionbar} />}
         {shell.tabbar && <MockElement el={shell.tabbar} />}
       </div>
     </MobileContext.Provider>
@@ -718,13 +862,13 @@ function AppTitleBar({ name }: { name: string }) {
 }
 
 // display が undefined（PWA の切り替えなし）のときは、スマホ・タブレットはブラウザの枠なし（従来の見た目）、パソコンはブラウザで描く
-function Device({ spec, kind, display }: { spec: MockSpec; kind: DeviceKind; display?: DisplayKind }) {
+function Device({ spec, kind, display, orientation }: { spec: MockSpec; kind: DeviceKind; display?: DisplayKind; orientation: Orientation }) {
   const url = `example.com${spec.title?.startsWith("/") ? spec.title : `/${spec.title ?? ""}`}`;
   const showUrl = display === "browser";
   if (kind !== "desktop")
     return (
-      <div className={kind === "mobile" ? "mock-phone" : "mock-tablet"}>
-        <StatusBar island={kind === "mobile"} />
+      <div className={kind === "mobile" ? "mock-phone" : "mock-tablet"} data-orientation={orientation}>
+        <StatusBar island={kind === "mobile" && orientation === "portrait"} />
         {showUrl && <MobileUrl url={url} />}
         <Screen spec={spec} kind={kind} />
         <div className="mock-home-indicator" />
@@ -793,7 +937,7 @@ function Switch<T extends string>({ label, options, value, onChange }: {
 const pick = <T extends string>(all: Record<T, unknown>, keys: T[]) =>
   Object.fromEntries(keys.map((k) => [k, all[k]])) as Record<T, { label: string; icon: Icon }>;
 
-export default function ScreenMock({ source }: { source: string }) {
+export default function ScreenMock({ source, screen }: { source: string; screen?: string }) {
   const color = useContext(ProjectColorContext);
   const print = usePrint();
   const narrow = useMediaQuery("(max-width: 48em)") && !print;
@@ -820,12 +964,18 @@ export default function ScreenMock({ source }: { source: string }) {
   const withPwa = !!spec.pwa || spec.display === "pwa";
   const display = withPwa ? (shown ?? spec.display ?? "browser") : undefined;
   const DeviceIcon = DEVICES[kind].icon;
+  // 横向きはタブレット・スマホのときだけ（パソコンは常に横長）
+  const orientation: Orientation = kind !== "desktop" && spec.orientation === "landscape" ? "landscape" : "portrait";
+  const screenId = spec.screen ?? screen;
+  const deviceLabel = `${DEVICES[kind].label}${kind === "desktop" ? "" : orientation === "landscape" ? "横" : "縦"}`;
+  const width =
+    kind === "desktop" ? DEVICE_WIDTH[narrow ? "desktopNarrow" : "desktop"] : orientation === "landscape" ? LANDSCAPE_WIDTH[kind] : DEVICE_WIDTH[kind];
 
   return (
     <figure className="mock-stage" data-device={kind}>
       {print ? (
         <figcaption className="mock-band">
-          画面イメージ（{DEVICES[kind].label}{display === "pwa" ? "・アプリとして表示" : ""}）　※実際のデザインとは異なります
+          画面イメージ{screenId ? `　${screenId}` : ""}（{deviceLabel}{display === "pwa" ? "・アプリとして表示" : ""}）　※実際のデザインとは異なります
         </figcaption>
       ) : (
         <figcaption className="mock-band">
@@ -833,6 +983,8 @@ export default function ScreenMock({ source }: { source: string }) {
             <DeviceIcon size={14} stroke={ICON_STROKE} />
             画面イメージ
           </span>
+          {screenId && <span className="mock-band-id">{screenId}</span>}
+          <span className="mock-band-device">{deviceLabel}</span>
           <span className="mock-band-note">実際のデザインとは異なります</span>
           <span className="mock-switches">
             {withPwa && display && <Switch label="表示のしかた" options={DISPLAYS} value={display} onChange={setShown} />}
@@ -842,9 +994,9 @@ export default function ScreenMock({ source }: { source: string }) {
       )}
       <div className="mock-body">
         <div className="mock-device">
-          <Scaled printMaxHeight={MOCK_PRINT_MAX_HEIGHT} width={kind === "desktop" ? DEVICE_WIDTH[narrow ? "desktopNarrow" : "desktop"] : DEVICE_WIDTH[kind]}>
-            <AppTheme color={color}>
-              <Device spec={spec} kind={kind} display={display} />
+          <Scaled printMaxHeight={MOCK_PRINT_MAX_HEIGHT} width={width}>
+            <AppTheme color={color} field={spec.theme === "field"}>
+              <Device spec={spec} kind={kind} display={display} orientation={orientation} />
             </AppTheme>
           </Scaled>
         </div>

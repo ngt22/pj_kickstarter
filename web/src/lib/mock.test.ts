@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectNotes, collectTransitions, excludeMock, splitShell } from "./mock";
+import { collectNotes, collectTransitions, excludeMock, screenMocks, splitShell } from "./mock";
 
 const body = [
   { header: { title: "予約", actions: [{ label: "ログイン", to: "SC-10" }] } },
@@ -55,5 +55,26 @@ describe("excludeMock", () => {
     expect(excludeMock('[data-mantine-color-scheme="dark"] .m_a::before')).toBe(
       '[data-mantine-color-scheme="dark"] .m_a:where(:not(.mock-app *))::before',
     );
+  });
+});
+
+describe("新しい部品", () => {
+  it("actionbar と fab は骨組みに分け、ボタンの遷移先を一覧にする", () => {
+    const b = [{ header: "点検" }, { fab: { to: "SC-03" } }, { actionbar: [{ label: "報告する", to: "SC-04" }] }];
+    const shell = splitShell(b);
+    expect(shell.actionbar).toBeDefined();
+    expect(shell.fab).toBeDefined();
+    expect(shell.main).toEqual([]);
+    expect(collectTransitions(b).map((t) => t.to)).toEqual(["SC-03", "SC-04"]);
+  });
+});
+
+describe("screenMocks", () => {
+  it("```mock を直前の ## SC-xx の見出しに対応させる", () => {
+    const md = "## SC-01 一覧\n\n```mock\nbody: [a]\n```\n\n### 項目\n\n## SC-02 詳細\n\n```mock\nbody: [b]\n```\n\n## 補足\n\n```mock\nbody: [c]\n```";
+    expect([...screenMocks(md)]).toEqual([
+      ["SC-01", "body: [a]"],
+      ["SC-02", "body: [b]"],
+    ]);
   });
 });
